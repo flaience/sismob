@@ -1,0 +1,39 @@
+# criar imoveis
+POST http://localhost:3000/imoveis
+Content-Type: application/json
+
+{
+  "titulo": "Cobertura Luxo com Vista para o Mar",
+  "descricao": "Espetacular cobertura mobiliada com automação residencial.",
+  "tipo": "apartamento",
+  "precoVenda": 1500000,
+  "areaPrivativa": 250,
+  "endereco": "Av. Beira Mar, 1000 - Florianópolis",
+  "lat": -27.587,
+  "lng": -48.552,
+  "tourVirtualUrl": "https://matterport.com/discover/space/your-tour-id",
+  "infra": {
+    "temAguaQuente": true,
+    "temEsperaSplit": true,
+    "temChurrasqueira": true,
+    "mobiliado": true
+  },
+  "instrucoes": [
+    {
+      "ordem": 1,
+      "titulo": "Entrada do Condomínio",
+      "descricao": "Ao chegar, interfone no 001 e identifique-se como visitante do ap 101.",
+      "fotoUrl": "https://suaimobiliaria.com/fotos/portaria.jpg",
+      "latAlvo": -27.5871,
+      "lngAlvo": -48.5521
+    },
+    {
+      "ordem": 2,
+      "titulo": "Estacionamento",
+      "descricao": "Vire à esquerda após a guarita. Sua vaga é a de número 15 (pintada em verde).",
+      "fotoUrl": "https://suaimobiliaria.com/fotos/vaga.jpg",
+      "latAlvo": -27.5872,
+      "lngAlvo": -48.5522
+    }
+  ]
+}
