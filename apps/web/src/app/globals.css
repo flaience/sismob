@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Opcional: Um reset básico para o corpo da página */
+body {
+  @apply bg-gray-50 text-gray-900;
+  margin: 0;
+  font-family: sans-serif;
+}

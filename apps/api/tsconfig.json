@@ -13,7 +13,7 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "paths": {
-      "@realstate/database": ["../../packages/database/index.ts"]
+      "@sismob/database": ["../../packages/database/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "../../packages/database/**/*.ts"],

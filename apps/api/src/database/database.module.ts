@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '@realstate/database';
+import * as schema from '@sismob/database';
 
 @Global()
 @Module({

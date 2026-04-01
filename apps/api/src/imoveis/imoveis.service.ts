@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from '@realstate/database';
+import * as schema from '@sismob/database';
 import { CreateImovelDto } from './dto/create-imovel.dto';
 
 @Injectable()
@@ -72,12 +72,26 @@ export class ImoveisService {
     }
   }
 
+  // apps/api/src/imoveis/imoveis.service.ts
+
+  // apps/api/src/imoveis/imoveis.service.ts
+
   async findAll() {
-    return await this.db.query.imoveis.findMany({
-      with: {
-        infraestrutura: true,
-        instrucoes: true,
-      },
-    });
+    try {
+      // Teste 1: Buscar apenas os imóveis (sem relações) para ver se o banco responde
+      // Se este funcionar, o problema está nos nomes das relações (with)
+      const results = await this.db.query.imoveis.findMany({
+        with: {
+          midias: true,
+          infraestrutura: true,
+          // proprietario: true, // Comente esta linha por um momento
+        },
+      });
+      return results;
+    } catch (error) {
+      // ISSO VAI MOSTRAR O ERRO REAL NO SEU TERMINAL
+      console.error('❌ ERRO DETALHADO NO NESTJS:', error);
+      throw error;
+    }
   }
 }
