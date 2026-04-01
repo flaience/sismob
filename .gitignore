@@ -34,3 +34,5 @@ logs
 !.vscode/settings.json
 .idea
 .DS_Store
+.vercel
+.env*.local
