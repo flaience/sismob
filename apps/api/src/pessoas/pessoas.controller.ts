@@ -19,7 +19,7 @@ export class PessoasController {
   @Post()
   async create(@Body() dto: any, @Request() req: any) {
     // Vincula automaticamente à imobiliária do usuário logado
-    return this.pessoasService.create(dto, req.user.imobiliariaId);
+    return this.pessoasService.createUsuario(dto, req.user.imobiliariaId);
   }
 
   @UseGuards(AuthGuard('jwt'))

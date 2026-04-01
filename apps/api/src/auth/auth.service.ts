@@ -17,7 +17,7 @@ export class AuthService {
     );
   }
 
-  async onboarding(dto: any) {
+  async registerTenant(dto: any) {
     return await this.db.transaction(async (tx) => {
       // 1. Criar o Usuário no Supabase Auth
       const { data: authUser, error: authError } =

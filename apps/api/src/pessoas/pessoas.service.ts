@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  Inject,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
 import { eq, and } from 'drizzle-orm';
@@ -15,20 +10,9 @@ export class PessoasService {
     private db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  // Criar pessoa vinculada a uma imobiliária
-  async create(dto: any, imobiliariaId: string) {
-    return await this.db
-      .insert(schema.pessoas)
-      .values({
-        ...dto,
-        imobiliariaId,
-      })
-      .returning();
-  }
-
-  // Buscar pessoas filtrando por imobiliária e tipo (papel)
+  // 1=usuario/admin, 2=cliente, 3=proprietário, 4=inquilino, 5=imobiliaria, 6=tenant
   async findByRole(
-    papel: 'corretor' | 'proprietario' | 'cliente',
+    papel: '1' | '2' | '3' | '4' | '5' | '6',
     imobiliariaId: string,
   ) {
     return await this.db.query.pessoas.findMany({
@@ -40,26 +24,17 @@ export class PessoasService {
   }
 
   async createUsuario(dto: any, requesterId: string) {
-    // 1. Busca quem está fazendo a requisição
     const requester = await this.db.query.pessoas.findFirst({
       where: eq(schema.pessoas.id, requesterId),
     });
 
-    // 2. Trava de segurança: Se não for admin, bloqueia
-    if (!requester || requester.papel !== 'admin') {
+    // Mudamos de 'admin' para '1' (que representa o administrador no seu novo schema)
+    if (!requester || requester.papel !== '1') {
       throw new UnauthorizedException(
-        'Acesso negado: Apenas administradores podem gerenciar usuários.',
+        'Apenas administradores podem gerenciar usuários.',
       );
     }
 
-    // 3. Procede com a criação
     return await this.db.insert(schema.pessoas).values(dto).returning();
-  }
-  async getMe(userId: string) {
-    const user = await this.db.query.pessoas.findFirst({
-      where: eq(schema.pessoas.id, userId),
-    });
-    if (!user) throw new NotFoundException('Usuário não encontrado no Sismob.');
-    return user;
   }
 }
