@@ -6,16 +6,10 @@
   "types": "./index.ts",
   "scripts": {
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "drizzle-orm": "0.33.0",
     "postgres": "3.4.4"
-  },
-  "devDependencies": {
-    "dotenv": "^16.4.5",
-    "drizzle-kit": "0.24.0",
-    "tsx": "^4.7.1"
   }
 }

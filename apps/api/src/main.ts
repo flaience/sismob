@@ -3,17 +3,32 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
+// Esta é a função que a Vercel vai chamar
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  await app.init();
+  // Se estivermos na Vercel, não usamos o listen()
+  if (process.env.VERCEL) {
+    await app.init();
+    return app.getHttpAdapter().getInstance();
+  }
 
-  const server = app.getHttpAdapter().getInstance();
-  return server;
+  // Se estivermos local, usamos a porta 3005
+  const port = process.env.PORT || 3005;
+  await app.listen(port);
+  console.log(`🚀 Servidor Local: http://localhost:${port}`);
 }
 
-// Exportação para Vercel
-export default bootstrap();
+// O segredo para Monorepo na Vercel:
+export const handler = async (req: any, res: any) => {
+  const instance = await bootstrap();
+  return instance(req, res);
+};
+
+// Mantém o arranque padrão para o TSX local
+if (!process.env.VERCEL) {
+  bootstrap();
+}

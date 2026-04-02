@@ -18,7 +18,6 @@ import * as schema from '@sismob/database';
 
         // Criar o cliente com configurações de pool para Serverless
         const queryClient = postgres(connectionString, {
-          ssl: 'require',
           max: 1, // Importante para não estourar conexões no Supabase Free
         });
 
