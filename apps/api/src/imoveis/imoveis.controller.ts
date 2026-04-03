@@ -5,6 +5,7 @@ import { ImoveisService } from './imoveis.service';
 import { CreateImovelDto } from './dto/create-imovel.dto';
 
 @Controller('imoveis')
+// O NestJS usa o nome do controller para criar a rota. Então, 'imoveis' aqui significa que as rotas serão '/imoveis'
 export class ImoveisController {
   // A palavra 'private' é OBRIGATÓRIA aqui para o NestJS funcionar
   constructor(
