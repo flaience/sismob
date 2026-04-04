@@ -1,11 +1,11 @@
 "use client"; // 1. Sempre a primeira linha
-// 2. Imports de bibliotecas padrão
+
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
 import dynamic from "next/dynamic";
 import { MapPin, Info, ArrowLeft, Navigation } from "lucide-react";
-
+// testes
 // 3. A CONSTANTE Pannellum FICA AQUI (Fora do componente principal)
 // O 'as any' é o segredo para silenciar o erro de 'width' e 'height'
 const Visualizador360: any = dynamic(
