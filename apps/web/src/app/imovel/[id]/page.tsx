@@ -1,5 +1,6 @@
+//src/app/imovel/[id]/page.tsx
 "use client"; // 1. Sempre a primeira linha
-
+// teste
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
