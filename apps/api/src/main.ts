@@ -4,6 +4,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  console.log('--- DIAGNÓSTICO DE AMBIENTE ---');
+  console.log('PORTA:', process.env.PORT);
+  console.log(
+    'DATABASE_URL PRESENTE:',
+    process.env.DATABASE_URL ? '✅ SIM' : '❌ NÃO',
+  );
   const app = await NestFactory.create(AppModule);
 
   // 1. Configuração de CORS para permitir que o seu site na Vercel acesse a API
