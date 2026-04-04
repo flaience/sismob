@@ -1,7 +1,4 @@
-//src/app/imovel/[id]/page.tsx
-
 "use client"; // 1. Sempre a primeira linha
-// teste build
 // 2. Imports de bibliotecas padrão
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
