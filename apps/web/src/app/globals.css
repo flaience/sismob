@@ -1,8 +1,12 @@
 @import "tailwindcss";
-
+@source "../../**/*.{ts,tsx}";
 /* Opcional: Um reset básico para o corpo da página */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
 body {
   @apply bg-gray-50 text-gray-900;
   margin: 0;
-  font-family: sans-serif;
 }
