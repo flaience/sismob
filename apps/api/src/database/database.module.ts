@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '@sismob/database';
+import * as schema from '@sismob/database'; // Certifique-se que este import está correto
 
 @Global()
 @Module({
@@ -9,20 +9,14 @@ import * as schema from '@sismob/database';
     {
       provide: 'DRIZZLE_CONNECTION',
       useFactory: () => {
-        // Na Vercel, as variáveis já estão no process.env automaticamente
         const connectionString = process.env.DATABASE_URL;
+        if (!connectionString) throw new Error('DATABASE_URL is missing');
 
-        if (!connectionString) {
-          throw new Error('DATABASE_URL is missing in environment variables');
-        }
+        const queryClient = postgres(connectionString);
 
-        // Criar o cliente com configurações de pool para Serverless
-        const queryClient = postgres(connectionString, {
-          max: 1, // Importante para não estourar conexões no Supabase Free
-        });
-
-        // @ts-ignore
-        return drizzle(queryClient, { schema });
+        // IMPORTANTE: O segundo argumento { schema } é o que habilita o this.db.query
+        // Usamos o 'as any' para evitar conflitos de tipos no Monorepo
+        return drizzle(queryClient, { schema }) as any;
       },
     },
   ],

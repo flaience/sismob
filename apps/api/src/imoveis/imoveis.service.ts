@@ -1,4 +1,3 @@
-// apps/api/src/imoveis/imoveis.service.ts
 import {
   Injectable,
   Inject,
@@ -6,92 +5,135 @@ import {
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { CreateImovelDto } from './dto/create-imovel.dto';
+import { eq, and } from 'drizzle-orm';
+import { FilesService } from '../files/files.service';
 
 @Injectable()
 export class ImoveisService {
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
+    private filesService: FilesService,
   ) {}
 
-  async create(dto: CreateImovelDto) {
+  async createWithImages(
+    dto: any,
+    files: Express.Multer.File[],
+    userId: string,
+  ) {
     try {
       return await this.db.transaction(async (tx) => {
-        // 1. Salvar o Imóvel
-        const [novoImovel] = await (tx.insert(schema.imoveis) as any)
+        // 1. Buscar a imobiliária usando select tradicional (mais estável que query)
+        const usuariosFiltrados = await tx
+          .select()
+          .from(schema.pessoas as any)
+          .where(eq(schema.pessoas.id as any, userId))
+          .limit(1);
+
+        const usuario = usuariosFiltrados[0];
+
+        if (!usuario || !usuario.imobiliariaId) {
+          throw new Error('Usuário não vinculado a uma imobiliária.');
+        }
+
+        // 2. Inserir o Imóvel
+        const [novoImovel] = await (tx.insert(schema.imoveis as any) as any)
           .values({
             titulo: dto.titulo,
             descricao: dto.descricao,
             tipo: dto.tipo,
-            // IMPORTANTE: Decimal no Postgres exige String no JS
-            precoVenda: dto.precoVenda.toString(),
-            areaPrivativa: dto.areaPrivativa.toString(),
-            endereco: dto.endereco,
-            lat: dto.lat.toString(),
-            lng: dto.lng.toString(),
+            status: dto.status || 'disponivel',
+            imobiliariaId: usuario.imobiliariaId,
+            proprietarioId: dto.proprietarioId,
+            precoVenda: dto.precoVenda?.toString(),
+            precoAluguel: dto.precoAluguel?.toString(),
+            areaPrivativa: dto.areaPrivativa?.toString(),
+            enderecoOriginal: dto.enderecoOriginal,
+            lat: dto.lat?.toString() || '0',
+            lng: dto.lng?.toString() || '0',
             tourVirtualUrl: dto.tourVirtualUrl,
           })
           .returning();
 
-        // 2. Salvar a Infraestrutura
-        await tx.insert(schema.infraestrutura).values({
+        // 3. Salvar Infraestrutura
+        await tx.insert(schema.infraestrutura as any).values({
           imovelId: novoImovel.id,
-          temAguaQuente: dto.infra.temAguaQuente,
-          temEsperaSplit: dto.infra.temEsperaSplit,
-          temChurrasqueira: dto.infra.temChurrasqueira,
-          mobiliado: dto.infra.mobiliado,
-        });
+          temAguaQuente: dto.temAguaQuente === 'true',
+          temEsperaSplit: dto.temEsperaSplit === 'true',
+          mobiliado: dto.mobiliado === 'true',
+        } as any);
 
-        // 3. Salvar Instruções de Chegada
-        if (dto.instrucoes && dto.instrucoes.length > 0) {
-          const instrucoesComId = dto.instrucoes.map((ins) => ({
-            imovelId: novoImovel.id,
-            ordem: ins.ordem,
-            titulo: ins.titulo,
-            descricao: ins.descricao,
-            fotoUrl: ins.fotoUrl,
-            latAlvo: ins.latAlvo.toString(),
-            lngAlvo: ins.lngAlvo.toString(),
-          }));
-          await tx.insert(schema.instrucoesChegada).values(instrucoesComId);
+        // 4. Upload e registro de Mídias
+        if (files && files.length > 0) {
+          for (const [index, file] of files.entries()) {
+            const url = await this.filesService.uploadFoto(
+              file,
+              `imoveis/${novoImovel.id}`,
+            );
+
+            // Verifica se o arquivo atual foi marcado como 360
+            const e360 = dto.is360?.includes(file.originalname);
+
+            await tx.insert(schema.midiaImovel as any).values({
+              imovelId: novoImovel.id,
+              url: url,
+              tipo: e360 ? 'foto_360' : 'foto_interna',
+              isCapa: index === 0,
+              ordem: index,
+            } as any);
+          }
         }
 
-        return {
-          message: 'Imóvel completo cadastrado com sucesso!',
-          id: novoImovel.id,
-        };
+        // 5. Salvar Instruções de Chegada
+        if (dto.instrucoes) {
+          try {
+            const instrucoes =
+              typeof dto.instrucoes === 'string'
+                ? JSON.parse(dto.instrucoes)
+                : dto.instrucoes;
+            if (Array.isArray(instrucoes) && instrucoes.length > 0) {
+              const dataIns = instrucoes.map((ins: any) => ({
+                imovelId: novoImovel.id,
+                ordem: ins.ordem,
+                titulo: ins.titulo,
+                descricao: ins.descricao,
+                fotoUrl: ins.fotoUrl,
+              }));
+              await tx.insert(schema.instrucoesChegada as any).values(dataIns);
+            }
+          } catch (e) {
+            console.warn(
+              '⚠️ Falha ao processar instruções de chegada:',
+              e.message,
+            );
+          }
+        }
+
+        return { message: 'Imóvel cadastrado com sucesso!', id: novoImovel.id };
       });
     } catch (error) {
-      // LOG DETALHADO NO TERMINAL
-      console.error('❌ ERRO NO BANCO:', error.message);
-      console.error('🔍 DETALHES:', error.detail || 'Sem detalhes adicionais');
-
-      // RETORNA O ERRO REAL PARA O REST CLIENT
-      throw new InternalServerErrorException(`Erro no Banco: ${error.message}`);
+      console.error('❌ ERRO NO CADASTRO:', error);
+      throw new InternalServerErrorException(error.message);
     }
   }
 
-  // apps/api/src/imoveis/imoveis.service.ts
-
-  // apps/api/src/imoveis/imoveis.service.ts
-
-  async findAll() {
+  async findAll(imobiliariaId: string) {
     try {
-      // Teste 1: Buscar apenas os imóveis (sem relações) para ver se o banco responde
-      // Se este funcionar, o problema está nos nomes das relações (with)
-      const results = await this.db.query.imoveis.findMany({
+      // Usamos (this.db.query as any) para forçar o acesso à tabela imoveis
+      // Isso resolve o erro 'Property imoveis does not exist on type {}'
+      const queryApi = this.db.query as any;
+
+      return await queryApi.imoveis.findMany({
+        where: eq(schema.imoveis.imobiliariaId as any, imobiliariaId),
         with: {
           midias: true,
           infraestrutura: true,
-          // proprietario: true, // Comente esta linha por um momento
+          instrucoes: true,
         },
       });
-      return results;
     } catch (error) {
-      // ISSO VAI MOSTRAR O ERRO REAL NO SEU TERMINAL
-      console.error('❌ ERRO DETALHADO NO NESTJS:', error);
-      throw error;
+      console.error('❌ ERRO AO BUSCAR IMÓVEIS:', error);
+      throw new InternalServerErrorException('Erro ao listar imóveis.');
     }
   }
 }
