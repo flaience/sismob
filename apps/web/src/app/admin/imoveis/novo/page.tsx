@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { PAPEIS } from "@/lib/constants";
 
 export default function NovoImovelPage() {
   const router = useRouter();
@@ -40,9 +41,25 @@ export default function NovoImovelPage() {
 
   // 1. Carrega proprietários para o Select
   useEffect(() => {
-    api.get("/pessoas?papel=3").then((res) => setProprietarios(res.data));
-  }, []);
+    async function carregarProprietarios() {
+      try {
+        // Usamos o 'api' (que já envia o seu Token de login automaticamente)
+        const res = await api.get("/pessoas", {
+          params: { papel: "3" }, // Garantimos que estamos pedindo o papel 3 (Proprietário)
+        });
 
+        console.log("📡 Dados recebidos da API:", res.data);
+        setProprietarios(res.data);
+      } catch (error: any) {
+        console.error(
+          "❌ Erro ao buscar proprietários:",
+          error.response?.data || error.message,
+        );
+      }
+    }
+
+    carregarProprietarios();
+  }, []);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles([...files, ...Array.from(e.target.files)]);
