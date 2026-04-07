@@ -1,24 +1,24 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
-    "outDir": "./dist",
-    "baseUrl": ".",
-    "rootDir": "../../",
+
+    /* O SEGREDO: Removemos o rootDir e deixamos o TS decidir */
+
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
     "strict": false,
     "paths": {
       "@sismob/database": ["../../packages/database/index.ts"]
     }
   },
-  "include": ["src/**/*", "../../packages/database/**/*"],
+  /* IMPORTANTE: Aqui incluímos apenas a pasta src */
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test"]
 }

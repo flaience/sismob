@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import ImovelCard from "@/components/ImovelCard";
+import { useTenant } from "@/context/TenantContext";
 
 export default function HomePage() {
   const [imoveis, setImoveis] = useState([]);
@@ -10,20 +11,26 @@ export default function HomePage() {
   // Pegamos o ID da imobiliária que criamos no script de popular (ex: 77777777-...)
   const IMOBILIARIA_ID = "77777777-7777-7777-7777-777777777777";
 
+  const { tenant } = useTenant(); // Pega o tenant do contexto
+
   useEffect(() => {
     async function fetchImoveis() {
+      if (!tenant?.id) return; // Só busca se tiver identificado a imobiliária
+
       try {
-        // Use o 'api' (do lib/api.ts) para enviar o token automaticamente
-        const response = await api.get("/imoveis");
+        // Passamos o imobiliariaId como filtro para o backend
+        const response = await api.get("/imoveis", {
+          params: { imobiliariaId: tenant.id },
+        });
         setImoveis(response.data);
       } catch (error) {
         console.error("Erro ao carregar imóveis:", error);
       } finally {
-        setLoading(false); // <--- Isso garante que a mensagem "Carregando" suma
+        setLoading(false);
       }
     }
     fetchImoveis();
-  }, []);
+  }, [tenant]); // Executa sempre que o tenant for identificado
 
   return (
     <main className="min-h-screen p-8">

@@ -28,3 +28,7 @@ declare module "pannellum-react" {
   export class Pannellum extends Component<PannellumProps> {}
   export class PannellumVideo extends Component<any> {}
 }
+declare module "*.css" {
+  const content: { [className: string]: string };
+  export default content;
+}

@@ -78,6 +78,8 @@ export const pessoas = pgTable(
 
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
+    dominio: varchar("dominio", { length: 255 }).unique(), // Ex: 'sismob.flaience.com'
+    slug: varchar("slug", { length: 100 }).unique(),
   },
   (table) => {
     return {

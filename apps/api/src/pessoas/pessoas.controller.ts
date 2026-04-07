@@ -18,14 +18,19 @@ export class PessoasController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Post()
   async create(@Body() dto: any, @Request() req: any) {
-    // Vincula automaticamente à imobiliária do usuário logado
+    // Agora o .createUsuario existe no Service!
     return this.pessoasService.createUsuario(dto, req.user.imobiliariaId);
+  }
+
+  // Rota de identificação pública (SEM LOGIN)
+  @Get('config/identificar')
+  async identificar(@Query('host') host: string) {
+    return this.pessoasService.findImobiliariaByHost(host);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
   async findAll(@Query('papel') papel: string, @Request() req: any) {
-    // Filtra por papel (1-6) e garante que só veja os dados da sua imobiliária
-    return this.pessoasService.findByRole(papel as any, req.user.imobiliariaId);
+    return this.pessoasService.findByRole(papel, req.user.imobiliariaId);
   }
 }
