@@ -47,21 +47,21 @@ export class PessoasService {
   // 3. Método para o sistema identificar a imobiliária pelo domínio
   async findImobiliariaByHost(host: string) {
     try {
-      // Usamos a Query API com casting para evitar qualquer erro de tipo
-      const queryApi = this.db.query as any;
-
-      const result = await queryApi.pessoas.findFirst({
-        where: and(
-          eq(schema.pessoas.dominio as any, host),
-          eq(schema.pessoas.papel as any, '5'), // 5 = Imobiliária
-        ),
+      // Usamos a forma mais robusta de consulta do Drizzle
+      const result = await this.db.query.pessoas.findFirst({
+        where: (table, { and, eq }) =>
+          and(eq(table.dominio, host), eq(table.papel, '5')),
       });
+
+      if (!result) {
+        console.warn(`⚠️ Nenhuma imobiliária encontrada para o host: ${host}`);
+      }
 
       return result;
     } catch (error) {
-      console.error('❌ Erro na Identificação por Host:', error.message);
+      console.error('❌ Erro fatal na busca por domínio:', error.message);
       throw new InternalServerErrorException(
-        'Erro interno ao identificar imobiliária.',
+        'Falha ao identificar imobiliária no banco.',
       );
     }
   }
