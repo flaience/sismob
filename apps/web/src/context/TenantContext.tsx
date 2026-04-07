@@ -21,7 +21,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         const res = await api.get(
           `/pessoas/config/identificar?host=${queryHost}`,
         );
-
+        console.log("🔍 Resposta da API de Identificação:", res.data);
+        if (!res.data) {
+          console.error(
+            "❌ A API não encontrou nenhuma imobiliária para o host:",
+            queryHost,
+          );
+        }
         if (res.data) {
           console.log("✅ Imobiliária identificada:", res.data.nome);
           setTenant(res.data);
