@@ -119,20 +119,13 @@ export class ImoveisService {
 
   async findAll(imobiliariaId: string) {
     try {
-      // Usamos (this.db.query as any) para forçar o acesso à tabela imoveis
-      // Isso resolve o erro 'Property imoveis does not exist on type {}'
-      const queryApi = this.db.query as any;
-
-      return await queryApi.imoveis.findMany({
-        where: eq(schema.imoveis.imobiliariaId as any, imobiliariaId),
-        with: {
-          midias: true,
-          infraestrutura: true,
-          instrucoes: true,
-        },
-      });
+      // Usamos 'as any' para ignorar a trava de tipos do monorepo
+      return await this.db
+        .select()
+        .from(schema.imoveis as any)
+        .where(eq((schema.imoveis as any).imobiliariaId, imobiliariaId));
     } catch (error) {
-      console.error('❌ ERRO AO BUSCAR IMÓVEIS:', error);
+      console.error('❌ Erro ao buscar imóveis:', error);
       throw new InternalServerErrorException('Erro ao listar imóveis.');
     }
   }

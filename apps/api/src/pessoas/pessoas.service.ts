@@ -1,7 +1,6 @@
 import {
   Injectable,
   Inject,
-  UnauthorizedException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -47,21 +46,23 @@ export class PessoasService {
   // 3. Método para o sistema identificar a imobiliária pelo domínio
   async findImobiliariaByHost(host: string) {
     try {
-      // Usamos a forma mais robusta de consulta do Drizzle
-      const result = await this.db.query.pessoas.findFirst({
-        where: (table, { and, eq }) =>
-          and(eq(table.dominio, host), eq(table.papel, '5')),
-      });
+      // O 'as any' no schema.pessoas resolve o erro de 'not assignable'
+      const results = await this.db
+        .select()
+        .from(schema.pessoas as any)
+        .where(
+          and(
+            eq((schema.pessoas as any).dominio, host),
+            eq((schema.pessoas as any).papel, '5'),
+          ),
+        )
+        .limit(1);
 
-      if (!result) {
-        console.warn(`⚠️ Nenhuma imobiliária encontrada para o host: ${host}`);
-      }
-
-      return result;
+      return results[0] || null;
     } catch (error) {
-      console.error('❌ Erro fatal na busca por domínio:', error.message);
+      console.error('❌ Erro na busca por domínio:', error.message);
       throw new InternalServerErrorException(
-        'Falha ao identificar imobiliária no banco.',
+        'Falha ao identificar imobiliária.',
       );
     }
   }

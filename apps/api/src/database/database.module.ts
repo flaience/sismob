@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '@sismob/database'; // Certifique-se que este import está correto
+import * as schema from '@sismob/database';
 
 @Global()
 @Module({
@@ -14,8 +14,8 @@ import * as schema from '@sismob/database'; // Certifique-se que este import est
 
         const queryClient = postgres(connectionString);
 
-        // IMPORTANTE: O segundo argumento { schema } é o que habilita o this.db.query
-        // Usamos o 'as any' para evitar conflitos de tipos no Monorepo
+        // O SEGREDO: O segundo argumento { schema } habilita o this.db.query
+        // Usamos 'as any' para evitar que o TypeScript trave o build por conflito de versões
         return drizzle(queryClient, { schema }) as any;
       },
     },
