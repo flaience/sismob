@@ -3,22 +3,23 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
-// apps/api/src/main.ts
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Ajuste o CORS para aceitar o seu novo domínio oficial
+  // 1. CORS configurado para aceitar o seu domínio da Vercel
   app.enableCors({
-    origin: [
-      'https://sismob.flaience.com',
-      'http://localhost:3001', // Para você continuar testando localmente
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    origin: true,
     credentials: true,
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  await app.listen(process.env.PORT || 3005, '0.0.0.0');
+
+  // 2. O Railway injeta a porta automaticamente na variável PORT
+  const port = process.env.PORT || 3005;
+
+  // 3. O SEGREDO: '0.0.0.0' permite conexões externas no Railway
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`🚀 Sismob API rodando na porta: ${port}`);
 }
 bootstrap();
