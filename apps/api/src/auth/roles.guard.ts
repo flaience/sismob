@@ -17,18 +17,25 @@ export class RolesGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const user = request.user; // O usuário vem do SupabaseStrategy
+    const user = request.user; // Injetado pelo SupabaseStrategy (payload do JWT)
 
     if (!user || !user.userId) return false;
 
-    // BUSCA NA TABELA ÚNICA 'pessoas' (Antiga 'perfis')
-    const perfil = await this.db.query.pessoas.findFirst({
-      where: eq(schema.pessoas.id, user.userId),
-    });
+    try {
+      // Usamos casting para (this.db.query as any) para habilitar o acesso à tabela pessoas
+      const queryApi = this.db.query as any;
 
-    // Permitir acesso se for Papel '1' (Usuário/Admin) ou '5' (Imobiliária)
-    const temAcesso = perfil?.papel === '1' || perfil?.papel === '5';
+      const perfil = await queryApi.pessoas.findFirst({
+        where: eq(schema.pessoas.id as any, user.userId),
+      });
 
-    return temAcesso;
+      if (!perfil) return false;
+
+      // Papel '1' (Admin/Corretor) ou '5' (Imobiliária)
+      return perfil.papel === '1' || perfil.papel === '5';
+    } catch (error) {
+      console.error('❌ Erro no RolesGuard:', error.message);
+      return false;
+    }
   }
 }

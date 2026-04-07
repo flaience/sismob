@@ -4,6 +4,8 @@ import { DatabaseModule } from './database/database.module';
 import { ImoveisModule } from './imoveis/imoveis.module'; // Importando o novo módulo
 import { PessoasModule } from './pessoas/pessoas.module'; // Importando
 
+import { AuthModule } from './auth/auth.module'; //
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -11,6 +13,7 @@ import { PessoasModule } from './pessoas/pessoas.module'; // Importando
       envFilePath: '../../.env',
     }),
     DatabaseModule,
+    AuthModule,
     ImoveisModule,
     PessoasModule,
   ],
