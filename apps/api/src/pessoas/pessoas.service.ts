@@ -46,12 +46,23 @@ export class PessoasService {
 
   // 3. Método para o sistema identificar a imobiliária pelo domínio
   async findImobiliariaByHost(host: string) {
-    const queryApi = this.db.query as any;
-    return await queryApi.pessoas.findFirst({
-      where: and(
-        eq(schema.pessoas.dominio as any, host),
-        eq(schema.pessoas.papel as any, '5'),
-      ),
-    });
+    try {
+      // Usamos a Query API com casting para evitar qualquer erro de tipo
+      const queryApi = this.db.query as any;
+
+      const result = await queryApi.pessoas.findFirst({
+        where: and(
+          eq(schema.pessoas.dominio as any, host),
+          eq(schema.pessoas.papel as any, '5'), // 5 = Imobiliária
+        ),
+      });
+
+      return result;
+    } catch (error) {
+      console.error('❌ Erro na Identificação por Host:', error.message);
+      throw new InternalServerErrorException(
+        'Erro interno ao identificar imobiliária.',
+      );
+    }
   }
 }

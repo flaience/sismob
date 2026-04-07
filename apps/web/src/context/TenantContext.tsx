@@ -12,22 +12,29 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     async function identificar() {
       try {
         const host = window.location.hostname;
-        // Se estiver local, simulamos o domínio oficial para o banco achar os dados
         const queryHost =
           host === "localhost" || host === "127.0.0.1"
             ? "sismob.flaience.com"
             : host;
 
+        console.log("🔍 Tentando identificar host:", queryHost);
         const res = await api.get(
           `/pessoas/config/identificar?host=${queryHost}`,
         );
-        setTenant(res.data);
+
+        if (res.data) {
+          console.log("✅ Imobiliária identificada:", res.data.nome);
+          setTenant(res.data);
+        } else {
+          console.warn("⚠️ Domínio não cadastrado no banco.");
+        }
       } catch (e) {
-        console.error("🚨 Imobiliária não identificada.");
+        console.error("❌ Falha na comunicação com a API de identificação.");
       } finally {
-        setLoading(false);
+        setLoading(false); // <--- OBRIGATÓRIO: Libera o site independente do resultado
       }
     }
+    // ...
     identificar();
   }, []);
 
