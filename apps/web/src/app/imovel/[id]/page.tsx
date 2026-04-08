@@ -1,4 +1,6 @@
 "use client";
+// alteração para teste
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
