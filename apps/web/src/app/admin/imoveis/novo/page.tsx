@@ -81,12 +81,16 @@ export default function NovoImovelPage() {
   // 2. Envio do Formulário (Multipart/Form-Data)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tenant?.id) return alert("Imobiliária não identificada.");
     setLoading(true);
 
     try {
       const formData = new FormData();
 
-      // Anexa dados básicos
+      // ANEXA O ID DA IMOBILIÁRIA (O segredo para o banco aceitar)
+      formData.append("imobiliariaId", tenant.id);
+
+      // Anexa o restante dos dados
       Object.entries(dados).forEach(([key, val]) => formData.append(key, val));
 
       // Anexa infraestrutura como string (o NestJS vai converter)

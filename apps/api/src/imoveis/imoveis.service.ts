@@ -44,32 +44,24 @@ export class ImoveisService {
    * CRIAÇÃO DE IMÓVEL COM IMAGENS (RESTRITA)
    * Salva o imóvel, faz upload das fotos e vincula os percursos
    */
-  async createWithImages(dto: any, files: any[], userId: string) {
+  async createWithImages(dto: any, files: any[], imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
-        // 1. Identificar a imobiliária do corretor que está logado
-        const usuarios = await tx
-          .select()
-          .from(schema.pessoas as any)
-          .where(eq(schema.pessoas.id as any, userId))
-          .limit(1);
-
-        const corretor = usuarios[0];
-        if (!corretor || !corretor.imobiliariaId) {
-          throw new Error('Corretor não possui imobiliária vinculada.');
+        // 1. O ID da imobiliária agora vem direto do formulário
+        if (!imobiliariaId) {
+          throw new Error('ID da imobiliária não fornecido.');
         }
 
-        // 2. Salvar o registro principal do Imóvel
+        // 2. Inserir o Imóvel
         const [novoImovel] = await (tx.insert(schema.imoveis as any) as any)
           .values({
             titulo: dto.titulo,
             descricao: dto.descricao,
             tipo: dto.tipo,
             status: dto.status || 'disponivel',
-            imobiliariaId: corretor.imobiliariaId,
+            imobiliariaId: imobiliariaId, // <--- USA O ID ENVIADO PELO FRONT
             proprietarioId: dto.proprietarioId,
             precoVenda: dto.precoVenda?.toString(),
-            precoAluguel: dto.precoAluguel?.toString(),
             areaPrivativa: dto.areaPrivativa?.toString(),
             enderecoOriginal: dto.enderecoOriginal,
             lat: dto.lat?.toString() || '0',
@@ -77,7 +69,6 @@ export class ImoveisService {
             tourVirtualUrl: dto.tourVirtualUrl,
           })
           .returning();
-
         // 3. Salvar Infraestrutura (AC, Água Quente, etc)
         await (tx.insert(schema.infraestrutura as any) as any).values({
           imovelId: novoImovel.id,
