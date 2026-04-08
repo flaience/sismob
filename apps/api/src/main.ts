@@ -8,7 +8,8 @@ async function bootstrap() {
 
   // 1. CORS configurado para aceitar o seu domínio da Vercel
   app.enableCors({
-    origin: true,
+    origin: ['https://sismob.flaience.com', 'http://localhost:3001'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   });
 
