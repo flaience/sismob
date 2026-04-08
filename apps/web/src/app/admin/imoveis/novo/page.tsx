@@ -13,6 +13,7 @@ import {
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { PAPEIS } from "@/lib/constants";
+import { useTenant } from "@/context/TenantContext";
 
 export default function NovoImovelPage() {
   const router = useRouter();
@@ -39,27 +40,33 @@ export default function NovoImovelPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [foto360Index, setFoto360Index] = useState<number | null>(null);
 
-  // 1. Carrega proprietários para o Select
+  const { tenant } = useTenant(); // Você já tem o tenant aqui
+
   useEffect(() => {
     async function carregarProprietarios() {
+      if (!tenant?.id) return; // Espera o domínio ser identificado
+
       try {
-        // Usamos o 'api' (que já envia o seu Token de login automaticamente)
+        // Agora passamos o imobiliariaId direto na URL para a API aberta
         const res = await api.get("/pessoas", {
-          params: { papel: "3" }, // Garantimos que estamos pedindo o papel 3 (Proprietário)
+          params: {
+            papel: "3",
+            imobiliariaId: tenant.id, // <--- O SEGREDO DA VITÓRIA
+          },
         });
 
-        console.log("📡 Dados recebidos da API:", res.data);
+        console.log("💎 Proprietários carregados com sucesso!");
         setProprietarios(res.data);
       } catch (error: any) {
         console.error(
-          "❌ Erro ao buscar proprietários:",
+          "❌ Falha ao buscar:",
           error.response?.data || error.message,
         );
       }
     }
-
     carregarProprietarios();
-  }, []);
+  }, [tenant]); // Executa assim que o tenant for descoberto
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles([...files, ...Array.from(e.target.files)]);

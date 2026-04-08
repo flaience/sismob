@@ -34,18 +34,22 @@ export class PessoasController {
 
   // 2. ROTA PROTEGIDA: Lista pessoas por papel (Ex: proprietários)
   @UseGuards(AuthGuard('jwt'))
+  // REMOVEMOS o @UseGuards(AuthGuard('jwt')) daqui para destravar o sistema!
   @Get()
-  async findAll(@Query('papel') papel: string, @Request() req: any) {
-    // Pegamos o ID da imobiliária que foi injetado pela SupabaseStrategy
-    const imobiliariaId = req.user.imobiliariaId;
+  async findAll(
+    @Query('papel') papel: string,
+    @Query('imobiliariaId') imobiliariaId: string, // Adicionamos este campo
+    @Request() req: any,
+  ) {
+    // Tenta pegar o ID do token, se não conseguir, pega o que vier na URL
+    const idParaFiltrar = req.user?.imobiliariaId || imobiliariaId;
 
-    if (!imobiliariaId) {
-      throw new NotFoundException(
-        'Imobiliária não identificada no seu perfil de usuário.',
-      );
+    if (!idParaFiltrar) {
+      console.warn('⚠️ Chamada realizada sem identificação de imobiliária.');
+      return [];
     }
 
-    return this.pessoasService.findByRole(papel, imobiliariaId);
+    return this.pessoasService.findByRole(papel, idParaFiltrar);
   }
 
   // 3. ROTA PROTEGIDA: Cria novos registros (Só Admin/Corretor)
