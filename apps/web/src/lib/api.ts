@@ -2,23 +2,27 @@ import axios from "axios";
 import { createClient } from "./supabase";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://sismobapi-production.up.railway.app",
 });
 
-// Este código roda antes de QUALQUER requisição para a API
 api.interceptors.request.use(async (config) => {
-  const supabase = createClient();
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  // Pega a sessão atual do Supabase
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Se o usuário estiver logado, anexa o Token no cabeçalho
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
+    if (session?.access_token) {
+      console.log("🔑 Token anexado à requisição com sucesso!");
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    } else {
+      console.warn("⚠️ Nenhuma sessão ativa encontrada. Enviando sem token...");
+    }
+  } catch (error) {
+    console.error("❌ Falha no interceptor de autenticação:", error);
   }
-
   return config;
 });
 
