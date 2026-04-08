@@ -44,24 +44,24 @@ export default function NovoImovelPage() {
 
   useEffect(() => {
     async function carregarProprietarios() {
-      if (!tenant?.id) return; // Espera o domínio ser identificado
+      // Espera o sistema identificar o domínio
+      if (!tenant?.id) return;
 
       try {
-        // Agora passamos o imobiliariaId direto na URL para a API aberta
+        console.log("📡 Buscando proprietários para imob:", tenant.id);
+
+        // Chamada para a API agora passando o ID na URL
         const res = await api.get("/pessoas", {
           params: {
             papel: "3",
-            imobiliariaId: tenant.id, // <--- O SEGREDO DA VITÓRIA
+            imobiliariaId: tenant.id,
           },
         });
 
-        console.log("💎 Proprietários carregados com sucesso!");
         setProprietarios(res.data);
+        console.log("✅ Lista carregada!");
       } catch (error: any) {
-        console.error(
-          "❌ Falha ao buscar:",
-          error.response?.data || error.message,
-        );
+        console.error("❌ Erro:", error.response?.data || error.message);
       }
     }
     carregarProprietarios();
