@@ -1,25 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '@sismob/database';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor() {
+  constructor(
+    @Inject('DRIZZLE_CONNECTION')
+    private db: PostgresJsDatabase<typeof schema>,
+  ) {
     super({
-      // Extrai o token do cabeçalho 'Authorization: Bearer <TOKEN>'
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // A chave secreta que o Supabase usa para assinar os tokens
       secretOrKey: process.env.SUPABASE_JWT_SECRET,
     });
   }
 
   async validate(payload: any) {
-    // O payload é o conteúdo do token JWT do Supabase decodificado
+    // payload.sub é o UUID do usuário que logou
+    const queryApi = this.db.query as any;
+
+    const userProfile = await queryApi.pessoas.findFirst({
+      where: eq(schema.pessoas.id as any, payload.sub),
+    });
+
+    if (!userProfile) {
+      throw new UnauthorizedException(
+        'Perfil não encontrado no banco de dados.',
+      );
+    }
+
+    // RETORNAMOS O OBJETO QUE SERÁ USADO EM 'req.user'
     return {
-      userId: payload.sub,
-      email: payload.email,
-      role: payload.role,
+      userId: userProfile.id,
+      email: userProfile.email,
+      imobiliariaId: userProfile.imobiliariaId, // <--- ESTA É A VARIÁVEL QUE FALTAVA
+      papel: userProfile.papel,
     };
   }
 }

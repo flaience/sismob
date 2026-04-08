@@ -16,13 +16,27 @@ export class PessoasService {
 
   // 1. Método para busca por papel (1=Admin, 2=Cliente, etc)
   async findByRole(papel: string, imobiliariaId: string) {
-    const queryApi = this.db.query as any;
-    return await queryApi.pessoas.findMany({
-      where: and(
-        eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
-        eq(schema.pessoas.papel as any, papel),
-      ),
-    });
+    try {
+      console.log(
+        `🔍 Buscando papel ${papel} para imobiliaria ${imobiliariaId}`,
+      );
+
+      const results = await this.db
+        .select()
+        .from(schema.pessoas as any)
+        .where(
+          and(
+            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
+            eq((schema.pessoas as any).papel, papel),
+          ),
+        );
+
+      console.log(`✅ Encontrados: ${results.length} registros`);
+      return results;
+    } catch (error) {
+      console.error('❌ Erro ao buscar pessoas por papel:', error.message);
+      return [];
+    }
   }
 
   // 2. Método exigido pelo Controller para criar usuários/corretores
