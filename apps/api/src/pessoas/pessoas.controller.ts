@@ -35,17 +35,21 @@ export class PessoasController {
   // 2. ROTA PROTEGIDA: Lista pessoas por papel (Ex: proprietários)
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  async findAll(@Query('papel') papel: string, @Request() req: any) {
-    // ESTA LINHA É A PROVA REAL:
-    console.log('👤 Usuário Logado:', req.user.email);
-    console.log('🏢 ID da Imobiliária extraído:', req.user.imobiliariaId);
-    console.log('🏷️ Papel solicitado:', papel);
+  async findAll(
+    @Query('papel') papel: string,
+    @Query('imobiliariaId') imobiliariaId: string, // Adicionamos este parâmetro
+    @Request() req: any,
+  ) {
+    // Se houver usuário logado, usa o ID do token.
+    // Se não, usa o ID que enviarmos na URL.
+    const idParaFiltrar = req.user?.imobiliariaId || imobiliariaId;
 
-    if (!req.user.imobiliariaId) {
-      console.error('❌ ERRO: O ID da imobiliária não veio no Token!');
+    if (!idParaFiltrar) {
+      console.warn('⚠️ Chamada sem ID de imobiliária');
+      return [];
     }
 
-    return this.pessoasService.findByRole(papel, req.user.imobiliariaId);
+    return this.pessoasService.findByRole(papel, idParaFiltrar);
   }
 
   // 3. ROTA PROTEGIDA: Cria novos usuários/clientes
