@@ -117,15 +117,23 @@ export class ImoveisService {
     }
   }
 
+  // apps/api/src/imoveis/imoveis.service.ts
+
   async findAll(imobiliariaId: string) {
     try {
-      // Usamos 'as any' para ignorar a trava de tipos do monorepo
-      return await this.db
+      console.log('📡 Buscando imóveis para a imobiliária:', imobiliariaId);
+
+      // Usamos o select tradicional (sem o .query)
+      // Isso ignora qualquer erro de relação (with) que esteja causando o erro 500
+      const results = await this.db
         .select()
         .from(schema.imoveis as any)
         .where(eq((schema.imoveis as any).imobiliariaId, imobiliariaId));
+
+      return results;
     } catch (error) {
-      console.error('❌ Erro ao buscar imóveis:', error);
+      // Esse erro vai aparecer no terminal preto do Railway
+      console.error('❌ ERRO NO BANCO AO BUSCAR IMÓVEIS:', error.message);
       throw new InternalServerErrorException('Erro ao listar imóveis.');
     }
   }
