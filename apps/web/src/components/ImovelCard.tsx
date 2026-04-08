@@ -97,7 +97,7 @@ export default function ImovelCard({ imovel }: ImovelCardProps) {
       {/* 3. BOTÕES DE AÇÃO (OS DIFERENCIAIS) */}
       <div className="flex gap-3 mt-auto">
         <Link
-          href={`/imovel/${imovel.id}/tour`}
+          href={`/imovel/${imovel.id}`}
           className="flex-[3] bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-100 group/btn"
         >
           <Camera
