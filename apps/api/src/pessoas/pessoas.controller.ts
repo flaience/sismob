@@ -20,7 +20,7 @@ export class PessoasController {
     private readonly pessoasService: PessoasService,
   ) {}
 
-  // 1. ROTA PÚBLICA: Identifica a imobiliária pelo domínio (Usada no TenantContext)
+  // 1. ROTA PÚBLICA: Identifica a imobiliária pelo domínio (Tenant)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
     const imobiliaria = await this.pessoasService.findImobiliariaByHost(host);
@@ -35,24 +35,20 @@ export class PessoasController {
   // 2. ROTA PROTEGIDA: Lista pessoas por papel (Ex: proprietários)
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  async findAll(
-    @Query('papel') papel: string,
-    @Query('imobiliariaId') imobiliariaId: string, // Adicionamos este parâmetro
-    @Request() req: any,
-  ) {
-    // Se houver usuário logado, usa o ID do token.
-    // Se não, usa o ID que enviarmos na URL.
-    const idParaFiltrar = req.user?.imobiliariaId || imobiliariaId;
+  async findAll(@Query('papel') papel: string, @Request() req: any) {
+    // Pegamos o ID da imobiliária que foi injetado pela SupabaseStrategy
+    const imobiliariaId = req.user.imobiliariaId;
 
-    if (!idParaFiltrar) {
-      console.warn('⚠️ Chamada sem ID de imobiliária');
-      return [];
+    if (!imobiliariaId) {
+      throw new NotFoundException(
+        'Imobiliária não identificada no seu perfil de usuário.',
+      );
     }
 
-    return this.pessoasService.findByRole(papel, idParaFiltrar);
+    return this.pessoasService.findByRole(papel, imobiliariaId);
   }
 
-  // 3. ROTA PROTEGIDA: Cria novos usuários/clientes
+  // 3. ROTA PROTEGIDA: Cria novos registros (Só Admin/Corretor)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Post()
   async create(@Body() dto: any, @Request() req: any) {

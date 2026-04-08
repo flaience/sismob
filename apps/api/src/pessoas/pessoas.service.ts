@@ -14,11 +14,10 @@ export class PessoasService {
     private db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  // 1. Método para busca por papel (1=Admin, 2=Cliente, etc)
+  // Busca por papel e imobiliária (SaaS)
   async findByRole(papel: string, imobiliariaId: string) {
     try {
-      // Usamos a forma mais básica do Drizzle para não ter erro de tradução
-      const query = this.db
+      const results = await this.db
         .select()
         .from(schema.pessoas as any)
         .where(
@@ -27,36 +26,16 @@ export class PessoasService {
             eq((schema.pessoas as any).papel, papel),
           ),
         );
-
-      return await query;
+      return results;
     } catch (error) {
-      console.error('❌ Erro no SQL do Service:', error.message);
+      console.error('❌ Erro no Service findByRole:', error.message);
       return [];
     }
   }
 
-  // 2. Método exigido pelo Controller para criar usuários/corretores
-  async createUsuario(dto: any, imobiliariaId: string) {
-    try {
-      return await (this.db.insert(schema.pessoas as any) as any)
-        .values({
-          ...dto,
-          imobiliariaId,
-          papel: dto.papel || '1', // Default para usuário
-        })
-        .returning();
-    } catch (error) {
-      console.error('❌ Erro ao criar usuário:', error);
-      throw new InternalServerErrorException(
-        'Erro ao salvar usuário no banco.',
-      );
-    }
-  }
-
-  // 3. Método para o sistema identificar a imobiliária pelo domínio
+  // Identificação pelo domínio (Público)
   async findImobiliariaByHost(host: string) {
     try {
-      // O 'as any' no schema.pessoas resolve o erro de 'not assignable'
       const results = await this.db
         .select()
         .from(schema.pessoas as any)
@@ -70,10 +49,22 @@ export class PessoasService {
 
       return results[0] || null;
     } catch (error) {
-      console.error('❌ Erro na busca por domínio:', error.message);
-      throw new InternalServerErrorException(
-        'Falha ao identificar imobiliária.',
-      );
+      console.error('❌ Erro no Service findImobiliariaByHost:', error.message);
+      return null;
+    }
+  }
+
+  // Criação de usuários
+  async createUsuario(dto: any, imobiliariaId: string) {
+    try {
+      return await (this.db.insert(schema.pessoas as any) as any)
+        .values({
+          ...dto,
+          imobiliariaId,
+        })
+        .returning();
+    } catch (error) {
+      throw new InternalServerErrorException('Erro ao salvar usuário.');
     }
   }
 }
