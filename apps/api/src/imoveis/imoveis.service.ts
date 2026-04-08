@@ -13,37 +13,60 @@ export class ImoveisService {
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
-    private filesService: FilesService,
+    private filesService: FilesService, // Serviço que criamos para o Supabase Storage
   ) {}
 
-  async createWithImages(
-    dto: any,
-    files: Express.Multer.File[],
-    userId: string,
-  ) {
+  /**
+   * BUSCA DE IMÓVEIS (PÚBLICA)
+   * Filtra automaticamente pela imobiliária identificada pelo domínio
+   */
+  async findAll(imobiliariaId: string) {
+    try {
+      // Usamos a Query API do Drizzle com casting para evitar erros de tipo no Monorepo
+      const queryApi = this.db.query as any;
+
+      return await queryApi.imoveis.findMany({
+        where: eq(schema.imoveis.imobiliariaId as any, imobiliariaId),
+        with: {
+          midias: true,
+          infraestrutura: true,
+          instrucoes: true,
+          proprietario: true,
+        },
+      });
+    } catch (error) {
+      console.error('❌ Erro ao buscar imóveis:', error.message);
+      throw new InternalServerErrorException('Erro ao listar imóveis.');
+    }
+  }
+
+  /**
+   * CRIAÇÃO DE IMÓVEL COM IMAGENS (RESTRITA)
+   * Salva o imóvel, faz upload das fotos e vincula os percursos
+   */
+  async createWithImages(dto: any, files: any[], userId: string) {
     try {
       return await this.db.transaction(async (tx) => {
-        // 1. Buscar a imobiliária usando select tradicional (mais estável que query)
-        const usuariosFiltrados = await tx
+        // 1. Identificar a imobiliária do corretor que está logado
+        const usuarios = await tx
           .select()
           .from(schema.pessoas as any)
           .where(eq(schema.pessoas.id as any, userId))
           .limit(1);
 
-        const usuario = usuariosFiltrados[0];
-
-        if (!usuario || !usuario.imobiliariaId) {
-          throw new Error('Usuário não vinculado a uma imobiliária.');
+        const corretor = usuarios[0];
+        if (!corretor || !corretor.imobiliariaId) {
+          throw new Error('Corretor não possui imobiliária vinculada.');
         }
 
-        // 2. Inserir o Imóvel
+        // 2. Salvar o registro principal do Imóvel
         const [novoImovel] = await (tx.insert(schema.imoveis as any) as any)
           .values({
             titulo: dto.titulo,
             descricao: dto.descricao,
             tipo: dto.tipo,
             status: dto.status || 'disponivel',
-            imobiliariaId: usuario.imobiliariaId,
+            imobiliariaId: corretor.imobiliariaId,
             proprietarioId: dto.proprietarioId,
             precoVenda: dto.precoVenda?.toString(),
             precoAluguel: dto.precoAluguel?.toString(),
@@ -55,86 +78,63 @@ export class ImoveisService {
           })
           .returning();
 
-        // 3. Salvar Infraestrutura
-        await tx.insert(schema.infraestrutura as any).values({
+        // 3. Salvar Infraestrutura (AC, Água Quente, etc)
+        await (tx.insert(schema.infraestrutura as any) as any).values({
           imovelId: novoImovel.id,
           temAguaQuente: dto.temAguaQuente === 'true',
           temEsperaSplit: dto.temEsperaSplit === 'true',
           mobiliado: dto.mobiliado === 'true',
-        } as any);
+        });
 
-        // 4. Upload e registro de Mídias
+        // 4. Processar Upload de Fotos para o Supabase Storage
         if (files && files.length > 0) {
           for (const [index, file] of files.entries()) {
+            // Upload via FilesService
             const url = await this.filesService.uploadFoto(
               file,
               `imoveis/${novoImovel.id}`,
             );
 
-            // Verifica se o arquivo atual foi marcado como 360
-            const e360 = dto.is360?.includes(file.originalname);
+            // Verifica se o front-end marcou esta foto como sendo a 360
+            const ehFoto360 = dto.is360?.includes(file.originalname);
 
-            await tx.insert(schema.midiaImovel as any).values({
+            await (tx.insert(schema.midiaImovel as any) as any).values({
               imovelId: novoImovel.id,
               url: url,
-              tipo: e360 ? 'foto_360' : 'foto_interna',
-              isCapa: index === 0,
+              tipo: ehFoto360 ? 'foto_360' : 'foto_interna',
+              isCapa: index === 0, // A primeira foto sempre será a capa por padrão
               ordem: index,
-            } as any);
+            });
           }
         }
 
-        // 5. Salvar Instruções de Chegada
+        // 5. Salvar Instruções de Percurso (Auxílio de Chegada)
         if (dto.instrucoes) {
-          try {
-            const instrucoes =
-              typeof dto.instrucoes === 'string'
-                ? JSON.parse(dto.instrucoes)
-                : dto.instrucoes;
-            if (Array.isArray(instrucoes) && instrucoes.length > 0) {
-              const dataIns = instrucoes.map((ins: any) => ({
-                imovelId: novoImovel.id,
-                ordem: ins.ordem,
-                titulo: ins.titulo,
-                descricao: ins.descricao,
-                fotoUrl: ins.fotoUrl,
-              }));
-              await tx.insert(schema.instrucoesChegada as any).values(dataIns);
-            }
-          } catch (e) {
-            console.warn(
-              '⚠️ Falha ao processar instruções de chegada:',
-              e.message,
+          const instrucoesRaw =
+            typeof dto.instrucoes === 'string'
+              ? JSON.parse(dto.instrucoes)
+              : dto.instrucoes;
+          if (Array.isArray(instrucoesRaw) && instrucoesRaw.length > 0) {
+            const dataIns = instrucoesRaw.map((ins: any) => ({
+              imovelId: novoImovel.id,
+              ordem: ins.ordem,
+              titulo: ins.titulo,
+              descricao: ins.descricao,
+            }));
+            await (tx.insert(schema.instrucoesChegada as any) as any).values(
+              dataIns,
             );
           }
         }
 
-        return { message: 'Imóvel cadastrado com sucesso!', id: novoImovel.id };
+        return {
+          message: 'Imóvel e Diferenciais criados com sucesso!',
+          id: novoImovel.id,
+        };
       });
     } catch (error) {
-      console.error('❌ ERRO NO CADASTRO:', error);
+      console.error('❌ ERRO NO PROCESSO DE CADASTRO:', error.message);
       throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  // apps/api/src/imoveis/imoveis.service.ts
-
-  async findAll(imobiliariaId: string) {
-    try {
-      console.log('📡 Buscando imóveis para a imobiliária:', imobiliariaId);
-
-      // Usamos o select tradicional (sem o .query)
-      // Isso ignora qualquer erro de relação (with) que esteja causando o erro 500
-      const results = await this.db
-        .select()
-        .from(schema.imoveis as any)
-        .where(eq((schema.imoveis as any).imobiliariaId, imobiliariaId));
-
-      return results;
-    } catch (error) {
-      // Esse erro vai aparecer no terminal preto do Railway
-      console.error('❌ ERRO NO BANCO AO BUSCAR IMÓVEIS:', error.message);
-      throw new InternalServerErrorException('Erro ao listar imóveis.');
     }
   }
 }

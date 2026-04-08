@@ -1,37 +1,44 @@
 import {
   Controller,
+  Get,
   Post,
-  Get, // <--- ADICIONADO
-  Query, // <--- ADICIONADO
   Body,
+  Query,
   UseInterceptors,
   UploadedFiles,
   UseGuards,
   Request,
+  Inject,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ImoveisService } from './imoveis.service';
 import { AuthGuard } from '@nestjs/passport';
+import { ImoveisService } from './imoveis.service';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('imoveis')
 export class ImoveisController {
-  constructor(private readonly imoveisService: ImoveisService) {}
+  constructor(
+    @Inject(ImoveisService)
+    private readonly imoveisService: ImoveisService,
+  ) {}
 
-  // 1. ROTA DE LISTAGEM (O que o site usa para mostrar os cards)
-  @Get() // <--- ESTA É A PORTA QUE ESTAVA FALTANDO
+  // 1. ROTA PÚBLICA: Listagem de imóveis filtrada por imobiliária
+  @Get()
   async findAll(@Query('imobiliariaId') imobiliariaId: string) {
     return this.imoveisService.findAll(imobiliariaId);
   }
 
-  // 2. ROTA DE CRIAÇÃO (O que o corretor usa)
+  // 2. ROTA PROTEGIDA: Cadastro de imóvel com upload de imagens
   @Post()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @UseInterceptors(FilesInterceptor('imagens'))
   async create(
     @Body() data: any,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles() files: any[], // Tipado como any para evitar erro de Multer no build
     @Request() req: any,
   ) {
-    return this.imoveisService.createWithImages(data, files, req.user.userId);
+    // O userId vem do token, para sabermos quem cadastrou
+    const userId = req.user.userId;
+    return this.imoveisService.createWithImages(data, files, userId);
   }
 }

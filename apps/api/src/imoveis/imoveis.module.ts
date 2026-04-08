@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ImoveisService } from './imoveis.service';
 import { ImoveisController } from './imoveis.controller';
+import { ImoveisService } from './imoveis.service';
+import { FilesModule } from '../files/files.module'; // <--- OBRIGATÓRIO
 
 @Module({
+  imports: [FilesModule], // <--- Permite que o ImoveisService use o FilesService
   controllers: [ImoveisController],
   providers: [ImoveisService],
-  exports: [ImoveisService], // Permite que outros módulos usem este serviço se necessário
 })
 export class ImoveisModule {}

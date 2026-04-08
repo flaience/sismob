@@ -6,6 +6,7 @@ import {
   Query,
   UseGuards,
   Request,
+  NotFoundException,
   Inject,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -15,34 +16,36 @@ import { RolesGuard } from '../auth/roles.guard';
 @Controller('pessoas')
 export class PessoasController {
   constructor(
-    // Forçamos o NestJS a injetar o serviço pelo Token da Classe
     @Inject(PessoasService)
     private readonly pessoasService: PessoasService,
   ) {}
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Post()
-  async create(@Body() dto: any, @Request() req: any) {
-    // Agora o .createUsuario existe no Service!
-    return this.pessoasService.createUsuario(dto, req.user.imobiliariaId);
-  }
-
-  // Rota de identificação pública (SEM LOGIN)
+  // 1. ROTA PÚBLICA: Identifica a imobiliária pelo domínio (Usada no TenantContext)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
-    // Adicionamos uma proteção extra para depuração
-    if (!this.pessoasService) {
-      throw new Error(
-        'O NestJS falhou em injetar o PessoasService automaticamente.',
+    const imobiliaria = await this.pessoasService.findImobiliariaByHost(host);
+    if (!imobiliaria) {
+      throw new NotFoundException(
+        'Nenhuma imobiliária vinculada a este domínio.',
       );
     }
-
-    return this.pessoasService.findImobiliariaByHost(host);
+    return imobiliaria;
   }
 
+  // 2. ROTA PROTEGIDA: Lista pessoas por papel (Ex: proprietários)
   @UseGuards(AuthGuard('jwt'))
   @Get()
   async findAll(@Query('papel') papel: string, @Request() req: any) {
-    return this.pessoasService.findByRole(papel, req.user.imobiliariaId);
+    // req.user vem da nossa SupabaseStrategy
+    const imobiliariaId = req.user.imobiliariaId;
+    return this.pessoasService.findByRole(papel, imobiliariaId);
+  }
+
+  // 3. ROTA PROTEGIDA: Cria novos usuários/clientes
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Post()
+  async create(@Body() dto: any, @Request() req: any) {
+    const imobiliariaId = req.user.imobiliariaId;
+    return this.pessoasService.createUsuario(dto, imobiliariaId);
   }
 }
