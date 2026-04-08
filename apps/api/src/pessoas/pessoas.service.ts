@@ -17,11 +17,8 @@ export class PessoasService {
   // 1. Método para busca por papel (1=Admin, 2=Cliente, etc)
   async findByRole(papel: string, imobiliariaId: string) {
     try {
-      console.log(
-        `🔍 Buscando papel ${papel} para imobiliaria ${imobiliariaId}`,
-      );
-
-      const results = await this.db
+      // Usamos a forma mais básica do Drizzle para não ter erro de tradução
+      const query = this.db
         .select()
         .from(schema.pessoas as any)
         .where(
@@ -31,10 +28,9 @@ export class PessoasService {
           ),
         );
 
-      console.log(`✅ Encontrados: ${results.length} registros`);
-      return results;
+      return await query;
     } catch (error) {
-      console.error('❌ Erro ao buscar pessoas por papel:', error.message);
+      console.error('❌ Erro no SQL do Service:', error.message);
       return [];
     }
   }

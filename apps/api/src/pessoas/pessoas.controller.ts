@@ -36,9 +36,16 @@ export class PessoasController {
   @UseGuards(AuthGuard('jwt'))
   @Get()
   async findAll(@Query('papel') papel: string, @Request() req: any) {
-    // req.user vem da nossa SupabaseStrategy
-    const imobiliariaId = req.user.imobiliariaId;
-    return this.pessoasService.findByRole(papel, imobiliariaId);
+    // ESTA LINHA É A PROVA REAL:
+    console.log('👤 Usuário Logado:', req.user.email);
+    console.log('🏢 ID da Imobiliária extraído:', req.user.imobiliariaId);
+    console.log('🏷️ Papel solicitado:', papel);
+
+    if (!req.user.imobiliariaId) {
+      console.error('❌ ERRO: O ID da imobiliária não veio no Token!');
+    }
+
+    return this.pessoasService.findByRole(papel, req.user.imobiliariaId);
   }
 
   // 3. ROTA PROTEGIDA: Cria novos usuários/clientes
