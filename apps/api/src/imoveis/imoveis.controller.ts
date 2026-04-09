@@ -1,3 +1,4 @@
+import { RolesGuard } from './../auth/roles.guard';
 import {
   Controller,
   Get,
@@ -14,6 +15,7 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ImoveisService } from './imoveis.service';
 import { AuthGuard } from '@nestjs/passport';
+import { Delete } from '@nestjs/common'; // Adicione Delete no import
 
 @Controller('imoveis')
 export class ImoveisController {
@@ -51,5 +53,11 @@ export class ImoveisController {
 
     // Pegamos o imobiliariaId que o front envia para garantir o multi-tenant
     return this.imoveisService.upsertImovel(data, allFiles, data.imobiliariaId);
+  }
+  @Delete(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard) // Proteção total: Login + Admin/Corretor
+  async remove(@Param('id') id: string, @Request() req: any) {
+    // Usamos o ID da imobiliária que vem do Token para segurança
+    return this.imoveisService.remove(+id, req.user.imobiliariaId);
   }
 }

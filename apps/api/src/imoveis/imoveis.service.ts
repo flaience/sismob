@@ -108,4 +108,23 @@ export class ImoveisService {
       throw new InternalServerErrorException(e.message);
     }
   }
+
+  async remove(id: number, imobiliariaId: string) {
+    try {
+      // Deleta garantindo que o imóvel pertence àquela imobiliária
+      const result = await this.db
+        .delete(schema.imoveis as any)
+        .where(
+          and(
+            eq((schema.imoveis as any).id, id),
+            eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
+          ),
+        );
+
+      return { message: 'Imóvel removido com sucesso' };
+    } catch (error) {
+      console.error('❌ Erro ao deletar imóvel:', error.message);
+      throw new InternalServerErrorException('Falha ao excluir o registro.');
+    }
+  }
 }

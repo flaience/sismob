@@ -81,57 +81,45 @@ export default function NovoImovelPage() {
   // 2. Envio do Formulário (Multipart/Form-Data)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 1. Verificação Crítica
-    if (!tenant?.id)
-      return alert("Erro: Imobiliária não identificada pelo domínio.");
-    if (!dados.proprietarioId)
-      return alert("Por favor, selecione um proprietário.");
-
+    if (!tenant?.id) return alert("Imobiliária não identificada.");
     setLoading(true);
 
     try {
       const formData = new FormData();
 
-      // 2. Anexar o ID da imobiliária (O que a API está esperando no 3º parâmetro)
+      // 1. Dados básicos
       formData.append("imobiliariaId", tenant.id);
+      Object.entries(dados).forEach(([key, val]) => formData.append(key, val));
 
-      // 3. Anexar dados básicos
-      formData.append("titulo", dados.titulo);
-      formData.append("descricao", dados.descricao);
-      formData.append("tipo", dados.tipo);
-      formData.append("precoVenda", dados.precoVenda);
-      formData.append("areaPrivativa", dados.areaPrivativa);
-      formData.append("enderecoOriginal", dados.enderecoOriginal);
-      formData.append("proprietarioId", dados.proprietarioId);
+      // 2. Anexar arquivos nos campos corretos (O SEGREDO DA VITÓRIA)
+      files.forEach((file, index) => {
+        if (foto360Index === index) {
+          // Se for a foto marcada como 360, vai para o campo 'foto360'
+          formData.append("foto360", file);
+          formData.append("capaNome", file.name); // Opcional: define a 360 como capa
+        } else {
+          // Se for foto normal, vai para o campo 'galeria'
+          formData.append("galeria", file);
+        }
+      });
 
-      // 4. Anexar Infraestrutura
+      // 3. Infraestrutura
       formData.append("temAguaQuente", String(infra.temAguaQuente));
       formData.append("temEsperaSplit", String(infra.temEsperaSplit));
       formData.append("mobiliado", String(infra.mobiliado));
 
-      // 5. Anexar Imagens
-      files.forEach((file, index) => {
-        formData.append("imagens", file);
-        if (foto360Index === index) {
-          formData.append("is360", file.name); // Marca qual arquivo é o 360
-        }
-      });
-
-      // 6. Enviar para a API aberta (sem AuthGuard)
+      // 4. Envio para a API
       const response = await api.post("/imoveis", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      console.log("✅ Sucesso:", response.data);
-      alert("Imóvel e fotos cadastrados com sucesso!");
+      alert("Imóvel cadastrado com sucesso!");
       router.push("/");
     } catch (error: any) {
-      console.error(
-        "❌ Erro no cadastro:",
-        error.response?.data || error.message,
-      );
-      alert("Erro ao salvar imóvel. Verifique o console.");
+      // LOG DETALHADO PARA VOCÊ VER O QUE O NESTJS REJEITOU
+      const mensagemErro = error.response?.data?.message || error.message;
+      console.error("❌ Detalhes do Erro 400:", mensagemErro);
+      alert("Erro no cadastro: " + JSON.stringify(mensagemErro));
     } finally {
       setLoading(false);
     }
