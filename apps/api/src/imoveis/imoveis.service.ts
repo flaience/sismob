@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { FilesService } from '../files/files.service';
 
 @Injectable()
@@ -13,7 +13,10 @@ export class ImoveisService {
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
-    private filesService: FilesService,
+
+    // USAMOS O @Inject AQUI PARA ELIMINAR O ERRO DE UNDEFINED
+    @Inject(FilesService)
+    private readonly filesService: FilesService,
   ) {}
 
   // BUSCA BÁSICA: Sem Joins complexos para garantir que o 500 suma
