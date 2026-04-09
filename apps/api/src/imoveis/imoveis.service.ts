@@ -53,20 +53,22 @@ export class ImoveisService {
         }
 
         // 2. Inserir o Imóvel
+        // Dentro do transaction:
         const [novoImovel] = await (tx.insert(schema.imoveis as any) as any)
           .values({
             titulo: dto.titulo,
-            descricao: dto.descricao,
-            tipo: dto.tipo,
-            status: dto.status || 'disponivel',
-            imobiliariaId: imobiliariaId, // <--- USA O ID ENVIADO PELO FRONT
-            proprietarioId: dto.proprietarioId,
-            precoVenda: dto.precoVenda?.toString(),
-            areaPrivativa: dto.areaPrivativa?.toString(),
-            enderecoOriginal: dto.enderecoOriginal,
-            lat: dto.lat?.toString() || '0',
-            lng: dto.lng?.toString() || '0',
-            tourVirtualUrl: dto.tourVirtualUrl,
+            descricao: dto.descricao || '',
+            tipo: dto.tipo || 'casa',
+            status: 'disponivel',
+            imobiliariaId: imobiliariaId, // O ID que o front mandou
+            proprietarioId: dto.proprietarioId, // UUID do Dr. João
+            precoVenda: dto.precoVenda ? dto.precoVenda.toString() : '0',
+            areaPrivativa: dto.areaPrivativa
+              ? dto.areaPrivativa.toString()
+              : '0',
+            enderecoOriginal: dto.enderecoOriginal || 'Endereço não informado',
+            lat: '0',
+            lng: '0',
           })
           .returning();
         // 3. Salvar Infraestrutura (AC, Água Quente, etc)

@@ -81,40 +81,57 @@ export default function NovoImovelPage() {
   // 2. Envio do Formulário (Multipart/Form-Data)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenant?.id) return alert("Imobiliária não identificada.");
+
+    // 1. Verificação Crítica
+    if (!tenant?.id)
+      return alert("Erro: Imobiliária não identificada pelo domínio.");
+    if (!dados.proprietarioId)
+      return alert("Por favor, selecione um proprietário.");
+
     setLoading(true);
 
     try {
       const formData = new FormData();
 
-      // ANEXA O ID DA IMOBILIÁRIA (O segredo para o banco aceitar)
+      // 2. Anexar o ID da imobiliária (O que a API está esperando no 3º parâmetro)
       formData.append("imobiliariaId", tenant.id);
 
-      // Anexa o restante dos dados
-      Object.entries(dados).forEach(([key, val]) => formData.append(key, val));
+      // 3. Anexar dados básicos
+      formData.append("titulo", dados.titulo);
+      formData.append("descricao", dados.descricao);
+      formData.append("tipo", dados.tipo);
+      formData.append("precoVenda", dados.precoVenda);
+      formData.append("areaPrivativa", dados.areaPrivativa);
+      formData.append("enderecoOriginal", dados.enderecoOriginal);
+      formData.append("proprietarioId", dados.proprietarioId);
 
-      // Anexa infraestrutura como string (o NestJS vai converter)
+      // 4. Anexar Infraestrutura
       formData.append("temAguaQuente", String(infra.temAguaQuente));
       formData.append("temEsperaSplit", String(infra.temEsperaSplit));
       formData.append("mobiliado", String(infra.mobiliado));
 
-      // Anexa arquivos e identifica qual é o 360
+      // 5. Anexar Imagens
       files.forEach((file, index) => {
         formData.append("imagens", file);
         if (foto360Index === index) {
-          formData.append("is360", file.name); // Envia o nome do arquivo que é 360
+          formData.append("is360", file.name); // Marca qual arquivo é o 360
         }
       });
 
-      await api.post("/imoveis", formData, {
+      // 6. Enviar para a API aberta (sem AuthGuard)
+      const response = await api.post("/imoveis", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Imóvel cadastrado com sucesso!");
+      console.log("✅ Sucesso:", response.data);
+      alert("Imóvel e fotos cadastrados com sucesso!");
       router.push("/");
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao cadastrar imóvel.");
+    } catch (error: any) {
+      console.error(
+        "❌ Erro no cadastro:",
+        error.response?.data || error.message,
+      );
+      alert("Erro ao salvar imóvel. Verifique o console.");
     } finally {
       setLoading(false);
     }
