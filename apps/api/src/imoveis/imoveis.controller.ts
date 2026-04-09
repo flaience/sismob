@@ -4,39 +4,52 @@ import {
   Post,
   Body,
   Query,
+  Param,
   UseInterceptors,
   UploadedFiles,
-  Inject, // <--- Importe o Inject
+  UseGuards,
+  Request,
+  Inject,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ImoveisService } from './imoveis.service';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('imoveis')
 export class ImoveisController {
   constructor(
-    // USAMOS O @Inject AQUI PARA FORÇAR A ENTRADA DO SERVIÇO
     @Inject(ImoveisService)
     private readonly imoveisService: ImoveisService,
   ) {}
 
   @Get()
   async findAll(@Query('imobiliariaId') imobiliariaId: string) {
-    if (!this.imoveisService) {
-      throw new Error('Erro de Injeção: ImoveisService está undefined');
-    }
     return this.imoveisService.findAll(imobiliariaId);
   }
 
+  @Get(':id')
+  async findOne(
+    @Param('id') id: string,
+    @Query('imobiliariaId') imobId: string,
+  ) {
+    return this.imoveisService.findOne(+id, imobId);
+  }
+
   @Post()
-  @UseInterceptors(FilesInterceptor('imagens'))
-  async create(@Body() data: any, @UploadedFiles() files: any[]) {
-    if (!this.imoveisService) {
-      throw new Error('Erro de Injeção: ImoveisService está undefined');
-    }
-    return this.imoveisService.createWithImages(
-      data,
-      files,
-      data.imobiliariaId,
-    );
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'galeria', maxCount: 15 },
+      { name: 'foto360', maxCount: 5 },
+    ]),
+  )
+  async create(
+    @Body() data: any,
+    @UploadedFiles() files: { galeria?: any[]; foto360?: any[] },
+  ) {
+    // Unificamos os arquivos para o service processar
+    const allFiles = [...(files.galeria || []), ...(files.foto360 || [])];
+
+    // Pegamos o imobiliariaId que o front envia para garantir o multi-tenant
+    return this.imoveisService.upsertImovel(data, allFiles, data.imobiliariaId);
   }
 }

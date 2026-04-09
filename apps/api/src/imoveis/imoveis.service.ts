@@ -2,10 +2,11 @@ import {
   Injectable,
   Inject,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { FilesService } from '../files/files.service';
 
 @Injectable()
@@ -13,83 +14,98 @@ export class ImoveisService {
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
-
-    // USAMOS O @Inject AQUI PARA ELIMINAR O ERRO DE UNDEFINED
     @Inject(FilesService)
     private readonly filesService: FilesService,
   ) {}
 
-  // BUSCA BÁSICA: Sem Joins complexos para garantir que o 500 suma
+  // LISTAGEM (Pública/Multi-tenant)
   async findAll(imobiliariaId: string) {
     try {
-      if (!imobiliariaId) return [];
-
-      // Usamos o query.findMany para trazer os 'filhos' (midias, infra, etc)
       const queryApi = this.db.query as any;
-
-      const resultados = await queryApi.imoveis.findMany({
-        where: eq(schema.imoveis.imobiliariaId as any, imobiliariaId),
+      return await queryApi.imoveis.findMany({
+        where: eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
         with: {
-          midias: true, // <--- ISSO TRARÁ AS FOTOS PARA O CARD
-          infraestrutura: true, // <--- ISSO TRARÁ OS ÍCONES
-          instrucoes: true, // <--- ISSO TRARÁ O PERCURSO
+          midias: true,
+          infraestrutura: true,
         },
       });
-
-      return resultados;
     } catch (error) {
-      console.error('❌ Erro ao buscar imóveis com mídias:', error.message);
+      console.error('❌ Erro no findAll:', error.message);
       return [];
     }
   }
 
-  // GRAVAÇÃO RESILIENTE
-  async createWithImages(dto: any, files: any[], imobiliariaId: string) {
+  // BUSCA POR ID (Para Edição)
+  async findOne(id: number, imobiliariaId: string) {
+    const queryApi = this.db.query as any;
+    const result = await queryApi.imoveis.findFirst({
+      where: and(
+        eq((schema.imoveis as any).id, id),
+        eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
+      ),
+      with: { midias: true, infraestrutura: true, instrucoes: true },
+    });
+    if (!result) throw new NotFoundException('Imóvel não encontrado.');
+    return result;
+  }
+
+  // UPSERT (Cria ou Atualiza com Mídia Separada)
+  async upsertImovel(dto: any, allFiles: any[], imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
-        // 1. Inserir o Imóvel
-        const [novoImovel] = await (tx.insert(schema.imoveis as any) as any)
-          .values({
-            titulo: dto.titulo,
-            descricao: dto.descricao || '',
-            tipo: dto.tipo || 'casa',
-            status: 'disponivel',
-            imobiliariaId: imobiliariaId,
-            proprietarioId: dto.proprietarioId,
-            precoVenda: dto.precoVenda ? dto.precoVenda.toString() : '0',
-            areaPrivativa: dto.areaPrivativa
-              ? dto.areaPrivativa.toString()
-              : '0',
-            enderecoOriginal: dto.enderecoOriginal || 'Não informado',
-            lat: '0',
-            lng: '0',
-          })
-          .returning();
+        const isUpdate = !!dto.id;
+        let idImovel = isUpdate ? Number(dto.id) : null;
 
-        // 2. Tenta salvar mídias apenas se houver arquivos
-        if (files && files.length > 0) {
-          for (const [index, file] of files.entries()) {
+        const dadosBase = {
+          titulo: dto.titulo,
+          descricao: dto.descricao,
+          tipo: dto.tipo,
+          imobiliariaId,
+          proprietarioId: dto.proprietarioId,
+          precoVenda: dto.precoVenda?.toString(),
+          areaPrivativa: dto.areaPrivativa?.toString(),
+          enderecoOriginal: dto.enderecoOriginal,
+        };
+
+        // 1. Grava ou Atualiza o Imóvel
+        if (isUpdate) {
+          await tx
+            .update(schema.imoveis as any)
+            .set(dadosBase)
+            .where(eq((schema.imoveis as any).id, idImovel));
+        } else {
+          const [novo] = await (tx.insert(schema.imoveis as any) as any)
+            .values(dadosBase)
+            .returning();
+          idImovel = novo.id;
+        }
+
+        // 2. Processa os Arquivos (Galeria e 360)
+        if (allFiles && allFiles.length > 0) {
+          for (const file of allFiles) {
             const url = await this.filesService.uploadFoto(
               file,
-              `imoveis/${novoImovel.id}`,
+              `imoveis/${idImovel}`,
             );
-            const eh360 = dto.is360?.includes(file.originalname);
+
+            // Lógica de Separação sugerida por você:
+            const eh360 = file.fieldname === 'foto360';
+            const ehCapa = file.originalname === dto.capaNome;
 
             await (tx.insert(schema.midiaImovel as any) as any).values({
-              imovelId: novoImovel.id,
-              url: url,
+              imovelId: idImovel,
+              url,
               tipo: eh360 ? 'foto_360' : 'foto_interna',
-              isCapa: index === 0,
-              ordem: index,
+              isCapa: ehCapa,
             });
           }
         }
 
-        return novoImovel;
+        return { id: idImovel, message: 'Sucesso!' };
       });
-    } catch (error) {
-      console.error('❌ ERRO NO BANCO (Create):', error.message);
-      throw new InternalServerErrorException(error.message);
+    } catch (e) {
+      console.error('❌ Erro no Upsert:', e.message);
+      throw new InternalServerErrorException(e.message);
     }
   }
 }
