@@ -108,9 +108,12 @@ export default function NovoImovelPage() {
 
       // 3. Imagens (Aqui usamos APPEND porque são múltiplos arquivos)
       files.forEach((file, index) => {
-        formData.append("imagens", file);
         if (foto360Index === index) {
-          formData.set("is360", file.name);
+          // O nome deve ser exatamente 'foto360'
+          formData.append("foto360", file);
+        } else {
+          // O nome deve ser exatamente 'galeria'
+          formData.append("galeria", file);
         }
       });
 

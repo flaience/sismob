@@ -32,15 +32,18 @@ export default function ImovelCard({
   }, []);
 
   const handleDelete = async () => {
-    if (!confirm("Tem certeza que deseja excluir este imóvel permanentemente?"))
-      return;
+    if (!confirm("Confirmar exclusão?")) return;
 
     try {
-      await api.delete(`/imoveis/${imovel.id}`);
-      alert("Imóvel removido!");
-      if (refresh) refresh(); // Atualiza a lista na home
+      // Passamos o imobiliariaId como parâmetro para a rota destravada
+      await api.delete(`/imoveis/${imovel.id}`, {
+        params: { imobiliariaId: imovel.imobiliariaId },
+      });
+      alert("Removido com sucesso!");
+      if (refresh) refresh();
     } catch (error) {
-      alert("Erro ao excluir imóvel. Verifique suas permissões.");
+      console.error("Erro ao deletar:", error);
+      alert("Erro técnico ao excluir.");
     }
   };
 
