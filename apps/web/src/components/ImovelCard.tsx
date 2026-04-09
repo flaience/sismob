@@ -30,13 +30,16 @@ export default function ImovelCard({ imovel }: ImovelCardProps) {
   const imagemCapa =
     imovel.midias?.find((m) => m.isCapa)?.url || imovel.midias?.[0]?.url;
 
+  const fotoExibida =
+    imovel.midias?.find((m: any) => m.isCapa)?.url || imovel.midias?.[0]?.url;
+
   return (
     <motion.div
       whileHover={{ y: -10 }}
       className="group bg-white rounded-[2.5rem] p-5 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 flex flex-col h-full"
     >
       {/* 1. CONTAINER DA IMAGEM */}
-
+      {/* 
       <div className="relative h-64 w-full rounded-[2rem] overflow-hidden bg-indigo-50">
         {imagemCapa ? (
           <Image
@@ -48,6 +51,20 @@ export default function ImovelCard({ imovel }: ImovelCardProps) {
             priority={false} // Carrega apenas quando necessário (Lazy Load)
             placeholder="blur" // Mostra um borrão enquanto carrega
             blurDataURL="data:image/png;base64,..." // Miniatura minúscula
+          />
+        ) : (
+          <Home className="absolute inset-0 m-auto text-indigo-200 w-16 h-16" />
+        )}
+      </div> */}
+      // Dentro do ImovelCard, antes do return: // No JSX, onde aparece a
+      imagem:
+      <div className="relative h-64 w-full rounded-[2rem] overflow-hidden bg-indigo-50">
+        {fotoExibida ? (
+          <Image
+            src={fotoExibida}
+            alt={imovel.titulo}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform duration-700"
           />
         ) : (
           <Home className="absolute inset-0 m-auto text-indigo-200 w-16 h-16" />

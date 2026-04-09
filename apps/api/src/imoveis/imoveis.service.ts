@@ -24,14 +24,22 @@ export class ImoveisService {
     try {
       if (!imobiliariaId) return [];
 
-      // Usamos o select mais puro do Drizzle
-      return await this.db
-        .select()
-        .from(schema.imoveis as any)
-        .where(eq((schema.imoveis as any).imobiliariaId, imobiliariaId));
+      // Usamos o query.findMany para trazer os 'filhos' (midias, infra, etc)
+      const queryApi = this.db.query as any;
+
+      const resultados = await queryApi.imoveis.findMany({
+        where: eq(schema.imoveis.imobiliariaId as any, imobiliariaId),
+        with: {
+          midias: true, // <--- ISSO TRARÁ AS FOTOS PARA O CARD
+          infraestrutura: true, // <--- ISSO TRARÁ OS ÍCONES
+          instrucoes: true, // <--- ISSO TRARÁ O PERCURSO
+        },
+      });
+
+      return resultados;
     } catch (error) {
-      console.error('❌ ERRO NO BANCO (FindAll):', error.message);
-      throw new InternalServerErrorException(error.message);
+      console.error('❌ Erro ao buscar imóveis com mídias:', error.message);
+      return [];
     }
   }
 
