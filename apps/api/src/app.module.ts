@@ -5,17 +5,17 @@ import { ImoveisModule } from './imoveis/imoveis.module'; // Importando o novo m
 import { PessoasModule } from './pessoas/pessoas.module'; // Importando
 
 import { AuthModule } from './auth/auth.module'; //
-
+import { FilesModule } from './files/files.module'; // Importando o
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../../.env',
     }),
     DatabaseModule,
     AuthModule,
     ImoveisModule,
     PessoasModule,
+    FilesModule,
   ],
 })
 export class AppModule {}
