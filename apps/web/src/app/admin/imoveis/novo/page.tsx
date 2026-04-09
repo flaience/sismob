@@ -29,6 +29,8 @@ export default function NovoImovelPage() {
     areaPrivativa: "",
     enderecoOriginal: "",
     proprietarioId: "",
+    lat: "", // <--- ADICIONE ESTA LINHA
+    lng: "", // <--- ADICIONE ESTA LINH
   });
 
   const [infra, setInfra] = useState({
@@ -87,8 +89,19 @@ export default function NovoImovelPage() {
     try {
       const formData = new FormData();
 
-      // 1. Dados básicos
+      // 1. Anexar dados básicos (titulo, tipo, proprietarioId, etc.)
+      Object.entries(dados).forEach(([key, val]) => {
+        // Só anexa se houver valor, senão manda vazio
+        formData.append(key, val || "");
+      });
+
+      // 2. Garantia de Coordenadas (Se estiverem vazias no formulário, manda "0")
+      // Isso resolve o erro de 'not-null constraint' do Postgres
+      if (!dados.lat) formData.set("lat", "0");
+      if (!dados.lng) formData.set("lng", "0");
+
       formData.append("imobiliariaId", tenant.id);
+
       Object.entries(dados).forEach(([key, val]) => formData.append(key, val));
 
       // 2. Anexar arquivos nos campos corretos (O SEGREDO DA VITÓRIA)

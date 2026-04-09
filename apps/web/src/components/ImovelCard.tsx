@@ -27,7 +27,7 @@ export default function ImovelCard({
   // Verifica se existe um usuário logado para mostrar o ícone de lixo
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsOwner(!!session);
+      setIsOwner(!!session?.user);
     });
   }, []);
 

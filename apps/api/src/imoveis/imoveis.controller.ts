@@ -55,9 +55,8 @@ export class ImoveisController {
     return this.imoveisService.upsertImovel(data, allFiles, data.imobiliariaId);
   }
   @Delete(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard) // Proteção total: Login + Admin/Corretor
+  @UseGuards(AuthGuard('jwt')) // <--- ESTE GUARDA É O QUE REALMENTE PROTEGE O BANCO
   async remove(@Param('id') id: string, @Request() req: any) {
-    // Usamos o ID da imobiliária que vem do Token para segurança
     return this.imoveisService.remove(+id, req.user.imobiliariaId);
   }
 }

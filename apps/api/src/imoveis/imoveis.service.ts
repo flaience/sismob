@@ -65,6 +65,8 @@ export class ImoveisService {
           precoVenda: dto.precoVenda?.toString(),
           areaPrivativa: dto.areaPrivativa?.toString(),
           enderecoOriginal: dto.enderecoOriginal,
+          lat: dto.lat?.toString() || '0', // Fallback para "0"
+          lng: dto.lng?.toString() || '0', // Fallback para "0"
         };
 
         // 1. Grava ou Atualiza o Imóvel
