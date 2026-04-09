@@ -29,10 +29,21 @@ export class RolesGuard implements CanActivate {
         where: eq(schema.pessoas.id as any, user.userId),
       });
 
-      if (!perfil) return false;
+      if (!perfil) {
+        console.error('❌ Perfil não encontrado para o ID:', user.userId);
+        return false;
+      }
 
-      // Papel '1' (Admin/Corretor) ou '5' (Imobiliária)
-      return perfil.papel === '1' || perfil.papel === '5';
+      // Permitir se for papel '1' (Admin/Corretor) OU '5' (Imobiliária)
+      // Usar String() garante a comparação correta
+      const papel = String(perfil.papel);
+      const temAcesso = papel === '1' || papel === '5';
+
+      console.log(
+        `🔐 Acesso para ${perfil.nome}: ${temAcesso ? '✅' : '❌'} (Papel: ${papel})`,
+      );
+
+      return temAcesso;
     } catch (error) {
       console.error('❌ Erro no RolesGuard:', error.message);
       return false;

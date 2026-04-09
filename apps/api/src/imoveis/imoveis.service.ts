@@ -53,23 +53,29 @@ export class ImoveisService {
   async upsertImovel(dto: any, allFiles: any[], imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
-        const isUpdate = !!dto.id;
+        // 1. LIMPEZA E SANITIZAÇÃO (Resolve o erro "casa,casa")
+        // Pegamos apenas o primeiro valor caso o FormData venha duplicado
+        const tipoLimpo = String(dto.tipo).split(',')[0];
+        const proprietarioIdLimpo = String(dto.proprietarioId).split(',')[0];
+
+        const isUpdate = !!dto.id && dto.id !== 'undefined';
         let idImovel = isUpdate ? Number(dto.id) : null;
 
         const dadosBase = {
           titulo: dto.titulo,
-          descricao: dto.descricao,
-          tipo: dto.tipo,
-          imobiliariaId,
-          proprietarioId: dto.proprietarioId,
-          precoVenda: dto.precoVenda?.toString(),
-          areaPrivativa: dto.areaPrivativa?.toString(),
-          enderecoOriginal: dto.enderecoOriginal,
-          lat: dto.lat?.toString() || '0', // Fallback para "0"
-          lng: dto.lng?.toString() || '0', // Fallback para "0"
+          descricao: dto.descricao || '',
+          tipo: tipoLimpo,
+          status: 'disponivel',
+          imobiliariaId: imobiliariaId,
+          proprietarioId: proprietarioIdLimpo,
+          precoVenda: dto.precoVenda?.toString() || '0',
+          areaPrivativa: dto.areaPrivativa?.toString() || '0',
+          enderecoOriginal: dto.enderecoOriginal || 'Endereço não informado',
+          lat: dto.lat?.toString() || '0',
+          lng: dto.lng?.toString() || '0',
         };
 
-        // 1. Grava ou Atualiza o Imóvel
+        // 2. GRAVAÇÃO OU ATUALIZAÇÃO DO IMÓVEL
         if (isUpdate) {
           await tx
             .update(schema.imoveis as any)
@@ -82,32 +88,50 @@ export class ImoveisService {
           idImovel = novo.id;
         }
 
-        // 2. Processa os Arquivos (Galeria e 360)
+        // 3. GRAVAÇÃO DA INFRAESTRUTURA
+        const infraDados = {
+          imovelId: idImovel,
+          temAguaQuente: String(dto.temAguaQuente) === 'true',
+          temEsperaSplit: String(dto.temEsperaSplit) === 'true',
+          mobiliado: String(dto.mobiliado) === 'true',
+        };
+
+        // Deletamos a infra antiga e criamos a nova (estratégia mais limpa para Upsert)
+        await tx
+          .delete(schema.infraestrutura as any)
+          .where(eq((schema.infraestrutura as any).imovelId, idImovel));
+        await tx.insert(schema.infraestrutura as any).values(infraDados);
+
+        // 4. PROCESSAMENTO DE MÍDIAS (FOTOS E TOUR 360)
         if (allFiles && allFiles.length > 0) {
           for (const file of allFiles) {
+            // Upload para o Supabase via seu FilesService
             const url = await this.filesService.uploadFoto(
               file,
               `imoveis/${idImovel}`,
             );
 
-            // Lógica de Separação sugerida por você:
+            // A Lógica de Separação sugerida por você:
             const eh360 = file.fieldname === 'foto360';
             const ehCapa = file.originalname === dto.capaNome;
 
             await (tx.insert(schema.midiaImovel as any) as any).values({
               imovelId: idImovel,
-              url,
+              url: url,
               tipo: eh360 ? 'foto_360' : 'foto_interna',
               isCapa: ehCapa,
             });
           }
         }
 
-        return { id: idImovel, message: 'Sucesso!' };
+        return {
+          id: idImovel,
+          message: isUpdate ? 'Imóvel atualizado!' : 'Imóvel cadastrado!',
+        };
       });
     } catch (e) {
-      console.error('❌ Erro no Upsert:', e.message);
-      throw new InternalServerErrorException(e.message);
+      console.error('❌ Erro no Upsert do Imóvel:', e.message);
+      throw new InternalServerErrorException(`Falha ao salvar: ${e.message}`);
     }
   }
 

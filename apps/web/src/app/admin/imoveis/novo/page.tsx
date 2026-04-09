@@ -89,55 +89,49 @@ export default function NovoImovelPage() {
     try {
       const formData = new FormData();
 
-      // 1. Anexar dados básicos (titulo, tipo, proprietarioId, etc.)
-      Object.entries(dados).forEach(([key, val]) => {
-        // Só anexa se houver valor, senão manda vazio
-        formData.append(key, val || "");
-      });
+      // 1. Usamos SET para garantir que cada campo seja ÚNICO (Evita o erro "casa,casa")
+      formData.set("imobiliariaId", tenant.id);
+      formData.set("titulo", dados.titulo);
+      formData.set("descricao", dados.descricao);
+      formData.set("tipo", dados.tipo); // Agora vai apenas "casa"
+      formData.set("precoVenda", dados.precoVenda);
+      formData.set("areaPrivativa", dados.areaPrivativa);
+      formData.set("enderecoOriginal", dados.enderecoOriginal);
+      formData.set("proprietarioId", dados.proprietarioId);
+      formData.set("lat", dados.lat || "0");
+      formData.set("lng", dados.lng || "0");
 
-      // 2. Garantia de Coordenadas (Se estiverem vazias no formulário, manda "0")
-      // Isso resolve o erro de 'not-null constraint' do Postgres
-      if (!dados.lat) formData.set("lat", "0");
-      if (!dados.lng) formData.set("lng", "0");
+      // 2. Infraestrutura
+      formData.set("temAguaQuente", String(infra.temAguaQuente));
+      formData.set("temEsperaSplit", String(infra.temEsperaSplit));
+      formData.set("mobiliado", String(infra.mobiliado));
 
-      formData.append("imobiliariaId", tenant.id);
-
-      Object.entries(dados).forEach(([key, val]) => formData.append(key, val));
-
-      // 2. Anexar arquivos nos campos corretos (O SEGREDO DA VITÓRIA)
+      // 3. Imagens (Aqui usamos APPEND porque são múltiplos arquivos)
       files.forEach((file, index) => {
+        formData.append("imagens", file);
         if (foto360Index === index) {
-          // Se for a foto marcada como 360, vai para o campo 'foto360'
-          formData.append("foto360", file);
-          formData.append("capaNome", file.name); // Opcional: define a 360 como capa
-        } else {
-          // Se for foto normal, vai para o campo 'galeria'
-          formData.append("galeria", file);
+          formData.set("is360", file.name);
         }
       });
 
-      // 3. Infraestrutura
-      formData.append("temAguaQuente", String(infra.temAguaQuente));
-      formData.append("temEsperaSplit", String(infra.temEsperaSplit));
-      formData.append("mobiliado", String(infra.mobiliado));
-
-      // 4. Envio para a API
-      const response = await api.post("/imoveis", formData, {
+      await api.post("/imoveis", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       alert("Imóvel cadastrado com sucesso!");
       router.push("/");
     } catch (error: any) {
-      // LOG DETALHADO PARA VOCÊ VER O QUE O NESTJS REJEITOU
-      const mensagemErro = error.response?.data?.message || error.message;
-      console.error("❌ Detalhes do Erro 400:", mensagemErro);
-      alert("Erro no cadastro: " + JSON.stringify(mensagemErro));
+      console.error(
+        "❌ Erro no cadastro:",
+        error.response?.data || error.message,
+      );
+      alert(
+        "Falha ao salvar: " + (error.response?.data?.message || "Erro interno"),
+      );
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-20">
       <header className="flex justify-between items-center">
