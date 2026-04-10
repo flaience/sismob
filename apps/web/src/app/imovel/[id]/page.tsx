@@ -62,14 +62,15 @@ export default function ImovelDetalhes() {
 
   // 2. Bloco Inteligente de Scroll (O pulo do gato para o botão de vídeo)
   useEffect(() => {
-    // Se o imóvel terminou de carregar e a URL tem #video
+    // Se a URL tem #video, pulamos para ele quase instantaneamente
     if (imovel && window.location.hash === "#video") {
       const timer = setTimeout(() => {
         const elemento = document.getElementById("video");
         if (elemento) {
-          elemento.scrollIntoView({ behavior: "smooth" });
+          // 'auto' faz o pulo ser instantâneo, sem o deslize demorado
+          elemento.scrollIntoView({ behavior: "auto" });
         }
-      }, 800); // Aguarda o render completo do componente
+      }, 100); // 100ms é imperceptível
       return () => clearTimeout(timer);
     }
   }, [imovel]);
@@ -102,7 +103,14 @@ export default function ImovelDetalhes() {
             width="100%"
             height="100%"
             image={foto360}
-            autoLoad
+            pitch={10}
+            yaw={180}
+            hfov={110}
+            // O SEGREDO: Se a URL tiver #video, o autoLoad fica FALSE
+            autoLoad={
+              typeof window !== "undefined" && window.location.hash !== "#video"
+            }
+            showFullscreenCtrl={true}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-white flex-col gap-4">
