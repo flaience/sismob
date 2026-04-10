@@ -21,12 +21,21 @@ export class ImoveisService {
   // LISTAGEM (Pública/Multi-tenant)
   async findAll(imobiliariaId: string) {
     try {
-      // O select() vazio força o Drizzle a buscar TODAS as colunas
-      // que estão declaradas no seu schema.ts acima.
-      return await this.db
-        .select()
-        .from(schema.imoveis as any)
-        .where(eq((schema.imoveis as any).imobiliariaId, imobiliariaId));
+      if (!imobiliariaId) return [];
+
+      // O segredo está no 'with': ele traz as fotos (midias) de volta
+      const queryApi = this.db.query as any;
+
+      const resultados = await queryApi.imoveis.findMany({
+        where: eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
+        with: {
+          midias: true, // <--- ISSO TRAZ AS FOTOS DE VOLTA
+          infraestrutura: true, // <--- ISSO TRAZ OS ÍCONES
+          instrucoes: true, // <--- ISSO TRAZ O PERCURSO
+        },
+      });
+
+      return resultados;
     } catch (error) {
       console.error('❌ Erro no findAll:', error.message);
       return [];
