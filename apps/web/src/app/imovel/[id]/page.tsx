@@ -10,6 +10,7 @@ import {
   Navigation,
   MessageCircle,
   Info,
+  Play,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -129,19 +130,23 @@ export default function ImovelDetalhes() {
         </div>
       </div>
       {/* SEÇÃO DE VÍDEO (DRONE) */}
-      {/* SEÇÃO DE VÍDEO (DRONE) */}
-      // ... dentro do return do ImovelDetalhes
-      {/* SEÇÃO DE VÍDEO (DRONE) */}
-      {imovel.video_url && ( // <--- O SEGREDO: Acessamos o nome EXATO do banco
-        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 mt-8">
-          <h3 className="text-2xl font-black mb-6 text-gray-900">
-            Experiência Aérea (Drone)
-          </h3>
+      {imovel.videoUrl && (
+        <div
+          id="video"
+          className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 mt-8 scroll-mt-20"
+        >
+          <h2 className="text-2xl font-black mb-6 text-gray-900 flex items-center gap-2">
+            <Play className="text-red-500" /> Experiência Aérea (Drone)
+          </h2>
+
           <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
             <iframe
               className="w-full h-full"
-              // Extrai o ID do vídeo do YouTube de forma robusta
-              src={`https://www.youtube.com/embed/${imovel.video_url.split("v=")[1]?.split("&")[0] || imovel.video_url.split("/").pop()}`}
+              src={`https://www.youtube.com/embed/${
+                imovel.videoUrl.includes("v=")
+                  ? imovel.videoUrl.split("v=")[1].split("&")[0]
+                  : imovel.videoUrl.split("/").pop()
+              }`}
               title="YouTube video player"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
