@@ -32,42 +32,47 @@ export default function ImovelDetalhes() {
   const [imovel, setImovel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // --- O BLOCO QUE VOCÊ PERGUNTOU FICA AQUI ---
+  // 1. Bloco de carregamento do Imóvel
   useEffect(() => {
     async function carregarImovel() {
-      // 1. Só tentamos buscar se o sistema já identificou a imobiliária pelo domínio
       if (!tenant?.id) return;
 
       try {
-        console.log(`🔍 Buscando imóvel ${id} para a imobiliária ${tenant.id}`);
-
-        // Buscamos os imóveis passando o ID da imobiliária como parâmetro
         const res = await api.get("/imoveis", {
           params: { imobiliariaId: tenant.id },
         });
 
-        // 2. Procuramos na lista o imóvel que bate com o ID da URL
         const encontrou = res.data.find((i: any) => i.id === Number(id));
 
         if (!encontrou) {
-          console.error(
-            "❌ Imóvel não pertence a esta imobiliária ou não existe.",
-          );
-          router.push("/"); // Volta para a home se for um "invasor"
+          router.push("/");
           return;
         }
 
         setImovel(encontrou);
       } catch (error) {
-        console.error("❌ Falha ao carregar detalhes do imóvel:", error);
+        console.error("❌ Falha ao carregar detalhes:", error);
       } finally {
         setLoading(false);
       }
     }
 
     carregarImovel();
-  }, [id, tenant, router]); // Re-executa se o ID ou a Imobiliária mudarem
-  // --- FIM DO BLOCO ---
+  }, [id, tenant, router]);
+
+  // 2. Bloco Inteligente de Scroll (O pulo do gato para o botão de vídeo)
+  useEffect(() => {
+    // Se o imóvel terminou de carregar e a URL tem #video
+    if (imovel && window.location.hash === "#video") {
+      const timer = setTimeout(() => {
+        const elemento = document.getElementById("video");
+        if (elemento) {
+          elemento.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 800); // Aguarda o render completo do componente
+      return () => clearTimeout(timer);
+    }
+  }, [imovel]);
 
   if (loading)
     return (
@@ -142,7 +147,6 @@ export default function ImovelDetalhes() {
           <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
             <iframe
               className="w-full h-full"
-              // CORREÇÃO DA URL: Adicionado o domínio do youtube e o interpolador ${}
               src={`https://www.youtube.com/embed/${
                 imovel.videoUrl.includes("v=")
                   ? imovel.videoUrl.split("v=")[1].split("&")[0]
