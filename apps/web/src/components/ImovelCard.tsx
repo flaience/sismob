@@ -72,7 +72,6 @@ export default function ImovelCard({
           <Trash2 size={18} />
         </button>
       )}
-
       {/* IMAGEM */}
       <div className="relative h-64 w-full rounded-[2rem] overflow-hidden bg-indigo-50 shrink-0">
         {imagemCapa ? (
@@ -90,7 +89,6 @@ export default function ImovelCard({
           </span>
         </div>
       </div>
-
       {/* TEXTO */}
       <div className="mt-6 flex-1 px-2">
         <h3 className="text-2xl font-black text-gray-900 mb-2 line-clamp-1">
@@ -107,39 +105,34 @@ export default function ImovelCard({
           </span>
         </div>
       </div>
-
       {/* 3. BARRA DE AÇÕES (ESTABILIZADA) */}
-      <div className="flex items-stretch gap-2 mt-auto h-14">
-        {/* BOTÃO TOUR - Sempre ocupa o maior espaço */}
+      // Dentro do ImovelCard.tsx, mude os botões de ação:
+      <div className="flex gap-2 mt-auto h-14">
+        {/* TOUR 360 */}
         <Link
-          href={`/imovel/${imovel.id}`}
-          className="flex-[3] bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 uppercase"
+          href={`/imovel/${imovel.id}?view=tour`} // Mudamos para parâmetro ?view=tour
+          className="flex-[3] bg-indigo-600 text-white rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 uppercase"
         >
           <Camera size={18} /> TOUR 360°
         </Link>
 
-        {/* BOTÃO VÍDEO - Só aparece se 'temVideo' for true */}
+        {/* VÍDEO DO DRONE */}
         {temVideo && (
           <Link
-            href={`/imovel/${imovel.id}#video`}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center group/video"
-            title="Ver vídeo do Drone"
+            href={`/imovel/${imovel.id}?view=video`} // Mudamos para ?view=video
+            className="flex-1 bg-red-500 text-white rounded-2xl flex items-center justify-center"
           >
-            <Play
-              size={20}
-              fill="currentColor"
-              className="group-hover/video:scale-110 transition-transform"
-            />
+            <Play size={20} fill="currentColor" />
           </Link>
         )}
 
-        {/* BOTÃO LOGÍSTICA - Sempre pequeno no canto */}
-        <button
-          className="flex-1 bg-gray-900 hover:bg-black text-white rounded-2xl transition-all shadow-lg flex items-center justify-center"
-          title="Ver percurso"
+        {/* LOGÍSTICA */}
+        <Link
+          href={`/imovel/${imovel.id}?view=map`} // Mudamos para ?view=map
+          className="flex-1 bg-gray-900 text-white rounded-2xl flex items-center justify-center"
         >
           <MapIcon size={20} />
-        </button>
+        </Link>
       </div>
     </motion.div>
   );

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api"; // O nosso axios configurado
+import { useSearchParams } from "next/navigation"; // Importe isso
 import { useTenant } from "@/context/TenantContext"; // O DNA da imobiliária
 import dynamic from "next/dynamic";
 import {
@@ -26,6 +27,8 @@ const Visualizador360: any = dynamic(
 );
 
 export default function ImovelDetalhes() {
+  const searchParams = useSearchParams();
+  const viewMode = searchParams.get("view") || "tour"; // Pega o modo da URL (tour, video ou map)
   const { id } = useParams();
   const router = useRouter();
   const { tenant } = useTenant(); // Descobre qual imobiliária é dona do site
@@ -85,89 +88,64 @@ export default function ImovelDetalhes() {
   const foto360 = imovel.midias?.find((m: any) => m.tipo === "foto_360")?.url;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-20">
-      {/* O RESTO DO SEU JSX BONITÃO VAI AQUI (Header, Pannellum, etc) */}
-      <header className="flex justify-between items-center">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-gray-500 font-bold"
-        >
-          <ArrowLeft /> Voltar
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-10 px-2 md:px-6">
+      {/* HEADER SIMPLES */}
+      <div className="flex items-center gap-4 py-2">
+        <Link href="/" className="p-2 bg-gray-100 rounded-full">
+          <ArrowLeft size={20} />
         </Link>
-        <h1 className="text-3xl font-black">{imovel.titulo}</h1>
-      </header>
-      {/* Área do Tour */}
-      <div className="h-[600px] rounded-[3rem] overflow-hidden bg-black shadow-2xl border-8 border-white">
-        {foto360 ? (
-          <Visualizador360
-            width="100%"
-            height="100%"
-            image={foto360}
-            pitch={10}
-            yaw={180}
-            hfov={110}
-            // O SEGREDO: Se a URL tiver #video, o autoLoad fica FALSE
-            autoLoad={
-              typeof window !== "undefined" && window.location.hash !== "#video"
-            }
-            showFullscreenCtrl={true}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-white flex-col gap-4">
-            <Info size={48} />
-            <p>Nenhum Tour Virtual 360 disponível.</p>
-          </div>
-        )}
+        <h1 className="text-xl font-bold truncate">{imovel.titulo}</h1>
       </div>
-      {/* Descrição e Percurso */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] shadow-sm">
-          <h3 className="text-xl font-bold mb-4">Descrição</h3>
-          <p className="text-gray-600">{imovel.descricao}</p>
-        </div>
 
-        <div className="bg-indigo-900 text-white p-10 rounded-[3rem] shadow-xl">
-          <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+      {/* EXIBIÇÃO CONDICIONAL: MOSTRA APENAS O QUE FOI PEDIDO */}
+
+      {viewMode === "tour" && (
+        <div className="h-[75vh] md:h-[600px] w-full rounded-[2rem] overflow-hidden shadow-2xl bg-black border-2 border-white">
+          {foto360 ? (
+            <Visualizador360
+              width="100%"
+              height="100%"
+              image={foto360}
+              autoLoad
+            />
+          ) : (
+            <p className="text-white text-center mt-20">Tour não disponível</p>
+          )}
+        </div>
+      )}
+
+      {viewMode === "video" && imovel.videoUrl && (
+        <div className="w-full aspect-video rounded-[2rem] overflow-hidden shadow-2xl bg-black">
+          <iframe
+            className="w-full h-full"
+            src={`https://www.youtube.com/embed/${imovel.videoUrl.includes("v=") ? imovel.videoUrl.split("v=")[1].split("&")[0] : imovel.videoUrl.split("/").pop()}`}
+            allowFullScreen
+          ></iframe>
+        </div>
+      )}
+
+      {viewMode === "map" && (
+        <div className="bg-indigo-900 text-white p-6 rounded-[2.5rem] shadow-xl min-h-[60vh]">
+          <h3 className="text-xl font-black mb-8 flex items-center gap-2">
             <Navigation /> Como chegar
           </h3>
-          {/* Map das instruções que já temos no banco */}
-          {imovel.instrucoes?.map((ins: any, idx: number) => (
-            <div key={ins.id} className="mb-6 flex gap-4">
-              <div className="font-black opacity-30 text-3xl">{idx + 1}</div>
-              <div>
-                <p className="font-bold text-indigo-200">{ins.titulo}</p>
-                <p className="text-xs opacity-70">{ins.descricao}</p>
+          <div className="space-y-8">
+            {imovel.instrucoes?.map((ins: any, idx: number) => (
+              <div key={ins.id} className="flex gap-4">
+                <span className="text-3xl font-black opacity-20">
+                  {idx + 1}
+                </span>
+                <p className="text-sm font-medium">{ins.descricao}</p>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* SEÇÃO DE VÍDEO (DRONE) */}
-      {imovel.videoUrl && (
-        <div
-          id="video"
-          className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 mt-8 scroll-mt-20"
-        >
-          <h2 className="text-2xl font-black mb-6 text-gray-900 flex items-center gap-2">
-            <Play className="text-red-500" /> Experiência Aérea (Drone)
-          </h2>
-
-          <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
-            <iframe
-              className="w-full h-full"
-              src={`https://www.youtube.com/embed/${
-                imovel.videoUrl.includes("v=")
-                  ? imovel.videoUrl.split("v=")[1].split("&")[0]
-                  : imovel.videoUrl.split("/").pop()
-              }`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+            ))}
           </div>
         </div>
       )}
+
+      {/* BOTÃO DE CONTATO SEMPRE VISÍVEL NO RODAPÉ */}
+      <button className="w-full bg-green-500 text-white p-6 rounded-[2rem] font-bold flex justify-center items-center gap-3">
+        <MessageCircle /> Falar com corretor
+      </button>
     </div>
   );
 }

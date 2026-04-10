@@ -23,8 +23,10 @@ export default function RootLayout({
               pl-0 (celular) 
               md:pl-32 (computador/tablet)
           */}
-          <main className="pl-0 md:pl-32 min-h-screen transition-all duration-500">
-            <div className="max-w-7xl mx-auto px-6 py-10 pb-28 md:pb-10">
+          <main className="pl-0 md:pl-32 transition-all duration-500">
+            <div className="w-full px-2 md:px-10 py-6">
+              {" "}
+              {/* px-2 garante bordas finas no mobile */}
               {children}
             </div>
           </main>
