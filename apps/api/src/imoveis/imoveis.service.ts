@@ -52,39 +52,43 @@ export class ImoveisService {
   // UPSERT (Cria ou Atualiza com Mídia Separada)
   async upsertImovel(dto: any, allFiles: any[], imobiliariaId: string) {
     try {
+      // LOG DE DIAGNÓSTICO: Isso aparecerá no Railway
+      console.log('📡 Dados brutos recebidos no DTO:', dto);
+
       return await this.db.transaction(async (tx) => {
-        // 1. LIMPEZA E SANITIZAÇÃO (Resolve o erro "casa,casa")
-        // Pegamos apenas o primeiro valor caso o FormData venha duplicado
         const tipoLimpo = String(dto.tipo).split(',')[0];
         const proprietarioIdLimpo = String(dto.proprietarioId).split(',')[0];
 
         const isUpdate = !!dto.id && dto.id !== 'undefined';
         let idImovel = isUpdate ? Number(dto.id) : null;
 
+        // MAPA DE GRAVAÇÃO (Usando nomes literais das colunas do banco)
         const dadosBase = {
           titulo: dto.titulo,
           descricao: dto.descricao || '',
           tipo: tipoLimpo,
           status: 'disponivel',
-          imobiliariaId: imobiliariaId,
-          proprietarioId: proprietarioIdLimpo,
-          precoVenda: dto.precoVenda?.toString() || '0',
-          areaPrivativa: dto.areaPrivativa?.toString() || '0',
-          enderecoOriginal: dto.enderecoOriginal || 'Endereço não informado',
-          videoUrl: dto.videoUrl || null,
+          imobiliaria_id: imobiliariaId, // <--- Use com underline para garantir
+          proprietario_id: proprietarioIdLimpo, // <--- Use com underline
+          preco_venda: dto.precoVenda?.toString() || '0',
+          area_privativa: dto.areaPrivativa?.toString() || '0',
+          endereco_original: dto.enderecoOriginal || 'Não informado',
+
+          // O SEGREDO DA VITÓRIA:
+          video_url: dto.videoUrl || null, // <--- Force o nome físico da coluna
+
           lat: dto.lat?.toString() || '0',
           lng: dto.lng?.toString() || '0',
         };
 
-        // 2. GRAVAÇÃO OU ATUALIZAÇÃO DO IMÓVEL
         if (isUpdate) {
           await tx
             .update(schema.imoveis as any)
-            .set(dadosBase)
+            .set(dadosBase as any)
             .where(eq((schema.imoveis as any).id, idImovel));
         } else {
           const [novo] = await (tx.insert(schema.imoveis as any) as any)
-            .values(dadosBase)
+            .values(dadosBase as any)
             .returning();
           idImovel = novo.id;
         }
