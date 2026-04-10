@@ -47,7 +47,16 @@ export default function ImovelCard({
     imovel.midias?.find((m: any) => m.isCapa)?.url || imovel.midias?.[0]?.url;
 
   // GARANTIA DE DADOS: Verifica o vídeo em qualquer formato de nome
-  const temVideo = imovel.videoUrl || imovel.video_url;
+  // const temVideo = imovel.videoUrl || imovel.video_url;
+  // se o vídeo está chegando como video_url ou videoUrl
+  console.log(`🎬 Imóvel ${imovel.id} - Campo video_url:`, imovel.video_url);
+  console.log(`🎬 Imóvel ${imovel.id} - Campo videoUrl:`, imovel.videoUrl);
+
+  // 2. Tenta pegar o vídeo de qualquer um dos dois formatos
+  const linkDoVideo = imovel.video_url || imovel.videoUrl;
+
+  // 3. Verifica se o link é uma string válida e não está vazio
+  const temVideo = typeof linkDoVideo === "string" && linkDoVideo.length > 5;
 
   return (
     <motion.div
@@ -109,13 +118,18 @@ export default function ImovelCard({
           <Camera size={18} /> TOUR 360°
         </Link>
 
-        {/* BOTÃO VÍDEO - Só aparece se houver link */}
+        {/* BOTÃO VÍDEO - Só aparece se 'temVideo' for true */}
         {temVideo && (
           <Link
             href={`/imovel/${imovel.id}#video`}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center"
+            className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center group/video"
+            title="Ver vídeo do Drone"
           >
-            <Play size={20} fill="currentColor" />
+            <Play
+              size={20}
+              fill="currentColor"
+              className="group-hover/video:scale-110 transition-transform"
+            />
           </Link>
         )}
 
