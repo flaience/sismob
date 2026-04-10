@@ -142,6 +142,7 @@ export default function ImovelDetalhes() {
           <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
             <iframe
               className="w-full h-full"
+              // CORREÇÃO DA URL: Adicionado o domínio do youtube e o interpolador ${}
               src={`https://www.youtube.com/embed/${
                 imovel.videoUrl.includes("v=")
                   ? imovel.videoUrl.split("v=")[1].split("&")[0]
