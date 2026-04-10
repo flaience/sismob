@@ -89,7 +89,6 @@ export default function ImovelDetalhes() {
         </Link>
         <h1 className="text-3xl font-black">{imovel.titulo}</h1>
       </header>
-
       {/* Área do Tour */}
       <div className="h-[600px] rounded-[3rem] overflow-hidden bg-black shadow-2xl border-8 border-white">
         {foto360 ? (
@@ -106,7 +105,6 @@ export default function ImovelDetalhes() {
           </div>
         )}
       </div>
-
       {/* Descrição e Percurso */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] shadow-sm">
@@ -132,18 +130,18 @@ export default function ImovelDetalhes() {
       </div>
       {/* SEÇÃO DE VÍDEO (DRONE) */}
       {/* SEÇÃO DE VÍDEO (DRONE) */}
-      {imovel.videoUrl && (
-        <div
-          id="video"
-          className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 mt-8 scroll-mt-10"
-        >
-          <h3 className="text-2xl font-black mb-6">
+      // ... dentro do return do ImovelDetalhes
+      {/* SEÇÃO DE VÍDEO (DRONE) */}
+      {imovel.video_url && ( // <--- O SEGREDO: Acessamos o nome EXATO do banco
+        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 mt-8">
+          <h3 className="text-2xl font-black mb-6 text-gray-900">
             Experiência Aérea (Drone)
           </h3>
           <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
             <iframe
               className="w-full h-full"
-              src={`https://www.youtube.com/embed/${imovel.videoUrl.split("v=")[1]?.split("&")[0] || imovel.videoUrl.split("/").pop()}`}
+              // Extrai o ID do vídeo do YouTube de forma robusta
+              src={`https://www.youtube.com/embed/${imovel.video_url.split("v=")[1]?.split("&")[0] || imovel.video_url.split("/").pop()}`}
               title="YouTube video player"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
