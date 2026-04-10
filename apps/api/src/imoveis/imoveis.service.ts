@@ -21,14 +21,12 @@ export class ImoveisService {
   // LISTAGEM (Pública/Multi-tenant)
   async findAll(imobiliariaId: string) {
     try {
-      const queryApi = this.db.query as any;
-      return await queryApi.imoveis.findMany({
-        where: eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
-        with: {
-          midias: true,
-          infraestrutura: true,
-        },
-      });
+      // O select() vazio força o Drizzle a buscar TODAS as colunas
+      // que estão declaradas no seu schema.ts acima.
+      return await this.db
+        .select()
+        .from(schema.imoveis as any)
+        .where(eq((schema.imoveis as any).imobiliariaId, imobiliariaId));
     } catch (error) {
       console.error('❌ Erro no findAll:', error.message);
       return [];
