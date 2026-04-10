@@ -1,39 +1,42 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import ImovelCard from "@/components/ImovelCard";
 import { useTenant } from "@/context/TenantContext";
 import { Building2, Home } from "lucide-react";
+
 export default function HomePage() {
   const [imoveis, setImoveis] = useState([]);
   const [loading, setLoading] = useState(true);
   const { tenant, loading: tenantLoading } = useTenant();
-  // Pegamos o ID da imobiliária que criamos no script de popular (ex: 77777777-...)
-  const IMOBILIARIA_ID = "77777777-7777-7777-7777-777777777777";
 
-  useEffect(() => {
-    async function fetchImoveis() {
-      // Se o carregamento do tenant terminou e não achamos ninguém
-      if (!tenantLoading && !tenant?.id) {
-        setLoading(false);
-        return;
-      }
-
-      if (tenant?.id) {
-        try {
-          const response = await api.get("/imoveis", {
-            params: { imobiliariaId: tenant.id },
-          });
-          setImoveis(response.data);
-        } catch (error) {
-          console.error("Erro ao carregar imóveis:", error);
-        } finally {
-          setLoading(false);
-        }
-      }
+  // 1. Função de busca isolada para ser usada no carregamento e no refresh (lixeira)
+  const fetchImoveis = async () => {
+    if (!tenant?.id) {
+      if (!tenantLoading) setLoading(false);
+      return;
     }
-    fetchImoveis();
+
+    try {
+      const response = await api.get("/imoveis", {
+        params: { imobiliariaId: tenant.id },
+      });
+      setImoveis(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar imóveis:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Dispara a busca sempre que o tenant for identificado
+  useEffect(() => {
+    if (!tenantLoading) {
+      fetchImoveis();
+    }
   }, [tenant, tenantLoading]);
+
   return (
     <main className="min-h-screen p-8 bg-slate-50">
       <div className="max-w-6xl mx-auto">
@@ -65,7 +68,11 @@ export default function HomePage() {
             {imoveis.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                 {imoveis.map((imovel: any) => (
-                  <ImovelCard key={imovel.id} imovel={imovel} />
+                  <ImovelCard
+                    key={imovel.id}
+                    imovel={imovel}
+                    refresh={fetchImoveis} // <--- ESTA LINHA MATA O ERRO TS(2741)
+                  />
                 ))}
               </div>
             ) : (
@@ -74,7 +81,7 @@ export default function HomePage() {
                   <Home size={40} />
                 </div>
                 <p className="text-gray-500 text-xl font-bold">
-                  Nenhum imóvel disponível para esta região.
+                  Nenhum imóvel disponível para esta imobiliária.
                 </p>
                 <p className="text-sm text-gray-400 mt-2">
                   Acesse a área restrita para cadastrar sua primeira unidade.

@@ -19,7 +19,7 @@ export default function ImovelCard({
   refresh,
 }: {
   imovel: any;
-  refresh?: () => void;
+  refresh: () => void;
 }) {
   const [isOwner, setIsOwner] = useState(false);
   const supabase = createClient();
@@ -32,18 +32,23 @@ export default function ImovelCard({
   }, []);
 
   const handleDelete = async () => {
-    if (!confirm("Confirmar exclusão?")) return;
+    if (!confirm("Deseja realmente excluir este imóvel?")) return;
 
     try {
-      // Passamos o imobiliariaId como parâmetro para a rota destravada
+      // Passamos o imobiliariaId como query param já que a rota está aberta
       await api.delete(`/imoveis/${imovel.id}`, {
         params: { imobiliariaId: imovel.imobiliariaId },
       });
-      alert("Removido com sucesso!");
-      if (refresh) refresh();
+
+      alert("Imóvel removido com sucesso!");
+
+      // O SEGREDO DO REFRESH:
+      if (refresh) {
+        refresh(); // Isso faz o Next.js recarregar a lista na Home
+      }
     } catch (error) {
       console.error("Erro ao deletar:", error);
-      alert("Erro técnico ao excluir.");
+      alert("Falha na exclusão. Tente novamente.");
     }
   };
 

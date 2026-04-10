@@ -130,6 +130,25 @@ export default function ImovelDetalhes() {
           ))}
         </div>
       </div>
+      {/* SEÇÃO DE VÍDEO (DRONE) */}
+      {/* SEÇÃO DE VÍDEO (DRONE) */}
+      {imovel.videoUrl && (
+        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 mt-8">
+          <h3 className="text-2xl font-black mb-6 text-gray-900">
+            Experiência Aérea (Drone)
+          </h3>
+          <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
+            <iframe
+              className="w-full h-full"
+              src={`https://www.youtube.com/embed/${imovel.videoUrl.split("v=")[1]?.split("&")[0] || imovel.videoUrl.split("/").pop()}`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
