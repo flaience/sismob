@@ -29,6 +29,7 @@ export default function NovoImovelPage() {
     areaPrivativa: "",
     enderecoOriginal: "",
     proprietarioId: "",
+    videoUrl: "", // <--- ADICIONE ESTA LINHA
     lat: "", // <--- ADICIONE ESTA LINHA
     lng: "", // <--- ADICIONE ESTA LINH
   });
@@ -97,6 +98,7 @@ export default function NovoImovelPage() {
       formData.set("precoVenda", dados.precoVenda);
       formData.set("areaPrivativa", dados.areaPrivativa);
       formData.set("enderecoOriginal", dados.enderecoOriginal);
+      formData.set("videoUrl", dados.videoUrl);
       formData.set("proprietarioId", dados.proprietarioId);
       formData.set("lat", dados.lat || "0");
       formData.set("lng", dados.lng || "0");
@@ -205,6 +207,23 @@ export default function NovoImovelPage() {
                   setDados({ ...dados, enderecoOriginal: e.target.value })
                 }
               />
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-4 top-4 text-red-500">
+                <span className="font-bold text-xs">YT</span>
+              </div>
+              <input
+                placeholder="Link do Vídeo do Drone (YouTube)"
+                className="w-full pl-12 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-red-500"
+                value={dados.videoUrl}
+                onChange={(e) =>
+                  setDados({ ...dados, videoUrl: e.target.value })
+                }
+              />
+              <p className="text-[10px] text-gray-400 mt-1 ml-2">
+                Cole o link completo: https://www.youtube.com/watch?v=...
+              </p>
             </div>
 
             <select
