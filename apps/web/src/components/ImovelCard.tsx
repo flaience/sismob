@@ -7,6 +7,7 @@ import {
   Trash2,
   Ruler,
   Camera,
+  Play,
   Map as MapIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -105,14 +106,35 @@ export default function ImovelCard({
       </div>
 
       {/* 3. BOTÕES DE DIFERENCIAL */}
-      <div className="flex gap-3 mt-auto">
+      <div className="flex gap-2 mt-auto">
+        {/* TOUR 360 (Principal) */}
         <Link
           href={`/imovel/${imovel.id}`}
-          className="flex-[3] bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-100"
+          className="flex-[2.5] bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-100 uppercase tracking-tighter"
         >
-          <Camera size={18} /> TOUR VIRTUAL 360°
+          <Camera size={18} /> TOUR 360°
         </Link>
-        <button className="flex-1 bg-gray-900 text-white p-4 rounded-2xl hover:bg-black transition-all">
+
+        {/* VÍDEO DO DRONE (Atalho Inteligente) */}
+        {imovel.videoUrl && (
+          <Link
+            href={`/imovel/${imovel.id}#video`}
+            className="flex-1 bg-red-500 hover:bg-red-600 text-white p-4 rounded-2xl transition-all shadow-lg flex items-center justify-center group/video"
+            title="Ver vídeo do Drone"
+          >
+            <Play
+              size={20}
+              fill="currentColor"
+              className="group-hover/video:scale-110 transition-transform"
+            />
+          </Link>
+        )}
+
+        {/* LOGÍSTICA / MAPA */}
+        <button
+          className="flex-1 bg-gray-900 hover:bg-black text-white p-4 rounded-2xl transition-all shadow-lg flex items-center justify-center"
+          title="Como chegar ao imóvel"
+        >
           <MapIcon size={20} />
         </button>
       </div>
