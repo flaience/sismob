@@ -55,6 +55,7 @@ export default function ImovelCard({
 
   const imagemCapa =
     imovel.midias?.find((m: any) => m.isCapa)?.url || imovel.midias?.[0]?.url;
+  const urlVideo = imovel.videoUrl || imovel.video_url;
 
   return (
     <motion.div
@@ -107,16 +108,7 @@ export default function ImovelCard({
 
       {/* 3. BOTÕES DE DIFERENCIAL */}
       <div className="flex gap-2 mt-auto">
-        {/* TOUR 360 (Principal) */}
-        <Link
-          href={`/imovel/${imovel.id}`}
-          className="flex-[2.5] bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-100 uppercase tracking-tighter"
-        >
-          <Camera size={18} /> TOUR 360°
-        </Link>
-
-        {/* VÍDEO DO DRONE (Atalho Inteligente) */}
-        {imovel.videoUrl && (
+        {urlVideo && (
           <Link
             href={`/imovel/${imovel.id}#video`}
             className="flex-1 bg-red-500 hover:bg-red-600 text-white p-4 rounded-2xl transition-all shadow-lg flex items-center justify-center group/video"

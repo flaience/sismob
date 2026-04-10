@@ -145,6 +145,7 @@ export const imoveis = pgTable(
     lng: decimal("lng", { precision: 11, scale: 8 }).notNull(),
 
     tourVirtualUrl: text("tour_virtual_url"),
+    videoUrl: text("video_url"), // Link do Youtube/Drone (NOVO)
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
