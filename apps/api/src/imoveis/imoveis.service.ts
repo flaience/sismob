@@ -71,6 +71,7 @@ export class ImoveisService {
           precoVenda: dto.precoVenda?.toString() || '0',
           areaPrivativa: dto.areaPrivativa?.toString() || '0',
           enderecoOriginal: dto.enderecoOriginal || 'Endereço não informado',
+          videoUrl: dto.videoUrl || null,
           lat: dto.lat?.toString() || '0',
           lng: dto.lng?.toString() || '0',
         };
