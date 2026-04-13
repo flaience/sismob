@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "ignoreDeprecations": "5.0",
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "module": "ESNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true
+  },
+  "extends": "expo/tsconfig.base"
+}

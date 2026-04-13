@@ -1,57 +1,36 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import React from "react";
+import { Tabs } from "expo-router";
+import { Search, User, Camera } from "lucide-react-native";
 
-import { useColorScheme } from '@/components/useColorScheme';
-
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
-
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
+export default function TabLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "#6366f1", // Indigo 600
+        tabBarInactiveTintColor: "#9ca3af",
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: "#f3f4f6",
+          height: 60,
+          paddingBottom: 8,
+        },
+        headerShown: false, // Esconde o título no topo para usar o nosso customizado
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Explorar",
+          tabBarIcon: ({ color }) => <Search size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="two" // Vamos mudar para 'Login' depois
+        options={{
+          title: "Acesso",
+          tabBarIcon: ({ color }) => <User size={24} color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }

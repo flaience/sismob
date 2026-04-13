@@ -1,21 +1,9 @@
 {
   "name": "sismob",
   "private": true,
-  "engines": {
-    "node": "22.x"
-  },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint"
-  },
-  "pnpm": {
-    "overrides": {
-      "drizzle-orm": "0.33.0",
-      "drizzle-kit": "0.24.0",
-      "react": "19.0.0",
-      "react-dom": "19.0.0"
-    }
+    "dev": "turbo run dev"
   },
   "dependencies": {
     "tsx": "^4.7.1",
