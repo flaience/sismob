@@ -6,8 +6,13 @@ import { TenantProvider } from "@/context/TenantContext";
 export const metadata: Metadata = {
   title: "Sismob - Sistema Imobiliário 360",
   description: "Tour virtual e auxílio de chegada de última geração",
+  manifest: "/manifest.json", // Importante para o PWA
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Sismob",
+  },
 };
-
 export default function RootLayout({
   children,
 }: {
