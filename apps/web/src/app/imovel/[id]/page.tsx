@@ -112,44 +112,27 @@ export default function ImovelDetalhes() {
       {viewMode === "tour" && (
         <div className="relative h-[75vh] md:h-[650px] w-full rounded-[3.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
           {foto360 ? (
-            <>
-              <Visualizador360
-                width="100%"
-                height="100%"
-                image={foto360}
-                autoLoad
-                orientationOn={gyroActive}
-                showFullscreenCtrl={false}
-              />
-              {!gyroActive && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                  <button
-                    onClick={ativarGiroscopio}
-                    className="bg-white p-8 rounded-[3rem] flex flex-col items-center gap-4 shadow-2xl transition-all active:scale-95"
-                  >
-                    <div className="bg-indigo-600 p-5 rounded-[2rem] text-white">
-                      <Smartphone size={40} />
-                    </div>
-                    <div className="text-center">
-                      <span className="block font-black text-indigo-950 uppercase text-sm">
-                        Ativar Modo Imersivo
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-bold">
-                        Gire o celular para olhar o imóvel
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </>
+            <Visualizador360
+              width="100%"
+              height="100%"
+              image={foto360}
+              autoLoad
+              mouseZoom={true} // Permite zoom com o gesto de pinça no celular
+              friction={0.1} // Deixa o giro mais suave e "luxuoso"
+              showControls={false} // Esconde botões feios para parecer app nativo
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-white gap-4">
-              <Info size={48} className="text-gray-600" />
-              <p className="text-gray-400">
-                Aguardando processamento da foto 360...
-              </p>
+            <div className="flex items-center justify-center h-full text-white font-bold">
+              Foto 360 não disponível.
             </div>
           )}
+
+          {/* Badge de Instrução Visual */}
+          <div className="absolute bottom-8 right-8 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/30">
+            <p className="text-white text-[10px] font-bold uppercase tracking-widest">
+              Arraste para girar 360°
+            </p>
+          </div>
         </div>
       )}
       // aqui
