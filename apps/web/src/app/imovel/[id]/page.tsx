@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -11,19 +10,17 @@ import {
   ArrowLeft,
   Navigation,
   MessageCircle,
-  Smartphone, // Ícone que faltava
-  Play, // Ícone que faltava
+  Smartphone,
 } from "lucide-react";
 import Link from "next/link";
 
-// Visualizador 360 carregado apenas no cliente (Browser)
 const Visualizador360: any = dynamic(
   () => import("pannellum-react").then((mod) => mod.Pannellum),
   {
     ssr: false,
     loading: () => (
-      <div className="h-full w-full bg-gray-900 animate-pulse flex items-center justify-center text-white font-bold tracking-tighter">
-        SIS<span className="text-indigo-400">MOB</span> 360°...
+      <div className="h-full w-full bg-gray-900 animate-pulse flex items-center justify-center text-white">
+        Iniciando motor 360...
       </div>
     ),
   },
@@ -33,91 +30,87 @@ export default function ImovelDetalhes() {
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const viewMode = searchParams.get("view") || "tour";
   const { tenant } = useTenant();
 
-  // 1. ESTADOS
   const [imovel, setImovel] = useState<any>(null);
-  const [gyroActive, setGyroActive] = useState(false); // Variável que faltava
-  const viewMode = searchParams.get("view") || "tour";
+  const [gyroActive, setGyroActive] = useState(false);
 
-  // 2. BUSCA DE DADOS
   useEffect(() => {
     if (tenant?.id) {
-      api.get(`/imoveis`).then((res) => {
-        const encontrou = res.data.find((i: any) => i.id === Number(id));
-        if (!encontrou) {
-          alert("Imóvel não encontrado.");
-          router.push("/");
-          return;
-        }
-        setImovel(encontrou);
-      });
+      console.log(`🔍 Buscando imóvel ID: ${id} para Tenant: ${tenant.id}`);
+
+      api
+        .get(`/imoveis`, { params: { imobiliariaId: tenant.id } })
+        .then((res) => {
+          // Busca flexível: tenta achar o imóvel na lista
+          const encontrou = res.data.find(
+            (i: any) => Number(i.id) === Number(id),
+          );
+
+          if (!encontrou) {
+            console.error(
+              "❌ Imóvel não encontrado na lista retornada pela API.",
+            );
+            console.log("📦 Lista recebida:", res.data);
+            return;
+          }
+
+          console.log("✅ Imóvel carregado com sucesso:", encontrou.titulo);
+          setImovel(encontrou);
+        })
+        .catch((err) => {
+          console.error("❌ Erro na chamada da API:", err);
+        });
     }
-  }, [id, tenant, router]);
+  }, [id, tenant]);
 
-  // 3. FUNÇÃO DE ATIVAÇÃO DOS SENSORES (O que faltava)
   const ativarGiroscopio = async () => {
-    // Criamos uma referência 'any' para o evento, silenciando o TypeScript
-    const DeviceOrientation = DeviceOrientationEvent as any;
-
+    const DeviceOrientation = (window as any).DeviceOrientationEvent;
     if (
       typeof DeviceOrientation !== "undefined" &&
       typeof DeviceOrientation.requestPermission === "function"
     ) {
-      try {
-        // Agora chamamos a função através da referência 'any'
-        const permission = await DeviceOrientation.requestPermission();
-
-        if (permission === "granted") {
-          setGyroActive(true);
-        } else {
-          alert("A permissão para usar o movimento foi negada pelo iOS.");
-        }
-      } catch (error) {
-        console.error("Erro ao solicitar sensores:", error);
-      }
+      const permission = await DeviceOrientation.requestPermission();
+      if (permission === "granted") setGyroActive(true);
     } else {
-      // Para Android, Windows e Mac, a permissão é automática
       setGyroActive(true);
     }
   };
 
   if (!imovel)
     return (
-      <div className="p-20 text-center text-gray-400 font-bold">
-        Carregando detalhes do imóvel...
+      <div className="p-20 text-center space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div>
+        <p className="text-gray-400 font-bold">
+          Sincronizando experiência 360...
+        </p>
+        <p className="text-xs text-gray-300">
+          Se demorar, verifique o console (F12)
+        </p>
       </div>
     );
 
-  // Detecta a foto 360 na galeria
-  const foto360 = imovel.midias?.find(
-    (m: any) => m.tipo === "foto_360" || m.tipo === "foto360",
+  // Busca a foto 360 de forma robusta
+  const foto360 = imovel.midias?.find((m: any) =>
+    String(m.tipo).toLowerCase().includes("360"),
   )?.url;
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-24 px-2 md:px-6">
-      {/* 1. HEADER DINÂMICO */}
-      <div className="flex items-center gap-4 py-4 px-2">
+      <div className="flex items-center gap-4 py-2">
         <Link
           href="/"
-          className="p-3 bg-white shadow-xl rounded-2xl border border-gray-100 active:scale-95 transition-all"
+          className="p-3 bg-white shadow-sm rounded-2xl border border-gray-100"
         >
-          <ArrowLeft size={24} className="text-indigo-600" />
+          <ArrowLeft size={20} />
         </Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-black text-gray-900 truncate leading-tight">
-            {imovel.titulo}
-          </h1>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            {imovel.tipo} • Código #{imovel.id}
-          </p>
-        </div>
+        <h1 className="text-xl font-black text-gray-900 truncate">
+          {imovel.titulo}
+        </h1>
       </div>
-
-      {/* 2. CONTEÚDO (TOUR, VÍDEO OU MAPA) */}
-
       {viewMode === "tour" && (
-        <div className="relative h-[75vh] md:h-[650px] w-full rounded-[3rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
+        <div className="relative h-[75vh] md:h-[650px] w-full rounded-[3.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
           {foto360 ? (
             <>
               <Visualizador360
@@ -127,24 +120,22 @@ export default function ImovelDetalhes() {
                 autoLoad
                 orientationOn={gyroActive}
                 showFullscreenCtrl={false}
-                mouseZoom={false}
               />
-
               {!gyroActive && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm px-6">
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
                   <button
                     onClick={ativarGiroscopio}
-                    className="bg-white w-full max-w-sm p-8 rounded-[3rem] flex flex-col items-center gap-4 shadow-2xl active:scale-95 transition-all"
+                    className="bg-white p-8 rounded-[3rem] flex flex-col items-center gap-4 shadow-2xl transition-all active:scale-95"
                   >
-                    <div className="bg-indigo-600 p-5 rounded-[2rem] text-white shadow-xl shadow-indigo-200">
+                    <div className="bg-indigo-600 p-5 rounded-[2rem] text-white">
                       <Smartphone size={40} />
                     </div>
                     <div className="text-center">
-                      <span className="block font-black text-indigo-950 uppercase text-sm tracking-tighter">
+                      <span className="block font-black text-indigo-950 uppercase text-sm">
                         Ativar Modo Imersivo
                       </span>
-                      <span className="text-[11px] text-gray-400 font-bold mt-1 block">
-                        Mova o celular para olhar o imóvel
+                      <span className="text-[10px] text-gray-400 font-bold">
+                        Gire o celular para olhar o imóvel
                       </span>
                     </div>
                   </button>
@@ -154,14 +145,14 @@ export default function ImovelDetalhes() {
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-white gap-4">
               <Info size={48} className="text-gray-600" />
-              <p className="font-bold text-gray-400">
-                Nenhum Tour 360 disponível.
+              <p className="text-gray-400">
+                Aguardando processamento da foto 360...
               </p>
             </div>
           )}
         </div>
       )}
-
+      // aqui
       {viewMode === "video" && imovel.videoUrl && (
         <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl bg-black border-4 border-white">
           <iframe
@@ -178,7 +169,6 @@ export default function ImovelDetalhes() {
           ></iframe>
         </div>
       )}
-
       {viewMode === "map" && (
         <div className="bg-indigo-950 text-white p-10 rounded-[3rem] shadow-2xl min-h-[60vh] relative overflow-hidden border-t-8 border-indigo-500">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600 blur-[120px] opacity-20" />
@@ -218,7 +208,6 @@ export default function ImovelDetalhes() {
           </div>
         </div>
       )}
-
       <div className="fixed bottom-6 left-6 right-6 z-50">
         <button className="w-full bg-green-500 hover:bg-green-600 text-white p-6 rounded-[2.5rem] font-black text-lg flex justify-center items-center gap-4 shadow-xl transition-all active:scale-95">
           <MessageCircle size={32} />
