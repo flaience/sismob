@@ -30,18 +30,16 @@ export class PessoasController {
     return imob;
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   @Get()
   async findAll(
     @Query('papel') papel: string,
+    @Query('imobiliariaId') imobiliariaId: string,
     @Query('search') search: string,
-    @Request() req: any,
   ) {
-    return this.pessoasService.findByRole(
-      papel,
-      req.user.imobiliariaId,
-      search,
-    );
+    if (!imobiliariaId) return [];
+
+    return this.pessoasService.findByRole(papel, imobiliariaId, search);
   }
 
   @UseGuards(AuthGuard('jwt'))
