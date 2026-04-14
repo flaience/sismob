@@ -7,10 +7,14 @@ import {
   Request,
   NotFoundException,
   UseGuards,
+  Delete,
+  Patch,
+  Param,
   Inject,
 } from '@nestjs/common';
 import { PessoasService } from './pessoas.service';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('pessoas')
 export class PessoasController {
@@ -19,26 +23,48 @@ export class PessoasController {
     private readonly pessoasService: PessoasService,
   ) {}
 
-  // ROTA PÚBLICA: Identifica a imobiliária pelo domínio
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
-    const imobiliaria = await this.pessoasService.findImobiliariaByHost(host);
-    if (!imobiliaria)
-      throw new NotFoundException('Imobiliária não encontrada.');
-    return imobiliaria;
+    const imob = await this.pessoasService.findImobiliariaByHost(host);
+    if (!imob) throw new NotFoundException('Imobiliária não identificada.');
+    return imob;
   }
 
-  // ROTA PÚBLICA (DESTRAVADA): Lista pessoas por papel e imobiliária
-  // Removi o @UseGuards para acabar com o erro 401
+  @UseGuards(AuthGuard('jwt'))
   @Get()
-  @UseGuards(AuthGuard('jwt')) // <--- REATIVADO: Só corretores veem a lista de clientes/proprietários
-  async findAll(@Query('papel') papel: string, @Request() req: any) {
-    return this.pessoasService.findByRole(papel, req.user.imobiliariaId);
+  async findAll(
+    @Query('papel') papel: string,
+    @Query('search') search: string,
+    @Request() req: any,
+  ) {
+    return this.pessoasService.findByRole(
+      papel,
+      req.user.imobiliariaId,
+      search,
+    );
   }
 
-  // Mantenha o POST protegido se desejar, ou comente para testar inclusão
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Request() req: any) {
+    return this.pessoasService.findOne(id, req.user.imobiliariaId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Post()
-  async create(@Body() dto: any) {
-    return this.pessoasService.createUsuario(dto, dto.imobiliariaId);
+  async create(@Body() dto: any, @Request() req: any) {
+    return this.pessoasService.createUsuario(dto, req.user.imobiliariaId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: any, @Request() req: any) {
+    return this.pessoasService.updateCompleto(id, dto, req.user.imobiliariaId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Request() req: any) {
+    return this.pessoasService.remove(id, req.user.imobiliariaId);
   }
 }

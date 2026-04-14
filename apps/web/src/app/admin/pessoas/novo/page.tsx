@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, MapPin, Save, ArrowLeft, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,20 +27,67 @@ export default function NovoCadastroPage() {
     estado: "",
   });
 
+  const idEdicao = searchParams.get("id");
+
+  // 2. Efeito para carregar os dados caso seja uma Edição
+  useEffect(() => {
+    if (idEdicao && tenant?.id) {
+      api
+        .get(`/pessoas/${idEdicao}`)
+        .then((res) => {
+          const p = res.data;
+          const e = p.enderecos?.[0] || {}; // Pega o primeiro endereço se houver
+          setFormData({
+            nome: p.nome,
+            email: p.email,
+            documento: p.documento,
+            telefone: p.telefone,
+            tipo: p.tipo,
+            cep: e.cep || "",
+            logradouro: e.logradouro || "",
+            numero: e.numero || "",
+            bairro: e.bairro || "",
+            cidade: e.cidade || "",
+            estado: e.estado || "",
+          });
+        })
+        .catch((err) =>
+          console.error("Erro ao carregar dados para edição", err),
+        );
+    }
+  }, [idEdicao, tenant]);
+
+  // 3. A NOVA FUNÇÃO SUBMETIDA (Substitua a sua antiga por esta)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id) return alert("Imobiliária não identificada.");
+
     setLoading(true);
     try {
-      await api.post("/pessoas", {
-        ...formData,
-        papel,
-        imobiliariaId: tenant.id,
-      });
-      alert("Sucesso!");
-      router.back();
-    } catch (error) {
-      alert("Erro ao cadastrar.");
+      if (idEdicao) {
+        // MODO EDIÇÃO: Envia para a rota PATCH
+        await api.patch(`/pessoas/${idEdicao}`, {
+          ...formData,
+          imobiliariaId: tenant.id,
+        });
+        alert("Cadastro atualizado com sucesso!");
+      } else {
+        // MODO CRIAÇÃO: Envia para a rota POST
+        await api.post("/pessoas", {
+          ...formData,
+          papel,
+          imobiliariaId: tenant.id,
+        });
+        alert("Cadastro realizado com sucesso!");
+      }
+
+      router.back(); // Volta para a listagem (Grid)
+    } catch (error: any) {
+      console.error(
+        "❌ Erro ao salvar:",
+        error.response?.data || error.message,
+      );
+      alert("Erro ao salvar os dados. Verifique o console.");
     } finally {
       setLoading(false);
     }

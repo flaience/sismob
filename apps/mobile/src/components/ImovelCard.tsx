@@ -1,3 +1,4 @@
+//src/components/ImovelCard.tsx
 import React from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { MapPin, Camera, Play, Navigation } from "lucide-react-native";

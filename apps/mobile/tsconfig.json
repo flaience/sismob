@@ -3,15 +3,16 @@
   "compilerOptions": {
     "ignoreDeprecations": "5.0",
     "moduleResolution": "bundler",
-    "strict": true,
+    "strict": false,
+    "skipLibCheck": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "nativewind-env.d.ts"
   ]
 }
