@@ -20,7 +20,6 @@ export class PessoasController {
     private readonly pessoasService: PessoasService,
   ) {}
 
-  // ROTA PÚBLICA DE IDENTIFICAÇÃO
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
     const imob = await this.pessoasService.findImobiliariaByHost(host);
@@ -28,17 +27,15 @@ export class PessoasController {
     return imob;
   }
 
-  // LISTAGEM ABERTA (Mata o erro 401)
   @Get()
   async findAll(
     @Query('papel') papel: string,
-    @Query('imobiliariaId') imobiliariaId: string,
+    @Query('imobiliariaId') imobId: string,
     @Query('search') search: string,
   ) {
-    return this.pessoasService.findByRole(papel, imobiliariaId, search);
+    return this.pessoasService.findByRole(papel, imobId, search);
   }
 
-  // BUSCA INDIVIDUAL ABERTA
   @Get(':id')
   async findOne(
     @Param('id') id: string,
@@ -47,20 +44,17 @@ export class PessoasController {
     return this.pessoasService.findOne(id, imobId);
   }
 
-  // CRIAÇÃO ABERTA (Mata o erro 401 no botão Salvar)
   @Post()
   async create(@Body() dto: any) {
-    // Pegamos o imobiliariaId que o site envia no formulário
     return this.pessoasService.createUsuario(dto, dto.imobiliariaId);
   }
 
-  // ALTERAÇÃO ABERTA
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any) {
+    // Agora o Service possui o método updateCompleto!
     return this.pessoasService.updateCompleto(id, dto, dto.imobiliariaId);
   }
 
-  // DELEÇÃO ABERTA
   @Delete(':id')
   async remove(
     @Param('id') id: string,
