@@ -1,21 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  UserPlus,
-  Search,
-  Mail,
-  Phone,
-  FileText,
-  MoreVertical,
-  Trash2,
-  Edit,
-  UserCog,
-} from "lucide-react";
+import { UserPlus, Search, Mail, Phone, FileText, Users } from "lucide-react";
 import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
 import { useRouter } from "next/navigation";
 
-export default function ProprietariosPage() {
+export default function ClientesPage() {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const { tenant } = useTenant();
@@ -25,7 +15,7 @@ export default function ProprietariosPage() {
     if (!tenant?.id) return;
     try {
       const res = await api.get("/pessoas", {
-        params: { papel: "3", imobiliariaId: tenant.id },
+        params: { papel: "2", imobiliariaId: tenant.id },
       });
       setLista(res.data);
     } catch (e) {
@@ -43,30 +33,29 @@ export default function ProprietariosPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tighter text-indigo-600">
-            Proprietários
+          <h1 className="text-4xl font-black text-gray-900 tracking-tighter text-green-600">
+            Clientes
           </h1>
           <p className="text-gray-500 font-medium">
-            Gestão de donos de imóveis.
+            Gestão de interessados e leads.
           </p>
         </div>
         <button
-          onClick={() => router.push("/admin/pessoas/novo?papel=3")}
-          className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-bold flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"
+          onClick={() => router.push("/admin/pessoas/novo?papel=2")}
+          className="bg-green-600 text-white px-6 py-4 rounded-2xl font-bold flex items-center gap-2 shadow-lg hover:bg-green-700 transition-all"
         >
           <UserPlus size={20} /> CADASTRAR NOVO
         </button>
       </div>
 
-      {/* SEARCH BAR (PADRÃO) */}
       <div className="relative max-w-md">
         <Search
           className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
           size={20}
         />
         <input
-          placeholder="Buscar..."
-          className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-gray-100 shadow-sm focus:ring-2 focus:ring-indigo-600 outline-none"
+          placeholder="Buscar cliente..."
+          className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-gray-100 shadow-sm focus:ring-2 focus:ring-green-600 outline-none"
         />
       </div>
 
@@ -77,10 +66,8 @@ export default function ProprietariosPage() {
               key={item.id}
               className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all group"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-xl">
-                  <UserCog size={24} />
-                </div>
+              <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 font-bold mb-4">
+                <Users size={24} />
               </div>
               <h3 className="text-xl font-bold text-gray-900">{item.nome}</h3>
               <div className="mt-4 space-y-2 text-gray-500 text-sm">
@@ -89,9 +76,6 @@ export default function ProprietariosPage() {
                 </p>
                 <p className="flex items-center gap-2">
                   <Phone size={14} /> {item.telefone || "Sem fone"}
-                </p>
-                <p className="flex items-center gap-2">
-                  <FileText size={14} /> {item.documento}
                 </p>
               </div>
             </div>

@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Camera,
-  Map,
   Building2,
   ChevronRight,
   ChevronLeft,
@@ -12,6 +10,10 @@ import {
   LogOut,
   PlusCircle,
   LayoutDashboard,
+  Users,
+  UserCog,
+  Briefcase,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,7 +26,6 @@ export default function Sidebar() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Escuta o estado do login em tempo real
   useEffect(() => {
     supabase.auth
       .getSession()
@@ -43,12 +44,21 @@ export default function Sidebar() {
     router.refresh();
   };
 
+  // Menu de Gestão (Apenas para logados)
+  const adminMenu = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
+    { icon: PlusCircle, label: "Novo Imóvel", href: "/admin/imoveis/novo" },
+    { icon: UserCog, label: "Proprietários", href: "/admin/proprietarios" },
+    { icon: Users, label: "Clientes", href: "/admin/clientes" },
+    { icon: Briefcase, label: "Corretores", href: "/admin/corretores" },
+  ];
+
   return (
     <>
-      {/* SIDEBAR DESKTOP (Visível apenas em telas médias/grandes) */}
+      {/* 1. SIDEBAR DESKTOP */}
       <motion.aside
         animate={{ width: isExpanded ? 260 : 84 }}
-        className="hidden md:flex fixed left-6 top-6 bottom-6 z-50 bg-white/90 backdrop-blur-xl shadow-2xl rounded-[2.5rem] border border-white/20 flex flex-col p-4"
+        className="hidden md:flex fixed left-6 top-6 bottom-6 z-50 bg-white/90 backdrop-blur-xl shadow-2xl rounded-[2.5rem] border border-white/20 flex flex-col p-4 overflow-hidden"
       >
         {/* LOGO */}
         <div className="flex items-center gap-3 mb-10 px-2 pt-2">
@@ -56,13 +66,18 @@ export default function Sidebar() {
             <Building2 size={24} />
           </div>
           {isExpanded && (
-            <span className="font-black text-xl text-gray-800 uppercase tracking-tighter">
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="font-black text-xl text-gray-800 uppercase tracking-tighter"
+            >
               SIS<span className="text-indigo-600">MOB</span>
-            </span>
+            </motion.span>
           )}
         </div>
 
         <nav className="flex flex-col gap-2 flex-1">
+          {/* LINK PÚBLICO */}
           <Link
             href="/"
             className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/" ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:bg-gray-50"}`}
@@ -71,36 +86,38 @@ export default function Sidebar() {
             {isExpanded && <span className="text-sm font-bold">Explorar</span>}
           </Link>
 
+          {/* ÁREA DE GESTÃO */}
           <AnimatePresence>
             {session && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col gap-2 pt-4 mt-4 border-t border-gray-100"
+                className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2"
               >
-                <Link
-                  href="/admin/imoveis/novo"
-                  className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/admin/imoveis/novo" ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}
-                >
-                  <PlusCircle size={22} />
-                  {isExpanded && (
-                    <span className="text-sm font-bold">Novo Imóvel</span>
-                  )}
-                </Link>
-                <Link
-                  href="/admin/proprietarios"
-                  className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/admin/proprietarios" ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}
-                >
-                  <LayoutDashboard size={22} />
-                  {isExpanded && (
-                    <span className="text-sm font-bold">Gestão</span>
-                  )}
-                </Link>
+                {isExpanded && (
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 mb-2">
+                    Gestão
+                  </p>
+                )}
+
+                {adminMenu.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === item.href ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}
+                  >
+                    <item.icon size={22} />
+                    {isExpanded && (
+                      <span className="text-sm font-bold">{item.label}</span>
+                    )}
+                  </Link>
+                ))}
               </motion.div>
             )}
           </AnimatePresence>
         </nav>
 
+        {/* RODAPÉ SIDEBAR */}
         <div className="mt-auto flex flex-col gap-3">
           {session ? (
             <button
@@ -135,28 +152,38 @@ export default function Sidebar() {
         </div>
       </motion.aside>
 
-      {/* BOTTOM NAV MOBILE (Visível apenas em celulares) */}
+      {/* 2. BOTTOM NAV MOBILE (Focado nos atalhos principais) */}
       <nav className="md:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/80 backdrop-blur-xl border border-gray-100 flex justify-around p-3 rounded-[2rem] shadow-2xl">
         <Link
           href="/"
-          className={`p-3 rounded-2xl ${pathname === "/" ? "bg-indigo-600 text-white" : "text-gray-400"}`}
+          className={`p-4 rounded-2xl ${pathname === "/" ? "bg-indigo-600 text-white" : "text-gray-400"}`}
         >
           <Search size={24} />
         </Link>
-        {session && (
+
+        {session ? (
+          <>
+            <Link
+              href="/admin/imoveis/novo"
+              className={`p-4 rounded-2xl ${pathname === "/admin/imoveis/novo" ? "bg-gray-900 text-white" : "text-gray-400"}`}
+            >
+              <PlusCircle size={24} />
+            </Link>
+            <Link
+              href="/admin/proprietarios"
+              className={`p-4 rounded-2xl ${pathname.includes("admin") && pathname !== "/admin/imoveis/novo" ? "bg-gray-900 text-white" : "text-gray-400"}`}
+            >
+              <Layers size={24} />
+            </Link>
+          </>
+        ) : (
           <Link
-            href="/admin/imoveis/novo"
-            className={`p-3 rounded-2xl ${pathname === "/admin/imoveis/novo" ? "bg-gray-900 text-white" : "text-gray-400"}`}
+            href="/login"
+            className={`p-4 rounded-2xl ${pathname === "/login" ? "bg-green-600 text-white" : "text-gray-400"}`}
           >
-            <PlusCircle size={24} />
+            <LogIn size={24} />
           </Link>
         )}
-        <Link
-          href="/login"
-          className={`p-3 rounded-2xl ${pathname === "/login" ? "bg-indigo-600 text-white" : "text-gray-400"}`}
-        >
-          {session ? <LayoutDashboard size={24} /> : <LogIn size={24} />}
-        </Link>
       </nav>
     </>
   );

@@ -6,9 +6,11 @@ import {
   Query,
   Request,
   NotFoundException,
+  UseGuards,
   Inject,
 } from '@nestjs/common';
 import { PessoasService } from './pessoas.service';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('pessoas')
 export class PessoasController {
@@ -29,12 +31,9 @@ export class PessoasController {
   // ROTA PÚBLICA (DESTRAVADA): Lista pessoas por papel e imobiliária
   // Removi o @UseGuards para acabar com o erro 401
   @Get()
-  async findAll(
-    @Query('papel') papel: string,
-    @Query('imobiliariaId') imobiliariaId: string,
-  ) {
-    if (!imobiliariaId) return []; // Segurança mínima: exige o ID na URL
-    return this.pessoasService.findByRole(papel, imobiliariaId);
+  @UseGuards(AuthGuard('jwt')) // <--- REATIVADO: Só corretores veem a lista de clientes/proprietários
+  async findAll(@Query('papel') papel: string, @Request() req: any) {
+    return this.pessoasService.findByRole(papel, req.user.imobiliariaId);
   }
 
   // Mantenha o POST protegido se desejar, ou comente para testar inclusão

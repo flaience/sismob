@@ -8,11 +8,14 @@ import {
   Delete,
   UseInterceptors,
   UploadedFiles,
-  InternalServerErrorException,
+  UseGuards,
+  Request,
   Inject,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { AuthGuard } from '@nestjs/passport';
 import { ImoveisService } from './imoveis.service';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('imoveis')
 export class ImoveisController {
@@ -21,11 +24,13 @@ export class ImoveisController {
     private readonly imoveisService: ImoveisService,
   ) {}
 
+  // 1. LISTAGEM (Pública - identificada pelo domínio no site)
   @Get()
   async findAll(@Query('imobiliariaId') imobiliariaId: string) {
     return this.imoveisService.findAll(imobiliariaId);
   }
 
+  // 2. BUSCA INDIVIDUAL (Pública)
   @Get(':id')
   async findOne(
     @Param('id') id: string,
@@ -34,8 +39,9 @@ export class ImoveisController {
     return this.imoveisService.findOne(+id, imobId);
   }
 
-  // DESTRAVADO: Removido AuthGuard para resolver o 401 agora
+  // 3. CRIAÇÃO/EDIÇÃO (Protegida - O motor que você perguntou)
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard) // Garante que só usuários logados criam
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'galeria', maxCount: 15 },
@@ -45,26 +51,21 @@ export class ImoveisController {
   async create(
     @Body() data: any,
     @UploadedFiles() files: { galeria?: any[]; foto360?: any[] },
+    @Request() req: any, // Pega o usuário logado
   ) {
-    console.log('📥 Recebendo POST em /imoveis. Dados:', data);
     const allFiles = [...(files?.galeria || []), ...(files?.foto360 || [])];
 
-    // Pegamos o imobiliariaId que vem do formulário
-    if (!data.imobiliariaId)
-      throw new InternalServerErrorException('imobiliariaId faltando no form');
+    // EXCELÊNCIA SAAS: Ignoramos o ID que vem do formulário e usamos
+    // o ID da imobiliária que está criptografado no TOKEN do usuário.
+    const imobiliariaId = req.user.imobiliariaId;
 
-    return this.imoveisService.upsertImovel(data, allFiles, data.imobiliariaId);
+    return this.imoveisService.upsertImovel(data, allFiles, imobiliariaId);
   }
 
-  // DESTRAVADO: Removido AuthGuard para permitir a deleção agora
+  // 4. EXCLUSÃO (Protegida)
   @Delete(':id')
-  async remove(
-    @Param('id') id: string,
-    @Query('imobiliariaId') imobId: string,
-  ) {
-    console.log(
-      `🗑️ Solicitando exclusão do imóvel ${id} para imobiliária ${imobId}`,
-    );
-    return this.imoveisService.remove(+id, imobId);
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  async remove(@Param('id') id: string, @Request() req: any) {
+    return this.imoveisService.remove(+id, req.user.imobiliariaId);
   }
 }

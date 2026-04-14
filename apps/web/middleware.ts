@@ -1,27 +1,57 @@
-// import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
-// import { NextResponse } from "next/server";
-// import type { NextRequest } from "next/server"; // MUDOU AQUI (era next/request)
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-// export async function middleware(req: NextRequest) {
-//   const res = NextResponse.next();
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-//   // Cria o cliente do Supabase específico para o Middleware
-//   const supabase = createMiddlewareClient({ req, res });
+  // Inicializa o cliente do Supabase de forma moderna (SSR)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: "", ...options });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({ name, value: "", ...options });
+        },
+      },
+    },
+  );
 
-//   // Verifica se existe uma sessão ativa
-//   const {
-//     data: { session },
-//   } = await supabase.auth.getSession();
+  // Verifica a sessão
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-//   // Se o usuário tentar acessar qualquer rota que comece com /admin e não estiver logado
-//   if (req.nextUrl.pathname.startsWith("/admin") && !session) {
-//     return NextResponse.redirect(new URL("/login", req.url));
-//   }
+  // PROTEÇÃO: Se tentar acessar /admin sem estar logado
+  if (request.nextUrl.pathname.startsWith("/admin") && !session) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-//   return res;
-// }
+  return response;
+}
 
-// // Define quais caminhos o middleware deve observar
-// export const config = {
-//   matcher: ["/admin/:path*", "/perfil/:path*"],
-// };
+export const config = {
+  matcher: ["/admin/:path*"],
+};
