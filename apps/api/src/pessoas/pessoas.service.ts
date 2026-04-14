@@ -39,22 +39,31 @@ export class PessoasService {
   // BUSCA FILTRADA COM ENDEREÇO
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
     try {
-      const queryApi = this.db.query as any;
-      return await queryApi.pessoas.findMany({
-        where: and(
-          eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
-          eq(schema.pessoas.papel as any, papel),
-          search
-            ? or(
-                ilike(schema.pessoas.nome as any, `%${search}%`),
-                ilike(schema.pessoas.documento as any, `%${search}%`),
-              )
-            : undefined,
-        ),
-        with: { enderecos: true },
-      });
+      console.log(
+        `📡 Buscando Papel: ${papel} | Imob: ${imobiliariaId} | Busca: ${search}`,
+      );
+
+      // Usamos o select mais básico e direto possível
+      const query = this.db
+        .select()
+        .from(schema.pessoas as any)
+        .where(
+          and(
+            // O segredo está aqui: usamos o nome físico 'imobiliariaId' que o Drizzle mapeia
+            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
+            eq((schema.pessoas as any).papel, papel),
+            // Se houver busca, filtra por nome
+            search
+              ? ilike((schema.pessoas as any).nome, `%${search}%`)
+              : undefined,
+          ),
+        );
+
+      const results = await query;
+      console.log(`✅ Registros encontrados no banco: ${results.length}`);
+      return results;
     } catch (error) {
-      console.error('Erro findByRole:', error);
+      console.error('❌ Erro fatal no findByRole:', error.message);
       return [];
     }
   }
