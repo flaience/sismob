@@ -7,107 +7,98 @@ import {
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
 import { eq, and, or, ilike } from 'drizzle-orm';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class PessoasService {
+  private supabaseAdmin: SupabaseClient;
+
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) {
+    // INICIALIZA O MOTOR DO SUPABASE PARA CRIAR LOGINS
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // 1. IDENTIFICAÇÃO PÚBLICA PELO DOMÍNIO
+    if (url && key) {
+      this.supabaseAdmin = createClient(url, key, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
+  // 1. IDENTIFICAÇÃO PELO DOMÍNIO
   async findImobiliariaByHost(host: string) {
-    try {
-      const results = await this.db
-        .select()
-        .from(schema.pessoas as any)
-        .where(
-          and(
-            eq((schema.pessoas as any).dominio, host),
-            eq((schema.pessoas as any).papel, '5'),
-          ),
-        )
-        .limit(1);
-      return results[0] || null;
-    } catch (error) {
-      console.error('❌ Erro findImobiliariaByHost:', error.message);
-      return null;
-    }
+    const results = await this.db
+      .select()
+      .from(schema.pessoas as any)
+      .where(
+        and(
+          eq((schema.pessoas as any).dominio, host),
+          eq((schema.pessoas as any).papel, '5'),
+        ),
+      )
+      .limit(1);
+    return results[0] || null;
   }
 
-  // 2. BUSCA COM FILTRO DE PAPEL E PESQUISA
-  // BUSCA FILTRADA COM ENDEREÇO
+  // 2. BUSCA POR PAPEL (GRID)
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
-    try {
-      console.log(
-        `📡 Buscando Papel: ${papel} | Imob: ${imobiliariaId} | Busca: ${search}`,
-      );
-
-      // Usamos o select mais básico e direto possível
-      const query = this.db
-        .select()
-        .from(schema.pessoas as any)
-        .where(
-          and(
-            // O segredo está aqui: usamos o nome físico 'imobiliariaId' que o Drizzle mapeia
-            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
-            eq((schema.pessoas as any).papel, papel),
-            // Se houver busca, filtra por nome
-            search
-              ? ilike((schema.pessoas as any).nome, `%${search}%`)
-              : undefined,
-          ),
-        );
-
-      const results = await query;
-      console.log(`✅ Registros encontrados no banco: ${results.length}`);
-      return results;
-    } catch (error) {
-      console.error('❌ Erro fatal no findByRole:', error.message);
-      return [];
-    }
+    const queryApi = this.db.query as any;
+    return await queryApi.pessoas.findMany({
+      where: and(
+        eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
+        eq(schema.pessoas.papel as any, papel),
+        search ? ilike(schema.pessoas.nome as any, `%${search}%`) : undefined,
+      ),
+      with: { enderecos: true },
+    });
   }
 
-  async remove(id: string, imobiliariaId: string) {
-    try {
-      console.log(
-        `🗑️ Tentando excluir pessoa: ${id} da imobiliária ${imobiliariaId}`,
-      );
-
-      const result = await this.db
-        .delete(schema.pessoas as any)
-        .where(
-          and(
-            eq((schema.pessoas as any).id, id),
-            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
-          ),
-        );
-
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erro ao deletar pessoa:', error.message);
-      throw new InternalServerErrorException(
-        'Não é possível excluir esta pessoa pois ela possui vínculos ativos.',
-      );
-    }
-  }
+  // 3. BUSCA UM ÚNICO (EDIÇÃO)
   async findOne(id: string, imobiliariaId: string) {
     const queryApi = this.db.query as any;
-    return await queryApi.pessoas.findFirst({
+    const result = await queryApi.pessoas.findFirst({
       where: and(
         eq(schema.pessoas.id as any, id),
         eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
       ),
       with: { enderecos: true },
     });
+    return result;
   }
 
-  // 4. CRIAÇÃO (PESSOA + ENDEREÇO)
+  // 4. CRIAÇÃO COM LOGIN AUTOMÁTICO (UPGRADE SAAS)
   async createUsuario(dto: any, imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
+        let authUserId = dto.id; // Se já vier um ID (ex: do Supabase direto)
+
+        // SE FOR CORRETOR (1) OU ADMIN (1), CRIA LOGIN NO SUPABASE AUTH
+        if (dto.papel === '1' && !authUserId) {
+          if (!this.supabaseAdmin)
+            throw new Error('Serviço de Auth não configurado no .env');
+
+          const { data, error } =
+            await this.supabaseAdmin.auth.admin.createUser({
+              email: dto.email,
+              password: 'Sismob@123', // Senha padrão inicial
+              email_confirm: true,
+              user_metadata: { nome: dto.nome, imobiliariaId },
+            });
+
+          if (error) throw new Error(`Erro Supabase: ${error.message}`);
+          authUserId = data.user.id;
+        }
+
+        // SALVA NA TABELA PESSOAS
         const [novaPessoa] = await (tx.insert(schema.pessoas as any) as any)
           .values({
+            id: authUserId || undefined,
             nome: dto.nome,
             email: dto.email,
             documento: dto.documento,
@@ -118,6 +109,7 @@ export class PessoasService {
           })
           .returning();
 
+        // SALVA ENDEREÇO
         if (dto.cep) {
           await (tx.insert(schema.enderecos as any) as any).values({
             pessoaId: novaPessoa.id,
@@ -131,16 +123,16 @@ export class PessoasService {
         }
         return novaPessoa;
       });
-    } catch (error) {
-      throw new InternalServerErrorException('Erro ao criar registro.');
+    } catch (e) {
+      console.error('❌ Erro ao criar usuário:', e.message);
+      throw new InternalServerErrorException(e.message);
     }
   }
 
-  // 5. ATUALIZAÇÃO (PESSOA + ENDEREÇO - RESOLVE ERRO DE QUERY)
+  // 5. ATUALIZAÇÃO
   async updateCompleto(id: string, dto: any, imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
-        // 5.1 Atualiza Pessoa
         await tx
           .update(schema.pessoas as any)
           .set({
@@ -158,9 +150,8 @@ export class PessoasService {
             ),
           );
 
-        // 5.2 Atualiza ou Cria Endereço
         if (dto.cep) {
-          const queryApi = tx.query as any; // Casting Vital aqui
+          const queryApi = tx.query as any;
           const enderecoExistente = await queryApi.enderecos.findFirst({
             where: eq(schema.enderecos.pessoaId as any, id),
           });
@@ -187,11 +178,20 @@ export class PessoasService {
         }
         return { success: true };
       });
-    } catch (error) {
-      console.error('❌ Erro no updateCompleto:', error.message);
-      throw new InternalServerErrorException('Falha ao atualizar registro.');
+    } catch (e) {
+      throw new InternalServerErrorException(e.message);
     }
   }
 
   // 6. REMOÇÃO
+  async remove(id: string, imobiliariaId: string) {
+    return await this.db
+      .delete(schema.pessoas as any)
+      .where(
+        and(
+          eq((schema.pessoas as any).id, id),
+          eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
+        ),
+      );
+  }
 }

@@ -55,12 +55,14 @@ function FormContent() {
       api.get(`/pessoas/${idEdicao}`).then((res) => {
         const p = res.data;
         const e = p.enderecos?.[0] || {};
+
         setFormData({
-          nome: p.nome,
-          email: p.email,
-          documento: p.documento,
-          telefone: p.telefone || "",
-          tipo: p.tipo,
+          nome: p.nome || "",
+          email: p.email || "",
+          documento: p.documento || "",
+          // O segredo está aqui: tenta ler com ou sem underline
+          telefone: p.telefone || p.tel || "",
+          tipo: p.tipo || "f",
           cep: e.cep || "",
           logradouro: e.logradouro || "",
           numero: e.numero || "",
@@ -71,7 +73,6 @@ function FormContent() {
       });
     }
   }, [idEdicao, tenant]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id) return alert("Imobiliária não identificada.");
