@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const withPWA = withPWAInit({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
+  disable: true, // <--- FORCE O TRUE AQUI
   register: true,
 });
 
