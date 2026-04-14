@@ -36,50 +36,49 @@ export class PessoasService {
   }
 
   // 2. BUSCA COM FILTRO DE PAPEL E PESQUISA
+  // BUSCA FILTRADA COM ENDEREÇO
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
     try {
-      const table = schema.pessoas as any;
-      let conditions = [
-        eq(table.imobiliariaId, imobiliariaId),
-        eq(table.papel, papel),
-      ];
-
-      if (search) {
-        conditions.push(
-          or(
-            ilike(table.nome, `%${search}%`),
-            ilike(table.documento, `%${search}%`),
-          ) as any,
-        );
-      }
-
-      return await this.db
-        .select()
-        .from(table)
-        .where(and(...conditions));
+      const queryApi = this.db.query as any;
+      return await queryApi.pessoas.findMany({
+        where: and(
+          eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
+          eq(schema.pessoas.papel as any, papel),
+          search
+            ? or(
+                ilike(schema.pessoas.nome as any, `%${search}%`),
+                ilike(schema.pessoas.documento as any, `%${search}%`),
+              )
+            : undefined,
+        ),
+        with: { enderecos: true },
+      });
     } catch (error) {
-      console.error('❌ Erro findByRole:', error.message);
+      console.error('Erro findByRole:', error);
       return [];
     }
   }
 
-  // 3. BUSCA UM ÚNICO REGISTRO (RESOLVE O ERRO DE ENDERECOS)
-  async findOne(id: string, imobiliariaId: string) {
-    // Forçamos o 'query' a ser any para ele encontrar 'pessoas' e 'enderecos'
-    const queryApi = this.db.query as any;
+  async remove(id: string, imobiliariaId: string) {
+    return await this.db
+      .delete(schema.pessoas as any)
+      .where(
+        and(
+          eq(schema.pessoas.id as any, id),
+          eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
+        ),
+      );
+  }
 
-    const result = await queryApi.pessoas.findFirst({
+  async findOne(id: string, imobiliariaId: string) {
+    const queryApi = this.db.query as any;
+    return await queryApi.pessoas.findFirst({
       where: and(
         eq(schema.pessoas.id as any, id),
         eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
       ),
-      with: {
-        enderecos: true, // Agora o TS não vai mais reclamar aqui
-      },
+      with: { enderecos: true },
     });
-
-    if (!result) throw new NotFoundException('Registro não encontrado.');
-    return result;
   }
 
   // 4. CRIAÇÃO (PESSOA + ENDEREÇO)
@@ -174,14 +173,4 @@ export class PessoasService {
   }
 
   // 6. REMOÇÃO
-  async remove(id: string, imobiliariaId: string) {
-    return await this.db
-      .delete(schema.pessoas as any)
-      .where(
-        and(
-          eq((schema.pessoas as any).id, id),
-          eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
-        ),
-      );
-  }
 }
