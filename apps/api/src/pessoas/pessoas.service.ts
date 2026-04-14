@@ -69,16 +69,28 @@ export class PessoasService {
   }
 
   async remove(id: string, imobiliariaId: string) {
-    return await this.db
-      .delete(schema.pessoas as any)
-      .where(
-        and(
-          eq(schema.pessoas.id as any, id),
-          eq(schema.pessoas.imobiliariaId as any, imobiliariaId),
-        ),
+    try {
+      console.log(
+        `🗑️ Tentando excluir pessoa: ${id} da imobiliária ${imobiliariaId}`,
       );
-  }
 
+      const result = await this.db
+        .delete(schema.pessoas as any)
+        .where(
+          and(
+            eq((schema.pessoas as any).id, id),
+            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
+          ),
+        );
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Erro ao deletar pessoa:', error.message);
+      throw new InternalServerErrorException(
+        'Não é possível excluir esta pessoa pois ela possui vínculos ativos.',
+      );
+    }
+  }
   async findOne(id: string, imobiliariaId: string) {
     const queryApi = this.db.query as any;
     return await queryApi.pessoas.findFirst({
