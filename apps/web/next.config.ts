@@ -1,21 +1,8 @@
-import withPWAInit from "@ducanh2912/next-pwa";
 import type { NextConfig } from "next";
 
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: true, // <--- FORCE O TRUE AQUI
-  register: true,
-});
-
 const nextConfig: NextConfig = {
-  // ADICIONE ESTE BLOCO:
-  eslint: {
-    ignoreDuringBuilds: true, // Ignora avisos de aspas e textos no build
-  },
-  typescript: {
-    ignoreBuildErrors: true, // Ignora erros chatos de tipos no build
-  },
-  // Mantenha o restante das suas configs (images, etc)
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -25,4 +12,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig as any);
+export default nextConfig;
