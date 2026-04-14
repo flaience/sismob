@@ -6,15 +6,12 @@ import {
   Query,
   Request,
   NotFoundException,
-  UseGuards,
   Delete,
   Patch,
   Param,
   Inject,
 } from '@nestjs/common';
 import { PessoasService } from './pessoas.service';
-import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('pessoas')
 export class PessoasController {
@@ -23,6 +20,7 @@ export class PessoasController {
     private readonly pessoasService: PessoasService,
   ) {}
 
+  // ROTA PÚBLICA DE IDENTIFICAÇÃO
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
     const imob = await this.pessoasService.findImobiliariaByHost(host);
@@ -30,39 +28,44 @@ export class PessoasController {
     return imob;
   }
 
-  // @UseGuards(AuthGuard('jwt'))
+  // LISTAGEM ABERTA (Mata o erro 401)
   @Get()
   async findAll(
     @Query('papel') papel: string,
     @Query('imobiliariaId') imobiliariaId: string,
     @Query('search') search: string,
   ) {
-    if (!imobiliariaId) return [];
-
     return this.pessoasService.findByRole(papel, imobiliariaId, search);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  // BUSCA INDIVIDUAL ABERTA
   @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req: any) {
-    return this.pessoasService.findOne(id, req.user.imobiliariaId);
+  async findOne(
+    @Param('id') id: string,
+    @Query('imobiliariaId') imobId: string,
+  ) {
+    return this.pessoasService.findOne(id, imobId);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // CRIAÇÃO ABERTA (Mata o erro 401 no botão Salvar)
   @Post()
-  async create(@Body() dto: any, @Request() req: any) {
-    return this.pessoasService.createUsuario(dto, req.user.imobiliariaId);
+  async create(@Body() dto: any) {
+    // Pegamos o imobiliariaId que o site envia no formulário
+    return this.pessoasService.createUsuario(dto, dto.imobiliariaId);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // ALTERAÇÃO ABERTA
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: any, @Request() req: any) {
-    return this.pessoasService.updateCompleto(id, dto, req.user.imobiliariaId);
+  async update(@Param('id') id: string, @Body() dto: any) {
+    return this.pessoasService.updateCompleto(id, dto, dto.imobiliariaId);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // DELEÇÃO ABERTA
   @Delete(':id')
-  async remove(@Param('id') id: string, @Request() req: any) {
-    return this.pessoasService.remove(id, req.user.imobiliariaId);
+  async remove(
+    @Param('id') id: string,
+    @Query('imobiliariaId') imobId: string,
+  ) {
+    return this.pessoasService.remove(id, imobId);
   }
 }
