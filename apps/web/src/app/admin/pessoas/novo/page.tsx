@@ -51,27 +51,42 @@ function FormContent() {
   };
 
   useEffect(() => {
-    if (idEdicao && tenant?.id) {
-      api.get(`/pessoas/${idEdicao}`).then((res) => {
-        const p = res.data;
-        const e = p.enderecos?.[0] || {};
+    async function carregarDadosParaEdicao() {
+      // SÓ ENTRA AQUI SE TIVER UM ID NA URL
+      if (idEdicao && tenant?.id) {
+        try {
+          console.log("📡 Solicitando dados para edição...");
+          const res = await api.get(`/pessoas/${idEdicao}`, {
+            params: { imobiliariaId: tenant.id },
+          });
 
-        setFormData({
-          nome: p.nome || "",
-          email: p.email || "",
-          documento: p.documento || "",
-          // O segredo está aqui: tenta ler com ou sem underline
-          telefone: p.telefone || p.tel || "",
-          tipo: p.tipo || "f",
-          cep: e.cep || "",
-          logradouro: e.logradouro || "",
-          numero: e.numero || "",
-          bairro: e.bairro || "",
-          cidade: e.cidade || "",
-          estado: e.estado || "",
-        });
-      });
+          const p = res.data;
+          if (p) {
+            // Pegamos o primeiro endereço da lista (se houver)
+            const e = p.enderecos && p.enderecos[0] ? p.enderecos[0] : {};
+
+            setFormData({
+              nome: p.nome || "",
+              email: p.email || "",
+              documento: p.documento || "",
+              telefone: p.telefone || "",
+              tipo: p.tipo || "f",
+              cep: e.cep || "",
+              logradouro: e.logradouro || "",
+              numero: e.numero || "",
+              bairro: e.bairro || "",
+              cidade: e.cidade || "", // Verifique se o nome no seu estado é cidade ou city
+              estado: e.estado || "",
+            });
+            console.log("✅ Formulário preenchido com sucesso!");
+          }
+        } catch (error) {
+          console.error("❌ Erro ao carregar dados:", error);
+        }
+      }
     }
+
+    carregarDadosParaEdicao();
   }, [idEdicao, tenant]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

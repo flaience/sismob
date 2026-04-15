@@ -57,28 +57,46 @@ export class PessoasService {
   }
 
   async findOne(id: string, imobiliariaId: string) {
-    const results = await this.db
-      .select()
-      .from(schema.pessoas as any)
-      .where(
-        and(
-          eq((schema.pessoas as any).id, id),
-          eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
-        ),
-      )
-      .limit(1);
+    try {
+      console.log(
+        `🔎 Buscando detalhes da pessoa: ${id} | Imob: ${imobiliariaId}`,
+      );
 
-    const pessoa = results[0];
-    if (pessoa) {
+      // 1. Busca a pessoa de forma direta
+      const results = await this.db
+        .select()
+        .from(schema.pessoas as any)
+        .where(
+          and(
+            eq((schema.pessoas as any).id, id),
+            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
+          ),
+        )
+        .limit(1);
+
+      const pessoa = results[0];
+
+      if (!pessoa) {
+        console.warn('⚠️ Pessoa não encontrada no banco.');
+        return null;
+      }
+
+      // 2. Busca o endereço vinculado (separado para evitar erro de Join)
       const enderecos = await this.db
         .select()
         .from(schema.enderecos as any)
         .where(eq((schema.enderecos as any).pessoaId, id));
-      return { ...pessoa, enderecos };
-    }
-    return null;
-  }
 
+      // 3. Devolve tudo unificado (O front espera 'enderecos' como um array)
+      const resultadoFinal = { ...pessoa, enderecos };
+      // console.log("✅ Dados prontos para envio:", resultadoFinal.nome);
+
+      return resultadoFinal;
+    } catch (error) {
+      console.error('❌ Erro no findOne:', error.message);
+      return null;
+    }
+  }
   async createUsuario(dto: any, imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
