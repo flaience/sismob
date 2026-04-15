@@ -39,18 +39,19 @@ export class PessoasService {
 
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
     try {
-      const table = schema.pessoas as any;
-      let conditions = [
-        eq(table.imobiliariaId, imobiliariaId),
-        eq(table.papel, papel),
-      ];
-      if (search) {
-        conditions.push(ilike(table.nome, `%${search}%`) as any);
-      }
-      return await this.db
+      const results = await this.db
         .select()
-        .from(table)
-        .where(and(...conditions));
+        .from(schema.pessoas as any)
+        .where(
+          and(
+            eq((schema.pessoas as any).imobiliariaId, imobiliariaId),
+            eq((schema.pessoas as any).papel, papel),
+            search
+              ? ilike((schema.pessoas as any).nome, `%${search}%`)
+              : undefined,
+          ),
+        );
+      return results;
     } catch (error) {
       return [];
     }
@@ -100,27 +101,28 @@ export class PessoasService {
   async createUsuario(dto: any, imobiliariaId: string) {
     try {
       console.log(
-        '📥 Iniciando gravação de pessoa para imobiliária:',
-        imobiliariaId,
+        `📥 Iniciando cadastro unificado. Papel: ${dto.papel} | Imob: ${imobiliariaId}`,
       );
 
       return await this.db.transaction(async (tx) => {
-        let authUserId = dto.id;
+        let authUserId = null;
 
-        // 1. Lógica para Corretores (Papel 1)
-        if (dto.papel === '1' && !authUserId) {
-          console.log('🔐 Criando login no Supabase Auth...');
+        // REGRA PARA CORRETORES (PAPEL 1): Cria login
+        if (dto.papel === '1') {
           const { data, error } =
             await this.supabaseAdmin.auth.admin.createUser({
               email: dto.email,
               password: 'Sismob@123',
               email_confirm: true,
             });
-          if (error) throw new Error(`Erro Auth: ${error.message}`);
+          if (error) {
+            // Se o e-mail já existe no Supabase Auth, pegamos o erro aqui
+            throw new Error(`Erro de Autenticação: ${error.message}`);
+          }
           authUserId = data.user.id;
         }
 
-        // 2. Inserir na tabela pessoas usando nomes literais (snake_case)
+        // SALVAMENTO PADRÃO PARA QUALQUER PESSOA (1, 2, 3, 4, 5, 6)
         const [novaPessoa] = await (tx.insert(schema.pessoas as any) as any)
           .values({
             id: authUserId || undefined,
@@ -129,15 +131,15 @@ export class PessoasService {
             documento: dto.documento,
             telefone: dto.telefone,
             tipo: dto.tipo || 'f',
-            papel: dto.papel,
-            imobiliaria_id: imobiliariaId, // <--- OBRIGATÓRIO COM UNDERLINE
+            papel: String(dto.papel),
+            imobiliaria_id: imobiliariaId, // Nome físico da coluna
           })
           .returning();
 
-        // 3. Inserir Endereço usando nomes literais
+        // SALVAMENTO DE ENDEREÇO PADRÃO
         if (dto.cep) {
           await (tx.insert(schema.enderecos as any) as any).values({
-            pessoa_id: novaPessoa.id, // <--- OBRIGATÓRIO COM UNDERLINE
+            pessoa_id: novaPessoa.id, // Nome físico da coluna
             cep: dto.cep,
             logradouro: dto.logradouro,
             numero: dto.numero,
@@ -147,19 +149,10 @@ export class PessoasService {
           });
         }
 
-        console.log('✅ Pessoa e Endereço gravados com sucesso!');
         return novaPessoa;
       });
     } catch (e: any) {
-      console.error('❌ ERRO FATAL NA GRAVAÇÃO:', e.message);
-
-      // Tratamento de Duplicidade (UK que criamos no banco)
-      if (e.message.includes('unique constraint') || e.code === '23505') {
-        throw new InternalServerErrorException(
-          'Este CPF/CNPJ, E-mail ou Telefone já existe para este papel.',
-        );
-      }
-
+      console.error('❌ ERRO NO CADASTRO UNIFICADO:', e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
