@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { eq, and, ilike } from 'drizzle-orm';
+import { eq, and, or, ilike } from 'drizzle-orm';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
@@ -23,60 +23,70 @@ export class PessoasService {
     }
   }
 
-  // 1. BUSCA PARA O GRID (Sincronizado com o Banco)
+  // 1. IDENTIFICAÇÃO PÚBLICA (DOMÍNIO)
+  async findImobiliariaByHost(host: string) {
+    const table = schema.pessoas as any;
+    const results = await this.db
+      .select()
+      .from(table)
+      .where(and(eq(table.dominio, host), eq(table.papel, '5')))
+      .limit(1);
+    return results[0] || null;
+  }
+
+  // 2. BUSCA PARA O GRID (COM FILTRO DE NOME/DOC)
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
     try {
       const table = schema.pessoas as any;
-      // Usamos os nomes físicos (snake_case) para garantir que o Postgres entenda
-      const query = this.db
+      let conditions = [
+        eq(table.imobiliaria_id, imobiliariaId),
+        eq(table.papel, papel),
+      ];
+
+      if (search) {
+        conditions.push(
+          or(
+            ilike(table.nome, `%${search}%`),
+            ilike(table.documento, `%${search}%`),
+          ) as any,
+        );
+      }
+
+      return await this.db
         .select()
         .from(table)
-        .where(
-          and(
-            eq(table.imobiliaria_id, imobiliariaId),
-            eq(table.papel, papel),
-            search ? ilike(table.nome, `%${search}%`) : undefined,
-          ),
-        );
-      return await query;
+        .where(and(...conditions));
     } catch (error) {
-      console.error('❌ Erro ao listar no Grid:', error.message);
       return [];
     }
   }
 
-  // 2. BUSCA UM ÚNICO (Para Edição)
+  // 3. BUSCA UM ÚNICO (PARA EDIÇÃO)
   async findOne(id: string, imobiliariaId: string) {
-    try {
-      const table = schema.pessoas as any;
-      const results = await this.db
-        .select()
-        .from(table)
-        .where(and(eq(table.id, id), eq(table.imobiliaria_id, imobiliariaId)))
-        .limit(1);
+    const table = schema.pessoas as any;
+    const results = await this.db
+      .select()
+      .from(table)
+      .where(and(eq(table.id, id), eq(table.imobiliaria_id, imobiliariaId)))
+      .limit(1);
 
-      const pessoa = results[0];
-      if (pessoa) {
-        const tableEnd = schema.enderecos as any;
-        const ends = await this.db
-          .select()
-          .from(tableEnd)
-          .where(eq(tableEnd.pessoa_id, id));
-        return { ...pessoa, enderecos: ends };
-      }
-      return null;
-    } catch (error) {
-      return null;
+    const pessoa = results[0];
+    if (pessoa) {
+      const tableEnd = schema.enderecos as any;
+      const ends = await this.db
+        .select()
+        .from(tableEnd)
+        .where(eq(tableEnd.pessoa_id, id));
+      return { ...pessoa, enderecos: ends };
     }
+    return null;
   }
 
-  // 3. GRAVAÇÃO UNIFICADA (Mata o Erro 500)
+  // 4. CRIAÇÃO (COM SUPORTE A LOGIN PARA CORRETOR)
   async createUsuario(dto: any, imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
         let authUserId = null;
-
-        // Se for Corretor (Papel 1), cria login no Supabase
         if (dto.papel === '1') {
           const { data, error } =
             await this.supabaseAdmin.auth.admin.createUser({
@@ -84,12 +94,12 @@ export class PessoasService {
               password: 'Sismob@123',
               email_confirm: true,
             });
-          if (error) throw new Error(`Auth: ${error.message}`);
-          authUserId = data.user.id;
+          if (error && error.message !== 'User already registered')
+            throw new Error(error.message);
+          if (data?.user) authUserId = data.user.id;
         }
 
-        // SALVAMENTO USANDO NOMES FÍSICOS DAS COLUNAS
-        const [novaPessoa] = await (tx.insert(schema.pessoas as any) as any)
+        const [nova] = await (tx.insert(schema.pessoas as any) as any)
           .values({
             id: authUserId || undefined,
             nome: dto.nome,
@@ -98,13 +108,13 @@ export class PessoasService {
             telefone: dto.telefone,
             tipo: dto.tipo || 'f',
             papel: dto.papel,
-            imobiliaria_id: imobiliariaId, // <--- NOME FÍSICO
+            imobiliaria_id: imobiliariaId,
           })
           .returning();
 
         if (dto.cep) {
           await (tx.insert(schema.enderecos as any) as any).values({
-            pessoa_id: novaPessoa.id, // <--- NOME FÍSICO
+            pessoa_id: nova.id,
             cep: dto.cep,
             logradouro: dto.logradouro,
             numero: dto.numero,
@@ -113,15 +123,14 @@ export class PessoasService {
             estado: dto.estado,
           });
         }
-        return novaPessoa;
+        return nova;
       });
-    } catch (e: any) {
-      console.error('❌ ERRO REAL NA GRAVAÇÃO:', e.message);
+    } catch (e) {
       throw new InternalServerErrorException(e.message);
     }
   }
 
-  // 4. ATUALIZAÇÃO UNIFICADA
+  // 5. ATUALIZAÇÃO (PESSOA + ENDEREÇO)
   async updateCompleto(id: string, dto: any, imobiliariaId: string) {
     try {
       return await this.db.transaction(async (tx) => {
@@ -134,6 +143,7 @@ export class PessoasService {
             documento: dto.documento,
             telefone: dto.telefone,
             tipo: dto.tipo,
+            updatedAt: new Date(),
           })
           .where(
             and(eq(table.id, id), eq(table.imobiliaria_id, imobiliariaId)),
@@ -148,13 +158,22 @@ export class PessoasService {
             bairro: dto.bairro,
             cidade: dto.cidade,
             estado: dto.estado,
-            pessoa_id: id, // Nome físico
+            pessoa_id: id,
           };
-          // Tenta atualizar, se não houver, insere
-          await tx.insert(tableEnd).values(dadosEnd).onConflictDoUpdate({
-            target: tableEnd.pessoa_id,
-            set: dadosEnd,
-          });
+          // Tenta atualizar endereço, se não existir, cria
+          const exist = await tx
+            .select()
+            .from(tableEnd)
+            .where(eq(tableEnd.pessoa_id, id))
+            .limit(1);
+          if (exist.length > 0) {
+            await tx
+              .update(tableEnd)
+              .set(dadosEnd)
+              .where(eq(tableEnd.pessoa_id, id));
+          } else {
+            await tx.insert(tableEnd).values(dadosEnd);
+          }
         }
         return { success: true };
       });
@@ -163,22 +182,11 @@ export class PessoasService {
     }
   }
 
-  // 5. REMOÇÃO
+  // 6. REMOÇÃO
   async remove(id: string, imobiliariaId: string) {
     const table = schema.pessoas as any;
     return await this.db
       .delete(table)
       .where(and(eq(table.id, id), eq(table.imobiliaria_id, imobiliariaId)));
-  }
-
-  // 6. IDENTIFICAÇÃO (Público)
-  async findImobiliariaByHost(host: string) {
-    const table = schema.pessoas as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(and(eq(table.dominio, host), eq(table.papel, '5')))
-      .limit(1);
-    return results[0] || null;
   }
 }
