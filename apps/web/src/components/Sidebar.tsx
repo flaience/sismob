@@ -99,6 +99,12 @@ export default function Sidebar() {
               >
                 Interessados (Leads)
               </Link>
+              <Link
+                href="/admin/interessados"
+                className="block p-2 text-sm text-gray-500 hover:text-indigo-600 font-medium"
+              >
+                Interessados
+              </Link>
             </motion.div>
           )}
         </div>

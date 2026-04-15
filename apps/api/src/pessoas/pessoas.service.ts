@@ -93,6 +93,7 @@ export class PessoasService {
           if (error) throw new Error(error.message);
           authUserId = data.user.id;
         }
+
         const [nova] = await (tx.insert(schema.pessoas as any) as any)
           .values({
             id: authUserId || undefined,
@@ -105,6 +106,7 @@ export class PessoasService {
             imobiliariaId,
           })
           .returning();
+
         if (dto.cep) {
           await (tx.insert(schema.enderecos as any) as any).values({
             pessoaId: nova.id,
@@ -118,8 +120,15 @@ export class PessoasService {
         }
         return nova;
       });
-    } catch (e) {
-      throw new InternalServerErrorException(e.message);
+    } catch (e: any) {
+      console.error('❌ Erro ao criar:', e.message);
+      // CÓDIGO 23505 = VIOLAÇÃO DE CHAVE ÚNICA (DUPLICIDADE)
+      if (e.code === '23505' || e.message.includes('unique constraint')) {
+        throw new InternalServerErrorException(
+          'Este registro (CPF, E-mail ou Telefone) já existe para este papel nesta imobiliária.',
+        );
+      }
+      throw new InternalServerErrorException('Erro ao processar cadastro.');
     }
   }
 
