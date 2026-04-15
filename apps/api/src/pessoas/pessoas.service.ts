@@ -99,20 +99,29 @@ export class PessoasService {
   }
   async createUsuario(dto: any, imobiliariaId: string) {
     try {
+      console.log(
+        '📥 Iniciando gravação de pessoa para imobiliária:',
+        imobiliariaId,
+      );
+
       return await this.db.transaction(async (tx) => {
         let authUserId = dto.id;
+
+        // 1. Lógica para Corretores (Papel 1)
         if (dto.papel === '1' && !authUserId) {
+          console.log('🔐 Criando login no Supabase Auth...');
           const { data, error } =
             await this.supabaseAdmin.auth.admin.createUser({
               email: dto.email,
               password: 'Sismob@123',
               email_confirm: true,
             });
-          if (error) throw new Error(error.message);
+          if (error) throw new Error(`Erro Auth: ${error.message}`);
           authUserId = data.user.id;
         }
 
-        const [nova] = await (tx.insert(schema.pessoas as any) as any)
+        // 2. Inserir na tabela pessoas usando nomes literais (snake_case)
+        const [novaPessoa] = await (tx.insert(schema.pessoas as any) as any)
           .values({
             id: authUserId || undefined,
             nome: dto.nome,
@@ -121,13 +130,14 @@ export class PessoasService {
             telefone: dto.telefone,
             tipo: dto.tipo || 'f',
             papel: dto.papel,
-            imobiliariaId,
+            imobiliaria_id: imobiliariaId, // <--- OBRIGATÓRIO COM UNDERLINE
           })
           .returning();
 
+        // 3. Inserir Endereço usando nomes literais
         if (dto.cep) {
           await (tx.insert(schema.enderecos as any) as any).values({
-            pessoaId: nova.id,
+            pessoa_id: novaPessoa.id, // <--- OBRIGATÓRIO COM UNDERLINE
             cep: dto.cep,
             logradouro: dto.logradouro,
             numero: dto.numero,
@@ -136,17 +146,21 @@ export class PessoasService {
             estado: dto.estado,
           });
         }
-        return nova;
+
+        console.log('✅ Pessoa e Endereço gravados com sucesso!');
+        return novaPessoa;
       });
     } catch (e: any) {
-      console.error('❌ Erro ao criar:', e.message);
-      // CÓDIGO 23505 = VIOLAÇÃO DE CHAVE ÚNICA (DUPLICIDADE)
-      if (e.code === '23505' || e.message.includes('unique constraint')) {
+      console.error('❌ ERRO FATAL NA GRAVAÇÃO:', e.message);
+
+      // Tratamento de Duplicidade (UK que criamos no banco)
+      if (e.message.includes('unique constraint') || e.code === '23505') {
         throw new InternalServerErrorException(
-          'Este registro (CPF, E-mail ou Telefone) já existe para este papel nesta imobiliária.',
+          'Este CPF/CNPJ, E-mail ou Telefone já existe para este papel.',
         );
       }
-      throw new InternalServerErrorException('Erro ao processar cadastro.');
+
+      throw new InternalServerErrorException(e.message);
     }
   }
 

@@ -10,6 +10,7 @@ import {
   Patch,
   Param,
   Inject,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PessoasService } from './pessoas.service';
 
@@ -46,7 +47,12 @@ export class PessoasController {
 
   @Post()
   async create(@Body() dto: any) {
-    return this.pessoasService.createUsuario(dto, dto.imobiliariaId);
+    // Pegamos o ID da imobiliária que o site enviou no corpo (SaaS)
+    const imobId = dto.imobiliariaId;
+    if (!imobId)
+      throw new InternalServerErrorException('ID da imobiliária não enviado.');
+
+    return this.pessoasService.createUsuario(dto, imobId);
   }
 
   @Patch(':id')
