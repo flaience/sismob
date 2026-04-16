@@ -16,8 +16,7 @@ import { PessoasService } from './pessoas.service';
 @Controller('pessoas')
 export class PessoasController {
   constructor(
-    @Inject(PessoasService)
-    private readonly pessoasService: PessoasService,
+    @Inject(PessoasService) private readonly pessoasService: PessoasService,
   ) {}
 
   @Get('config/identificar')
