@@ -194,6 +194,9 @@ importers:
       expo-status-bar:
         specifier: 2.0.0
         version: 2.0.0(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0)
+      expo-symbols:
+        specifier: ^55.0.7
+        version: 55.0.7(kv4jn2i3mhl6dlg2mjecyfpsjm)
       lucide-react-native:
         specifier: 0.460.0
         version: 0.460.0(react-native-svg@15.15.4(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0))(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0)
@@ -1650,6 +1653,9 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@expo-google-fonts/material-symbols@0.4.32':
+    resolution: {integrity: sha512-+RtX6GNteOQEycWKcliKtHYQ3NvFamuD4ZCb7MLwzImkZwxRXjUO1kSVV5FFB2koK5WNYwUCye2KkDp8LFD1SQ==}
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
@@ -4942,6 +4948,14 @@ packages:
   expo-status-bar@2.0.0:
     resolution: {integrity: sha512-vxxdpvpNDMTEc5uTiIrbTvySKKUsOACmfl8OZuUdjNle05oGqwtq3v5YObwym/njSByjoyuZX8UpXBZnxvarwQ==}
     peerDependencies:
+      react: 19.0.0
+      react-native: '*'
+
+  expo-symbols@55.0.7:
+    resolution: {integrity: sha512-y4ALLbncSGQzhFLw1PaIBbO39xzaw3ie249HmK6zK/WLJYfw4Z/9UU4iPKO3KCE4FyCKIzd+yRsvzvlri23YrQ==}
+    peerDependencies:
+      expo: '*'
+      expo-font: '*'
       react: 19.0.0
       react-native: '*'
 
@@ -9708,6 +9722,8 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
+  '@expo-google-fonts/material-symbols@0.4.32': {}
+
   '@expo/bunyan@4.0.1':
     dependencies:
       uuid: 8.3.2
@@ -13606,6 +13622,15 @@ snapshots:
     dependencies:
       react: 19.0.0
       react-native: 0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0)
+
+  expo-symbols@55.0.7(kv4jn2i3mhl6dlg2mjecyfpsjm):
+    dependencies:
+      '@expo-google-fonts/material-symbols': 0.4.32
+      expo: 52.0.25(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.0(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0)))(react-native-webview@13.12.5(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0))(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0)
+      expo-font: 13.0.3(expo@52.0.25(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.0(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0)))(react-native-webview@13.12.5(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0))(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0))(react@19.0.0)
+      react: 19.0.0
+      react-native: 0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0)
+      sf-symbols-typescript: 2.2.0
 
   expo@52.0.25(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.0(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0)))(react-native-webview@13.12.5(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0))(react-native@0.76.5(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@19.0.0))(react@19.0.0):
     dependencies:
