@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import "./globals.css";
 import { TenantProvider } from "@/context/TenantContext";
+
+export const metadata: Metadata = {
+  title: "Sismob - Sistema Imobiliário 360",
+};
 
 export default function RootLayout({
   children,
