@@ -1,6 +1,7 @@
 "use client";
+"use client";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Building2,
@@ -12,10 +13,13 @@ import {
   LogIn,
   ChevronLeft,
   ChevronRight,
-  Layers,
+  Layers, // <--- VERIFIQUE ESTES
+  Target, // <--- VERIFIQUE ESTES
+  Camera,
+  Map as MapIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 export default function Sidebar() {

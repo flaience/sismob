@@ -1,3 +1,4 @@
+//src/app/(portal)/layout.tsx
 import { Link } from "expo-router";
 export default function PortalLayout({
   children,
