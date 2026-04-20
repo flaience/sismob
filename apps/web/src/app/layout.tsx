@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
+"use client";
 import "./globals.css";
 import { TenantProvider } from "@/context/TenantContext";
-
-export const metadata: Metadata = {
-  title: "Sismob - Sistema Imobiliário 360",
-  description: "Tour virtual e auxílio de chegada de última geração",
-};
 
 export default function RootLayout({
   children,
@@ -14,11 +9,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className="bg-slate-50 antialiased overflow-x-hidden">
-        <TenantProvider>
-          {/* Aqui não vai Sidebar nem Main, apenas o conteúdo dinâmico */}
-          {children}
-        </TenantProvider>
+      <body className="bg-slate-50 antialiased">
+        <TenantProvider>{children}</TenantProvider>
       </body>
     </html>
   );

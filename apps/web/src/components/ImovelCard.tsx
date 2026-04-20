@@ -11,9 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Ruler,
-} from "lucide-react";
+  Star,
+} from "lucide-react"; // 1. Ícones Web
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link"; // <--- OBRIGATÓRIO SER NEXT/LINK
+import Link from "next/link"; // 2. Link Web (NUNCA expo-router)
 import api from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { formatarMoeda, formatarMetragem } from "@/lib/utils";
@@ -26,7 +27,7 @@ export default function ImovelCard({
   refresh: () => void;
 }) {
   const [isOwner, setIsOwner] = useState(false);
-  const [currentImg, setCurrentImg] = useState(0); // Estado para o carrossel
+  const [currentImg, setCurrentImg] = useState(0);
   const supabase = createClient();
 
   const imagens = imovel.midias || [];
@@ -40,19 +41,25 @@ export default function ImovelCard({
 
   const nextImg = (e: any) => {
     e.preventDefault();
+    e.stopPropagation();
     setCurrentImg((prev) => (prev + 1 === imagens.length ? 0 : prev + 1));
   };
 
   const prevImg = (e: any) => {
     e.preventDefault();
+    e.stopPropagation();
     setCurrentImg((prev) => (prev === 0 ? imagens.length - 1 : prev - 1));
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!confirm("Deseja excluir este imóvel?")) return;
     try {
       await api.delete(`/imoveis/${imovel.id}`, {
-        params: { imobiliariaId: imovel.imobiliariaId },
+        params: {
+          imobiliariaId: imovel.imobiliaria_id || imovel.imobiliariaId,
+        },
       });
       refresh();
     } catch (error) {
@@ -74,7 +81,7 @@ export default function ImovelCard({
         </button>
       )}
 
-      {/* CARROSSEL DE IMAGENS */}
+      {/* CARROSSEL */}
       <div className="relative h-64 w-full rounded-[2rem] overflow-hidden bg-indigo-50 shrink-0">
         <AnimatePresence mode="wait">
           {imagens.length > 0 ? (
@@ -93,47 +100,33 @@ export default function ImovelCard({
           )}
         </AnimatePresence>
 
-        {/* Controles do Carrossel (Só aparecem se houver mais de 1 foto) */}
         {imagens.length > 1 && (
           <>
             <button
               onClick={prevImg}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/40 z-20"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 p-2 rounded-full text-white z-20"
             >
               <ChevronLeft size={20} />
             </button>
             <button
               onClick={nextImg}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/40 z-20"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 p-2 rounded-full text-white z-20"
             >
               <ChevronRight size={20} />
             </button>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 z-20">
-              {imagens.map((_: any, i: number) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${i === currentImg ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
-                />
-              ))}
-            </div>
           </>
         )}
       </div>
 
-      {/* TEXTO E INFORMAÇÕES */}
+      {/* CONTEÚDO */}
       <div className="mt-6 flex-1 px-2">
         <h3 className="text-2xl font-black text-gray-900 mb-2 line-clamp-1">
           {imovel.titulo}
         </h3>
 
-        {/* METRAGEM NO LUGAR DO TEXTO ANTIGO */}
         <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm mb-4">
           <Ruler size={16} />
           <span>{formatarMetragem(imovel.areaPrivativa)}</span>
-          <span className="text-gray-300 ml-2">|</span>
-          <span className="text-gray-400 font-medium ml-2 uppercase text-[10px] tracking-widest">
-            {imovel.tipo}
-          </span>
         </div>
 
         <div className="flex items-center text-gray-400 text-xs mb-6">
@@ -143,7 +136,7 @@ export default function ImovelCard({
 
         <div className="mb-6">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
-            Valor do Imóvel
+            Valor
           </p>
           <span className="text-3xl font-black text-gray-900 tracking-tighter">
             {formatarMoeda(imovel.precoVenda)}
@@ -151,11 +144,11 @@ export default function ImovelCard({
         </div>
       </div>
 
-      {/* BOTÕES DE AÇÃO (MODO VISUALIZAÇÃO ÚNICA) */}
+      {/* AÇÕES */}
       <div className="flex items-stretch gap-2 mt-auto h-14">
         <Link
           href={`/imovel/${imovel.id}?view=tour`}
-          className="flex-[3] bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-lg"
+          className="flex-[3] bg-indigo-600 text-white rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 uppercase transition-all shadow-lg"
         >
           <Camera size={18} /> TOUR 360°
         </Link>
@@ -163,7 +156,7 @@ export default function ImovelCard({
         {temVideo && (
           <Link
             href={`/imovel/${imovel.id}?view=video`}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center transition-all"
+            className="flex-1 bg-red-500 text-white rounded-2xl flex items-center justify-center transition-all shadow-lg"
           >
             <Play size={20} fill="currentColor" />
           </Link>
@@ -171,7 +164,7 @@ export default function ImovelCard({
 
         <Link
           href={`/imovel/${imovel.id}?view=map`}
-          className="flex-1 bg-gray-900 hover:bg-black text-white rounded-2xl flex items-center justify-center transition-all"
+          className="flex-1 bg-gray-900 text-white rounded-2xl flex items-center justify-center transition-all shadow-lg"
         >
           <MapIcon size={20} />
         </Link>

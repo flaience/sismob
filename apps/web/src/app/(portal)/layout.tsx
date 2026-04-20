@@ -1,5 +1,5 @@
-//src/app/(portal)/layout.tsx
-import { Link } from "expo-router";
+import Link from "next/link"; // <--- CORREÇÃO OBRIGATÓRIA
+
 export default function PortalLayout({
   children,
 }: {
@@ -7,19 +7,18 @@ export default function PortalLayout({
 }) {
   return (
     <div className="min-h-screen bg-white">
-      {/* Header simples no topo */}
-      <header className="p-6 flex justify-between items-center border-b border-gray-50">
-        <div className="font-black text-2xl text-indigo-600">
+      <header className="p-6 flex justify-between items-center border-b border-gray-50 bg-white/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="font-black text-2xl text-indigo-600 tracking-tighter">
           SIS<span className="text-gray-900">MOB</span>
         </div>
         <Link
           href="/login"
-          className="bg-gray-100 p-3 rounded-2xl text-gray-600 font-bold text-xs"
+          className="bg-gray-100 p-3 px-6 rounded-2xl text-gray-600 font-bold text-xs"
         >
           Acesso Restrito
         </Link>
       </header>
-      <main>{children}</main>
+      <main className="w-full">{children}</main>
     </div>
   );
 }
