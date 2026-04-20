@@ -1,5 +1,4 @@
 "use client";
-"use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,10 +12,9 @@ import {
   LogIn,
   ChevronLeft,
   ChevronRight,
-  Layers, // <--- VERIFIQUE ESTES
-  Target, // <--- VERIFIQUE ESTES
-  Camera,
-  Map as MapIcon,
+  Layers,
+  Target,
+  Camera, // <--- GARANTA QUE TODOS ESTÃO AQUI
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,13 +25,33 @@ export default function Sidebar() {
   const [showCadastros, setShowCadastros] = useState(false);
   const [session, setSession] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => setSession(session));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  };
+
+  const menu = [
+    { label: "Proprietários", href: "/admin/proprietarios" },
+    { label: "Inquilinos", href: "/admin/clientes" },
+    { label: "Corretores", href: "/admin/corretores" },
+    { label: "Interessados", href: "/admin/interessados" },
+  ];
 
   return (
     <>
@@ -55,7 +73,7 @@ export default function Sidebar() {
         <nav className="flex flex-col gap-2 flex-1">
           <Link
             href="/"
-            className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/" ? "bg-indigo-600 text-white" : "text-gray-400 hover:bg-gray-50"}`}
+            className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/" ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:bg-gray-50"}`}
           >
             <Search size={22} />
             {isExpanded && <span className="text-sm font-bold">Explorar</span>}
@@ -85,25 +103,16 @@ export default function Sidebar() {
               </button>
 
               {isExpanded && showCadastros && (
-                <div className="pl-12 flex flex-col gap-2 pb-4">
-                  <Link
-                    href="/admin/proprietarios"
-                    className="text-xs text-gray-500 hover:text-indigo-600 font-bold uppercase"
-                  >
-                    Proprietários
-                  </Link>
-                  <Link
-                    href="/admin/clientes"
-                    className="text-xs text-gray-500 hover:text-indigo-600 font-bold uppercase"
-                  >
-                    Inquilinos
-                  </Link>
-                  <Link
-                    href="/admin/corretores"
-                    className="text-xs text-gray-500 hover:text-indigo-600 font-bold uppercase"
-                  >
-                    Corretores
-                  </Link>
+                <div className="pl-12 flex flex-col gap-3 pb-4">
+                  {menu.map((m) => (
+                    <Link
+                      key={m.href}
+                      href={m.href}
+                      className="text-xs text-gray-500 hover:text-indigo-600 font-bold uppercase"
+                    >
+                      {m.label}
+                    </Link>
+                  ))}
                 </div>
               )}
 
@@ -121,14 +130,22 @@ export default function Sidebar() {
         </nav>
 
         <div className="mt-auto flex flex-col gap-2">
-          {!session && (
+          {!session ? (
             <Link
               href="/login"
-              className="flex items-center gap-4 p-4 bg-green-50 text-green-600 rounded-2xl hover:bg-green-100"
+              className="flex items-center gap-4 p-4 bg-green-50 text-green-600 rounded-2xl hover:bg-green-100 transition-all"
             >
               <LogIn size={22} />
               {isExpanded && <span className="text-sm font-bold">Entrar</span>}
             </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-4 p-4 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 transition-all"
+            >
+              <LogOut size={22} />
+              {isExpanded && <span className="text-sm font-bold">Sair</span>}
+            </button>
           )}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -144,15 +161,15 @@ export default function Sidebar() {
       </motion.aside>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 flex justify-around p-4 pb-8 shadow-2xl">
-        <Link href="/" className="p-2">
+        <Link href="/">
           <Search size={28} color="#6366f1" />
         </Link>
         {session ? (
-          <Link href="/admin/proprietarios" className="p-2">
+          <Link href="/admin/proprietarios">
             <Layers size={28} color="#4b5563" />
           </Link>
         ) : (
-          <Link href="/login" className="p-2">
+          <Link href="/login">
             <LogIn size={28} color="#10b981" />
           </Link>
         )}

@@ -13,10 +13,10 @@ import {
   Ruler,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
+import Link from "next/link"; // <--- OBRIGATÓRIO SER NEXT/LINK
 import api from "@/lib/api";
 import { createClient } from "@/lib/supabase";
-import { formatarMoeda, formatarMetragem } from "@/lib/utils"; // Importamos a unit de formatação
+import { formatarMoeda, formatarMetragem } from "@/lib/utils";
 
 export default function ImovelCard({
   imovel,
