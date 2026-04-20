@@ -16,7 +16,9 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "react-native$": false, // Desativa qualquer tentativa de carregar o motor nativo
+      "react-native$": false,
+      "expo-router$": false, // <--- ADICIONE ESTA LINHA EXATAMENTE AQUI
+      "lucide-react-native$": false, // <--- E ESTA TAMBÉM
     };
     return config;
   },
