@@ -1,10 +1,7 @@
+// src/app/layout.tsx (O PAI DE TODOS)
 import type { Metadata } from "next";
 import "./globals.css";
 import { TenantProvider } from "@/context/TenantContext";
-
-export const metadata: Metadata = {
-  title: "Sismob - Inteligência Imobiliária",
-};
 
 export default function RootLayout({
   children,
@@ -13,10 +10,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className="bg-slate-50 antialiased">
+      <body className="bg-slate-50 antialiased overflow-x-hidden">
         <TenantProvider>
-          {/* NADA de Sidebar ou Header aqui! Só o children */}
-          {children}
+          {children} {/* <--- APENAS ISSO! Nada de Sidebar aqui. */}
         </TenantProvider>
       </body>
     </html>
