@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Search, User, Camera } from "lucide-react-native";
+import { Search, User, Camera, Layers } from "lucide-react-native";
 
 export default function TabLayout() {
   return (
@@ -14,21 +14,27 @@ export default function TabLayout() {
           height: 60,
           paddingBottom: 8,
         },
-        headerShown: false, // Esconde o título no topo para usar o nosso customizado
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Explorar",
-          tabBarIcon: ({ color }) => <Search size={24} color={color} />,
+          tabBarIcon: ({ color }) => {
+            const Icon: any = Search; // Casting para anular o erro de tipo
+            return <Icon size={24} color={color} />;
+          },
         }}
       />
       <Tabs.Screen
-        name="two" // Vamos mudar para 'Login' depois
+        name="two"
         options={{
-          title: "Acesso",
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
+          title: "Gestão",
+          tabBarIcon: ({ color }) => {
+            const Icon: any = Layers; // Casting para anular o erro de tipo
+            return <Icon size={24} color={color} />;
+          },
         }}
       />
     </Tabs>
