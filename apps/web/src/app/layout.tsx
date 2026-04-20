@@ -3,7 +3,7 @@ import "./globals.css";
 import { TenantProvider } from "@/context/TenantContext";
 
 export const metadata: Metadata = {
-  title: "Sismob - Sistema Imobiliário 360",
+  title: "Sismob - Inteligência Imobiliária",
 };
 
 export default function RootLayout({
@@ -14,7 +14,10 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <body className="bg-slate-50 antialiased">
-        <TenantProvider>{children}</TenantProvider>
+        <TenantProvider>
+          {/* NADA de Sidebar ou Header aqui! Só o children */}
+          {children}
+        </TenantProvider>
       </body>
     </html>
   );
