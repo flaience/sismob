@@ -24,7 +24,7 @@ export default function LoginPage() {
       alert("Erro ao logar: " + error.message);
       setLoading(false);
     } else {
-      router.push("/"); // Redireciona para a home
+      router.push("/dashboard"); // Redireciona para a home
       router.refresh(); // Atualiza a sidebar para mostrar o menu admin
     }
   };

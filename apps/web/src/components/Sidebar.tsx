@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Building2,
@@ -10,7 +11,9 @@ import {
   LogIn,
   ChevronLeft,
   ChevronRight,
-  LayoutGrid,
+  LayoutDashboard, // Adicionado
+  Users, // Adicionado
+  Target, // Adicionado para Interessados
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,6 +24,7 @@ export default function Sidebar() {
   const [showCadastros, setShowCadastros] = useState(false);
   const [session, setSession] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -29,11 +33,18 @@ export default function Sidebar() {
       .then(({ data: { session } }) => setSession(session));
   }, []);
 
-  const menu = [
-    { label: "Proprietários", href: "/admin/proprietarios" },
-    { label: "Inquilinos", href: "/admin/clientes" },
-    { label: "Corretores", href: "/admin/corretores" },
-    { label: "Interessados", href: "/admin/interessados" },
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
+  // Definição do menu conforme a sua estrutura de pastas
+  const menuItens = [
+    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Proprietários", href: "/admin/proprietarios", icon: User },
+    { label: "Inquilinos", href: "/admin/clientes", icon: Users },
+    { label: "Interessados", href: "/admin/interessados", icon: Target },
+    { label: "Novo Imóvel", href: "/admin/imoveis/novo", icon: PlusCircle },
   ];
 
   return (
@@ -41,6 +52,7 @@ export default function Sidebar() {
       style={{ width: isExpanded ? 260 : 84 }}
       className="hidden md:flex fixed left-6 top-6 bottom-6 z-50 bg-white/95 backdrop-blur-xl shadow-2xl rounded-[2.5rem] border border-gray-100 flex flex-col p-4 transition-all duration-300 overflow-hidden"
     >
+      {/* LOGO */}
       <div className="flex items-center gap-3 mb-10 px-2 pt-2">
         <div className="bg-indigo-600 p-3 rounded-2xl text-white">
           <Building2 size={24} />
@@ -55,7 +67,7 @@ export default function Sidebar() {
       <nav className="flex flex-col gap-2 flex-1">
         <Link
           href="/"
-          className={`flex items-center gap-4 p-4 rounded-2xl ${pathname === "/" ? "bg-indigo-600 text-white" : "text-gray-400"}`}
+          className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/" ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:bg-gray-50"}`}
         >
           <Search size={22} />
           {isExpanded && <span className="text-sm font-bold">Explorar</span>}
@@ -68,26 +80,31 @@ export default function Sidebar() {
                 setIsExpanded(true);
                 setShowCadastros(!showCadastros);
               }}
-              className="w-full flex items-center justify-between p-4 text-gray-400"
+              className="w-full flex items-center justify-between p-4 text-gray-400 hover:bg-gray-50 rounded-2xl"
             >
               <div className="flex items-center gap-4">
-                <User size={22} />
+                <LayoutDashboard size={22} />
                 {isExpanded && (
-                  <span className="text-sm font-bold">Cadastros</span>
+                  <span className="text-sm font-bold">Gestão Interna</span>
                 )}
               </div>
-              {isExpanded && <ChevronDown size={16} />}
+              {isExpanded && (
+                <ChevronDown
+                  size={16}
+                  className={showCadastros ? "rotate-180" : ""}
+                />
+              )}
             </button>
 
             {isExpanded && showCadastros && (
               <div className="pl-12 flex flex-col gap-3 pb-4">
-                {menu.map((m) => (
+                {menuItens.map((item) => (
                   <Link
-                    key={m.href}
-                    href={m.href}
+                    key={item.href}
+                    href={item.href}
                     className="text-xs text-gray-500 font-bold uppercase hover:text-indigo-600"
                   >
-                    {m.label}
+                    {item.label}
                   </Link>
                 ))}
               </div>
@@ -96,12 +113,32 @@ export default function Sidebar() {
         )}
       </nav>
 
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="mt-auto flex items-center justify-center p-3 bg-gray-50 rounded-2xl text-gray-400"
-      >
-        {isExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
+      {/* RODAPÉ */}
+      <div className="mt-auto flex flex-col gap-2">
+        {!session ? (
+          <Link
+            href="/login"
+            className="flex items-center gap-4 p-4 bg-green-50 text-green-600 rounded-2xl"
+          >
+            <LogIn size={22} />
+            {isExpanded && <span className="text-sm font-bold">Entrar</span>}
+          </Link>
+        ) : (
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-4 p-4 bg-red-50 text-red-500 rounded-2xl"
+          >
+            <LogOut size={22} />
+            {isExpanded && <span className="text-sm font-bold">Sair</span>}
+          </button>
+        )}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center justify-center p-3 bg-gray-50 rounded-2xl text-gray-400"
+        >
+          {isExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
     </aside>
   );
 }
