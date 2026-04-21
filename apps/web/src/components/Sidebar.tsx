@@ -47,10 +47,13 @@ export default function Sidebar() {
     { label: "Proprietários", href: "/proprietarios", icon: User },
 
     // Se a pasta é (admin)/clientes/page.tsx, o link é /clientes
-    { label: "Inquilinos", href: "/clientes", icon: Users },
+    { label: "Clientes", href: "/clientes", icon: User },
 
     // Se a pasta é (admin)/interessados/page.tsx, o link é /interessados
     { label: "Interessados", href: "/interessados", icon: Target },
+
+    // Se a pasta é (admin)/clientes/page.tsx, o link é /clientes
+    { label: "Inquilinos", href: "/clientes", icon: Users },
 
     // Se a pasta é (admin)/imoveis/novo/page.tsx, o link é /imoveis/novo
     { label: "Novo Imóvel", href: "/imoveis/novo", icon: PlusCircle },
