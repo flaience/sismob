@@ -28,7 +28,37 @@ export default function GridPage() {
   };
 
   useEffect(() => {
-    if (!tenantLoading) fetchData();
+    async function fetchData() {
+      // 1. Log de Diagnóstico
+      console.log("🔍 Estado do Tenant no Grid:", tenant);
+      console.log("🔍 Carregando? ", tenantLoading);
+
+      if (tenantLoading) return; // Espera o DNA do site carregar
+
+      if (!tenant?.id) {
+        console.error(
+          "❌ Erro: Site não identificou a imobiliária dona do domínio.",
+        );
+        return;
+      }
+
+      try {
+        const res = await api.get("/pessoas", {
+          params: {
+            papel: "3",
+            imobiliariaId: tenant.id, // <--- O ID QUE ATIVA OS DADOS
+          },
+        });
+        console.log("✅ Dados recebidos do Banco:", res.data);
+        setLista(res.data);
+      } catch (e) {
+        console.error("❌ Falha na chamada da API:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
   }, [tenant, tenantLoading]);
 
   const excluir = async (id: string) => {
@@ -82,4 +112,7 @@ export default function GridPage() {
       </div>
     </div>
   );
+}
+function setLoading(arg0: boolean) {
+  throw new Error("Function not implemented.");
 }

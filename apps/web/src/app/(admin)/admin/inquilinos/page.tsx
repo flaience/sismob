@@ -54,7 +54,9 @@ export default function GridInquilinosPage() {
             className="pl-6 pr-4 py-3 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-emerald-600"
           />
           <button
-            onClick={() => router.push(`/pessoas/manutencao?papel=${PAPEL}`)}
+            onClick={() =>
+              router.push(`/admin/pessoas/manutencao?papel=${PAPEL}`)
+            }
             className="bg-emerald-600 text-white p-4 rounded-2xl shadow-lg hover:bg-emerald-700"
           >
             <UserPlus size={24} />

@@ -39,26 +39,23 @@ export default function Sidebar() {
   };
 
   // Definição do menu conforme a sua estrutura de pastas
+  // Substitua o array menuItens na sua Sidebar por este:
   const menuItens = [
-    // Se a pasta é (admin)/dashboard/page.tsx, o link é /dashboard
+    // Se a pasta é (admin)/dashboard/page.tsx -> URL é /dashboard
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 
-    // Se a pasta é (admin)/proprietarios/page.tsx, o link é /proprietarios
-    { label: "Proprietários", href: "/proprietarios", icon: User },
+    // Se a pasta é (admin)/admin/proprietarios/page.tsx -> URL é /admin/proprietarios
+    { label: "Proprietários", href: "/admin/proprietarios", icon: User },
 
-    // Se a pasta é (admin)/clientes/page.tsx, o link é /clientes
-    { label: "Clientes", href: "/clientes", icon: User },
+    // Se a pasta é (admin)/admin/clientes/page.tsx -> URL é /admin/clientes
+    { label: "Inquilinos", href: "/admin/clientes", icon: Users },
 
-    // Se a pasta é (admin)/interessados/page.tsx, o link é /interessados
-    { label: "Interessados", href: "/interessados", icon: Target },
+    // Se a pasta é (admin)/admin/interessados/page.tsx -> URL é /admin/interessados
+    { label: "Interessados", href: "/admin/interessados", icon: Target },
 
-    // Se a pasta é (admin)/clientes/page.tsx, o link é /clientes
-    { label: "Inquilinos", href: "/clientes", icon: Users },
-
-    // Se a pasta é (admin)/imoveis/novo/page.tsx, o link é /imoveis/novo
+    // Se a pasta é (admin)/imoveis/novo/page.tsx -> URL é /imoveis/novo
     { label: "Novo Imóvel", href: "/imoveis/novo", icon: PlusCircle },
   ];
-
   return (
     <aside
       style={{ width: isExpanded ? 260 : 84 }}
