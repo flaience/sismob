@@ -1,3 +1,4 @@
+//src/app/(admin)/proprietarios/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import {

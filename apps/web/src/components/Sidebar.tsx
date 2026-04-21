@@ -40,11 +40,20 @@ export default function Sidebar() {
 
   // Definição do menu conforme a sua estrutura de pastas
   const menuItens = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Proprietários", href: "/admin/proprietarios", icon: User },
-    { label: "Inquilinos", href: "/admin/clientes", icon: Users },
-    { label: "Interessados", href: "/admin/interessados", icon: Target },
-    { label: "Novo Imóvel", href: "/admin/imoveis/novo", icon: PlusCircle },
+    // Se a pasta é (admin)/dashboard/page.tsx, o link é /dashboard
+    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+
+    // Se a pasta é (admin)/proprietarios/page.tsx, o link é /proprietarios
+    { label: "Proprietários", href: "/proprietarios", icon: User },
+
+    // Se a pasta é (admin)/clientes/page.tsx, o link é /clientes
+    { label: "Inquilinos", href: "/clientes", icon: Users },
+
+    // Se a pasta é (admin)/interessados/page.tsx, o link é /interessados
+    { label: "Interessados", href: "/interessados", icon: Target },
+
+    // Se a pasta é (admin)/imoveis/novo/page.tsx, o link é /imoveis/novo
+    { label: "Novo Imóvel", href: "/imoveis/novo", icon: PlusCircle },
   ];
 
   return (
@@ -102,9 +111,20 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="text-xs text-gray-500 font-bold uppercase hover:text-indigo-600"
+                    className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                      pathname === item.href
+                        ? "bg-indigo-600 text-white shadow-lg"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-indigo-600"
+                    }`}
                   >
-                    {item.label}
+                    {/* ADICIONAMOS O ÍCONE AQUI PARA ELE APARECER NO MENU */}
+                    <item.icon size={22} className="shrink-0" />
+
+                    {isExpanded && (
+                      <span className="text-sm font-bold whitespace-nowrap">
+                        {item.label}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>
