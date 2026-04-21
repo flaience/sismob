@@ -1,15 +1,11 @@
 import { defineConfig } from "drizzle-kit";
-import * as dotenv from "dotenv";
-
-// Carrega o .env da raiz do monorepo ou da pasta atual
-dotenv.config({ path: "../../.env" });
 
 export default defineConfig({
   schema: "./schema.ts",
   out: "./drizzle",
-  dialect: "postgresql", // Mudou de 'driver' para 'dialect'
+  dialect: "postgresql", // Dialeto moderno
   dbCredentials: {
-    url: process.env.DATABASE_URL!, // Mudou de 'connectionString' para 'url'
+    url: "postgresql://postgres.ldmyywjrqyqoafwxspin:Mollinetti2025!@aws-1-us-east-1.pooler.supabase.com:6543/postgres",
   },
   verbose: true,
   strict: true,
