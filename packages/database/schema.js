@@ -132,3 +132,41 @@ exports.imoveisRelations = (0, drizzle_orm_1.relations)(
   }),
 );
 //# sourceMappingURL=schema.js.map
+// --- TEMPLATES DE CONTRATOS (Diferencial de Produto) ---
+export const templatesContratos = pgTable("templates_contratos", {
+  id: serial("id").primaryKey(),
+  tenant_id: uuid("tenant_id").references(() => tenants.id), // Se for NULL, é um template global da Flaience
+  titulo: varchar("titulo", { length: 255 }).notNull(), // Ex: "Compra e Venda Padrão"
+  conteudo: text("conteudo").notNull(), // O texto com as variáveis {{variavel}}
+  tipo: varchar("tipo", { length: 50 }), // 'saas', 'venda', 'locacao'
+});
+
+// --- CONTRATOS GERADOS ---
+export const contratosGerados = pgTable("contratos_gerados", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  template_id: integer("template_id").references(() => templatesContratos.id),
+  entidade_id: uuid("entidade_id"), // ID da Pessoa ou Imóvel relacionado
+  url_pdf: text("url_pdf"),
+  status: varchar("status", { length: 20 }).default("rascunho"), // rascunho, assinado
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// --- 1. COFRE DE CONTRATOS (STORAGE METADATA) ---
+export const contratosDocumentos = pgTable("contratos_documentos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenant_id: uuid("tenant_id").references(() => tenants.id),
+  negociacao_id: integer("negociacao_id").references(() => negociacoes.id),
+
+  nome_arquivo: varchar("nome_arquivo", { length: 255 }).notNull(),
+  url_storage: text("url_storage").notNull(), // Link no Supabase Storage
+
+  // Status do Ciclo de Vida
+  status: varchar("status", { length: 20 }).default("aguardando_assinatura"), // 'rascunho', 'assinado', 'validado'
+
+  // Rastreabilidade Gov.br
+  hash_integridade: text("hash_integridade"), // SHA-256 do arquivo original
+  data_assinatura: timestamp("data_assinatura"),
+  assinantes: jsonb("assinantes"), // [{nome: "Luis", cpf: "123", data: "..."}]
+
+  created_at: timestamp("created_at").defaultNow(),
+});

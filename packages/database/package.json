@@ -4,6 +4,10 @@
   "private": true,
   "main": "./index.ts",
   "types": "./index.ts",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx migrate.ts"
+  },
   "dependencies": {
     "drizzle-orm": "0.33.0",
     "postgres": "3.4.4"

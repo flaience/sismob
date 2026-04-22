@@ -28,6 +28,7 @@
     "@nestjs/platform-express": "^11.1.17",
     "@sismob/database": "workspace:^",
     "@supabase/supabase-js": "^2.48.2",
+    "axios": "^1.7.9",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "drizzle-orm": "0.36.1",
