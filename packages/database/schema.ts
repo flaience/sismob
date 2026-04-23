@@ -101,6 +101,7 @@ export const pessoas = pgTable(
     documento: varchar("documento", { length: 20 }).notNull(),
     telefone: varchar("telefone", { length: 20 }),
     is_admin: boolean("is_admin").default(false),
+    cargo: varchar("cargo", { length: 50 }), // 'corretor', 'secretaria', 'financeiro', 'gerente'
     onboarding_status: jsonb("onboarding_status").default({}),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),

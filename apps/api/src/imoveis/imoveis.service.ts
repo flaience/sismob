@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { FilesService } from '../files/files.service';
 
 @Injectable()
@@ -18,151 +18,128 @@ export class ImoveisService {
     private readonly filesService: FilesService,
   ) {}
 
-  // LISTAGEM (Pública/Multi-tenant)
-  async findAll(imobiliariaId: string) {
+  // 1. LISTAGEM COMPLETA
+  async findAll(tenantId: string) {
     try {
-      if (!imobiliariaId) return [];
-
-      // O segredo está no 'with': ele traz as fotos (midias) de volta
       const queryApi = this.db.query as any;
-
-      const resultados = await queryApi.imoveis.findMany({
-        where: eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
+      return await queryApi.imoveis.findMany({
+        where: eq((schema.imoveis as any).tenant_id, tenantId),
         with: {
-          midias: true, // <--- ISSO TRAZ AS FOTOS DE VOLTA
-          infraestrutura: true, // <--- ISSO TRAZ OS ÍCONES
-          instrucoes: true, // <--- ISSO TRAZ O PERCURSO
+          midias: true,
+          instrucoesChegada: true,
+          atributos: { with: { atributo: true } },
         },
+        orderBy: [desc((schema.imoveis as any).id)],
       });
-
-      return resultados;
-    } catch (error) {
-      console.error('❌ Erro no findAll:', error.message);
+    } catch (e) {
+      console.error('❌ Erro no findAll Imoveis:', e.message);
       return [];
     }
   }
 
-  // BUSCA POR ID (Para Edição)
-  async findOne(id: number, imobiliariaId: string) {
+  // 2. BUSCA UM ÚNICO
+  async findOne(id: number, tenantId: string) {
     const queryApi = this.db.query as any;
     const result = await queryApi.imoveis.findFirst({
       where: and(
         eq((schema.imoveis as any).id, id),
-        eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
+        eq((schema.imoveis as any).tenant_id, tenantId),
       ),
-      with: { midias: true, infraestrutura: true, instrucoes: true },
+      with: { midias: true, instrucoesChegada: true, atributos: true },
     });
     if (!result) throw new NotFoundException('Imóvel não encontrado.');
     return result;
   }
 
-  // UPSERT (Cria ou Atualiza com Mídia Separada)
-  async upsertImovel(dto: any, allFiles: any[], imobiliariaId: string) {
+  // 3. O "UPSERT" (GRAVAÇÃO E ALTERAÇÃO)
+  async upsert(dto: any, files: any, tenantId: string) {
     try {
-      // LOG DE DIAGNÓSTICO: Isso aparecerá no Railway
-      console.log('📡 Dados brutos recebidos no DTO:', dto);
-
       return await this.db.transaction(async (tx) => {
-        const tipoLimpo = String(dto.tipo).split(',')[0];
-        const proprietarioIdLimpo = String(dto.proprietarioId).split(',')[0];
-
         const isUpdate = !!dto.id && dto.id !== 'undefined';
         let idImovel = isUpdate ? Number(dto.id) : null;
 
-        // MAPA DE GRAVAÇÃO (Usando nomes literais das colunas do banco)
-        const dadosBase = {
+        const dadosImovel = {
+          tenant_id: tenantId,
           titulo: dto.titulo,
           descricao: dto.descricao || '',
-          tipo: tipoLimpo,
-          status: 'disponivel',
-          imobiliaria_id: imobiliariaId, // <--- Use com underline para garantir
-          proprietario_id: proprietarioIdLimpo, // <--- Use com underline
-          preco_venda: dto.precoVenda?.toString() || '0',
-          area_privativa: dto.areaPrivativa?.toString() || '0',
-          endereco_original: dto.enderecoOriginal || 'Não informado',
-
-          // O SEGREDO DA VITÓRIA:
-          video_url: dto.videoUrl || null, // <--- Force o nome físico da coluna
-
-          lat: dto.lat?.toString() || '0',
-          lng: dto.lng?.toString() || '0',
+          tipo: dto.tipo || 'casa',
+          status: dto.status || 'disponivel',
+          preco_venda: dto.preco_venda?.toString() || '0',
+          area_privativa: dto.area_privativa?.toString() || '0',
+          endereco_original: dto.endereco_original || 'Não informado',
+          video_url: dto.video_url || null,
+          proprietario_id: dto.proprietario_id,
         };
 
+        // A. GRAVA OU ATUALIZA O MASTER
         if (isUpdate) {
           await tx
             .update(schema.imoveis as any)
-            .set(dadosBase as any)
-            .where(eq((schema.imoveis as any).id, idImovel));
+            .set(dadosImovel)
+            .where(eq((schema.imoveis as any).id, idImovel as any));
         } else {
           const [novo] = await (tx.insert(schema.imoveis as any) as any)
-            .values(dadosBase as any)
+            .values(dadosImovel)
             .returning();
           idImovel = novo.id;
         }
 
-        // 3. GRAVAÇÃO DA INFRAESTRUTURA
-        const infraDados = {
-          imovelId: idImovel,
-          temAguaQuente: String(dto.temAguaQuente) === 'true',
-          temEsperaSplit: String(dto.temEsperaSplit) === 'true',
-          mobiliado: String(dto.mobiliado) === 'true',
-        };
-
-        // Deletamos a infra antiga e criamos a nova (estratégia mais limpa para Upsert)
-        await tx
-          .delete(schema.infraestrutura as any)
-          .where(eq((schema.infraestrutura as any).imovelId, idImovel));
-        await tx.insert(schema.infraestrutura as any).values(infraDados);
-
-        // 4. PROCESSAMENTO DE MÍDIAS (FOTOS E TOUR 360)
-        if (allFiles && allFiles.length > 0) {
-          for (const file of allFiles) {
-            // Upload para o Supabase via seu FilesService
-            const url = await this.filesService.uploadFoto(
-              file,
-              `imoveis/${idImovel}`,
+        // B. ATRIBUTOS (DELETE & INSERT)
+        if (dto.atributosIds) {
+          const ids = Array.isArray(dto.atributosIds)
+            ? dto.atributosIds
+            : [dto.atributosIds];
+          await tx
+            .delete(schema.imoveisAtributos as any)
+            .where(
+              eq((schema.imoveisAtributos as any).imovel_id, idImovel as any),
             );
-
-            // A Lógica de Separação sugerida por você:
-            const eh360 = file.fieldname === 'foto360';
-            const ehCapa = file.originalname === dto.capaNome;
-
-            await (tx.insert(schema.midiaImovel as any) as any).values({
-              imovelId: idImovel,
-              url: url,
-              tipo: eh360 ? 'foto_360' : 'foto_interna',
-              isCapa: ehCapa,
-            });
-          }
+          const novosAtributos = ids.map((atId: any) => ({
+            imovel_id: idImovel,
+            atributo_id: Number(atId),
+          }));
+          await (tx.insert(schema.imoveisAtributos as any) as any).values(
+            novosAtributos,
+          );
         }
 
-        return {
-          id: idImovel,
-          message: isUpdate ? 'Imóvel atualizado!' : 'Imóvel cadastrado!',
-        };
+        // C. MÍDIAS (UPLOAD E GRAVAÇÃO)
+        const allFiles = [...(files?.galeria || []), ...(files?.foto360 || [])];
+        for (const file of allFiles) {
+          const url = await this.filesService.uploadFoto(
+            file,
+            `imoveis/${idImovel}`,
+          );
+          await (tx.insert(schema.midias as any) as any).values({
+            imovel_id: idImovel,
+            url,
+            tipo: file.fieldname === 'foto360' ? 'foto_360' : 'foto',
+            is_capa: file.originalname === dto.capaNome,
+          });
+        }
+
+        return { id: idImovel, success: true };
       });
     } catch (e) {
-      console.error('❌ Erro no Upsert do Imóvel:', e.message);
-      throw new InternalServerErrorException(`Falha ao salvar: ${e.message}`);
+      console.error('❌ Erro fatal no Upsert Imóvel:', e.message);
+      throw new InternalServerErrorException(e.message);
     }
   }
 
-  async remove(id: number, imobiliariaId: string) {
+  // 4. REMOÇÃO
+  async remove(id: number, tenantId: string) {
     try {
-      // Deleta garantindo que o imóvel pertence àquela imobiliária
-      const result = await this.db
+      await this.db
         .delete(schema.imoveis as any)
         .where(
           and(
             eq((schema.imoveis as any).id, id),
-            eq((schema.imoveis as any).imobiliariaId, imobiliariaId),
+            eq((schema.imoveis as any).tenant_id, tenantId),
           ),
         );
-
-      return { message: 'Imóvel removido com sucesso' };
-    } catch (error) {
-      console.error('❌ Erro ao deletar imóvel:', error.message);
-      throw new InternalServerErrorException('Falha ao excluir o registro.');
+      return { success: true };
+    } catch (e) {
+      throw new InternalServerErrorException('Erro ao remover imóvel.');
     }
   }
 }

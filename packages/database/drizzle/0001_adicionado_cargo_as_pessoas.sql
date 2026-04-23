@@ -1,0 +1,1 @@
+ALTER TABLE "pessoas" ADD COLUMN "cargo" varchar(50);

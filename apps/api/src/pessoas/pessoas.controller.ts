@@ -43,14 +43,15 @@ export class PessoasController {
     return this.pessoasService.findOne(id, imobId);
   }
 
+  // CRIAÇÃO E ATUALIZAÇÃO USAM O MESMO MÉTODO 'SAVE'
   @Post()
   async create(@Body() dto: any) {
-    return this.pessoasService.createUsuario(dto, dto.imobiliariaId);
+    return this.pessoasService.save(dto, dto.imobiliariaId);
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any) {
-    return this.pessoasService.updateCompleto(id, dto, dto.imobiliariaId);
+    return this.pessoasService.save({ ...dto, id }, dto.imobiliariaId);
   }
 
   @Delete(':id')
