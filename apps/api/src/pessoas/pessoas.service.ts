@@ -37,19 +37,24 @@ export class PessoasService {
   // 2. BUSCA PARA O GRID (MATA O ERRO 500)
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
     try {
+      // Usamos nomes físicos do banco para não haver erro de tradução
       const table = schema.pessoas as any;
-      const query = this.db
+
+      let conds = [
+        eq(table.imobiliaria_id, imobiliariaId), // <--- SEMPRE COM UNDERLINE
+        eq(table.papel, papel),
+      ];
+
+      if (search) {
+        conds.push(ilike(table.nome, `%${search}%`) as any);
+      }
+
+      return await this.db
         .select()
         .from(table)
-        .where(
-          and(
-            eq(table.imobiliaria_id, imobiliariaId),
-            eq(table.papel, papel),
-            search ? ilike(table.nome, `%${search}%`) : undefined,
-          ),
-        );
-      return await query;
+        .where(and(...conds));
     } catch (error) {
+      console.error('❌ Erro no findByRole:', error.message);
       return [];
     }
   }
