@@ -83,8 +83,7 @@ export const unidades = pgTable("unidades", {
   is_matriz: boolean("is_matriz").default(false),
 });
 
-// ==========================================
-// 3. PESSOAS (CRM UNIFICADO)
+// =============================   =============
 // ==========================================
 export const pessoas = pgTable(
   "pessoas",

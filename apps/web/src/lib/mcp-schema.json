@@ -1,0 +1,7 @@
+{
+  "intent_cadastrar_banco": {
+    "endpoint": "/bancos",
+    "fields": ["codigo_compe", "nome"],
+    "voice_prompt": "Entendido, Luis. Qual o nome do banco e o código Febraban?"
+  }
+}

@@ -2,6 +2,8 @@
  * Transforma nomes de arquivos complexos em nomes seguros para a nuvem.
  * Remove acentos, caracteres especiais e substitui espaços por underscores.
  */
+
+//src/comon/utils/file-utils.ts
 export function sanitizeFileName(originalName: string): string {
   return originalName
     .normalize('NFD') // Decompõe caracteres acentuados

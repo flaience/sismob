@@ -1,7 +1,7 @@
 /// <reference types="multer" />
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { sanitizeFileName } from '../comon/utils/file-utils'; // <--- IMPORTANDO O UTILITÁRIO
+import { sanitizeFileName } from './../common/utils/file-utils'; // Agora o caminho está correto
 
 @Injectable()
 export class FilesService {
@@ -14,16 +14,12 @@ export class FilesService {
     );
   }
 
-  async uploadFoto(file: any, path: string): Promise<string> {
-    if (!this.supabase)
-      throw new BadRequestException('Storage não configurado.');
-
-    // USANDO A NOSSA UNIT DE UTILITÁRIO
-    const cleanName = sanitizeFileName(file.originalname);
-    const fileName = `${Date.now()}-${cleanName}`;
+  async uploadFoto(file: Express.Multer.File, path: string): Promise<string> {
+    const nomeLimpo = sanitizeFileName(file.originalname);
+    const fileName = `${Date.now()}-${nomeLimpo}`;
     const filePath = `${path}/${fileName}`;
 
-    const { data, error } = await this.supabase.storage
+    const { error } = await this.supabase.storage
       .from('sismob-media')
       .upload(filePath, file.buffer, {
         contentType: file.mimetype,
@@ -31,14 +27,13 @@ export class FilesService {
       });
 
     if (error) {
-      console.error('❌ Erro Supabase Storage:', error.message);
-      throw new BadRequestException(`Falha no upload: ${error.message}`);
+      throw new BadRequestException(`Erro no Storage: ${error.message}`);
     }
 
-    const { data: publicUrl } = this.supabase.storage
+    const { data } = this.supabase.storage
       .from('sismob-media')
       .getPublicUrl(filePath);
 
-    return publicUrl.publicUrl;
+    return data.publicUrl;
   }
 }

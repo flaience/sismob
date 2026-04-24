@@ -16,9 +16,11 @@ import { PessoasService } from './pessoas.service';
 @Controller('pessoas')
 export class PessoasController {
   constructor(
-    @Inject(PessoasService) private readonly pessoasService: PessoasService,
+    @Inject(PessoasService)
+    private readonly pessoasService: PessoasService,
   ) {}
 
+  // 1. IDENTIFICAÇÃO (Sempre pública para o TenantContext)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
     const imob = await this.pessoasService.findImobiliariaByHost(host);
@@ -26,6 +28,7 @@ export class PessoasController {
     return imob;
   }
 
+  // 2. LISTAGEM DO GRID (Mata o erro 500)
   @Get()
   async findAll(
     @Query('papel') papel: string,
@@ -35,6 +38,7 @@ export class PessoasController {
     return this.pessoasService.findByRole(papel, imobId, search);
   }
 
+  // 3. BUSCA UM ÚNICO (Para carregar o formulário preenchido)
   @Get(':id')
   async findOne(
     @Param('id') id: string,
@@ -43,17 +47,20 @@ export class PessoasController {
     return this.pessoasService.findOne(id, imobId);
   }
 
-  // CRIAÇÃO E ATUALIZAÇÃO USAM O MESMO MÉTODO 'SAVE'
+  // 4. MOTOR DE GRAVAÇÃO UNIFICADO (POST E PATCH chamam o 'save')
   @Post()
   async create(@Body() dto: any) {
+    // Pegamos o ID da imobiliária que o site envia no formulário
     return this.pessoasService.save(dto, dto.imobiliariaId);
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any) {
+    // Garantimos que o ID da URL vá para o método save
     return this.pessoasService.save({ ...dto, id }, dto.imobiliariaId);
   }
 
+  // 5. REMOÇÃO
   @Delete(':id')
   async remove(
     @Param('id') id: string,
