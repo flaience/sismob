@@ -4,32 +4,42 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Save, ArrowLeft, Loader2, User, MapPin, Building } from "lucide-react";
 import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
-import { PAPEIS_LABELS } from "@/lib/constants";
+import { PAPEIS, PAPEIS_LABELS } from "@/lib/constants";
 
 function FormPessoa() {
-  const { papel } = useParams();
+  const { papel: slug } = useParams();
   const searchParams = useSearchParams();
   const idEdicao = searchParams.get("id");
+  const papelId = searchParams.get("papel"); // O número do papel
   const { tenant } = useTenant();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [unidades, setUnidades] = useState([]); // Lista de filiais
+  const [unidades, setUnidades] = useState([]);
   const [formData, setFormData] = useState<any>({
     nome: "",
     email: "",
     documento: "",
     telefone: "",
+    tipo: "f",
     unidade_id: "",
-    tipo_entidade: "f",
+    endereco: {
+      cep: "",
+      logradouro: "",
+      numero: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+    },
   });
 
-  // 1. CARREGA DADOS (Edição e Lista de Unidades)
+  const precisaEndereco = papelId !== PAPEIS.INTERESSADO;
+
   useEffect(() => {
     if (tenant?.id) {
-      // Busca as filiais da imobiliária para o select
+      // Carrega unidades para o lookup
       api
-        .get(`/configuracoes/unidades`, {
+        .get("/configuracoes/unidades", {
           params: { imobiliariaId: tenant.id },
         })
         .then((res) => setUnidades(res.data));
@@ -46,17 +56,22 @@ function FormPessoa() {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = { ...formData, papel, imobiliariaId: tenant?.id };
+      const payload = {
+        ...formData,
+        papel: papelId,
+        imobiliariaId: tenant?.id,
+      };
       await api.post("/pessoas/save", payload);
-      alert("Registro salvo!");
       router.back();
+    } catch (err) {
+      alert("Erro ao salvar dados");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto p-6 space-y-8">
       <header className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
@@ -65,77 +80,183 @@ function FormPessoa() {
           <ArrowLeft />
         </button>
         <h1 className="text-3xl font-black text-gray-900">
-          Manutenção de {PAPEIS_LABELS[papel as string]}
+          Manutenção: {PAPEIS_LABELS[papelId as string]}
         </h1>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 space-y-4">
-          <div className="flex items-center gap-2 text-indigo-600 font-bold mb-4">
-            <User /> Dados Principais
+        {/* SEÇÃO 1: DADOS BÁSICOS */}
+        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 space-y-6">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold">
+            <User size={20} /> Dados Identificação
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              required
-              placeholder="Nome / Razão"
-              className="p-4 bg-gray-50 rounded-2xl outline-none"
-              value={formData.nome}
-              onChange={(e) =>
-                setFormData({ ...formData, nome: e.target.value })
-              }
-            />
-
-            {/* SELECT DE UNIDADES (FILIAIS) */}
-            <div className="relative">
-              <Building
-                className="absolute left-4 top-4 text-gray-400"
-                size={18}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
+                Nome Completo / Razão Social
+              </label>
+              <input
+                required
+                className="w-full p-4 bg-gray-50 rounded-2xl border-none"
+                value={formData.nome}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
               />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
+                Tipo
+              </label>
               <select
-                className="w-full pl-12 p-4 bg-gray-50 rounded-2xl outline-none appearance-none"
+                className="w-full p-4 bg-gray-50 rounded-2xl"
+                value={formData.tipo}
+                onChange={(e) =>
+                  setFormData({ ...formData, tipo: e.target.value })
+                }
+              >
+                <option value="f">Pessoa Física</option>
+                <option value="j">Pessoa Jurídica</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
+                CPF / CNPJ
+              </label>
+              <input
+                required
+                className="w-full p-4 bg-gray-50 rounded-2xl"
+                value={formData.documento}
+                onChange={(e) =>
+                  setFormData({ ...formData, documento: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
+                E-mail
+              </label>
+              <input
+                className="w-full p-4 bg-gray-50 rounded-2xl"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
+                Unidade / Filial
+              </label>
+              <select
+                required
+                className="w-full p-4 bg-gray-50 rounded-2xl"
                 value={formData.unidade_id}
                 onChange={(e) =>
                   setFormData({ ...formData, unidade_id: e.target.value })
                 }
               >
-                <option value="">Selecionar Unidade/Filial</option>
-                {unidades.map((un: any) => (
-                  <option key={un.id} value={un.id}>
-                    {un.nome}
+                <option value="">Selecione...</option>
+                {unidades.map((u: any) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome}
                   </option>
                 ))}
               </select>
             </div>
-
-            <input
-              required
-              placeholder="E-mail"
-              className="p-4 bg-gray-50 rounded-2xl outline-none"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-            />
-            <input
-              placeholder="Telefone"
-              className="p-4 bg-gray-50 rounded-2xl outline-none"
-              value={formData.telefone}
-              onChange={(e) =>
-                setFormData({ ...formData, telefone: e.target.value })
-              }
-            />
           </div>
         </div>
 
+        {/* SEÇÃO 2: ENDEREÇO (CONDICIONAL) */}
+        {precisaEndereco && (
+          <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 space-y-6">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold">
+              <MapPin size={20} /> Localização
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <input
+                placeholder="CEP"
+                className="p-4 bg-gray-50 rounded-2xl"
+                value={formData.endereco?.cep}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    endereco: { ...formData.endereco, cep: e.target.value },
+                  })
+                }
+              />
+              <div className="md:col-span-2">
+                <input
+                  placeholder="Logradouro"
+                  className="p-4 bg-gray-50 rounded-2xl w-full"
+                  value={formData.endereco?.logradouro}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      endereco: {
+                        ...formData.endereco,
+                        logradouro: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+              <input
+                placeholder="Nº"
+                className="p-4 bg-gray-50 rounded-2xl"
+                value={formData.endereco?.numero}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    endereco: { ...formData.endereco, numero: e.target.value },
+                  })
+                }
+              />
+              <input
+                placeholder="Bairro"
+                className="p-4 bg-gray-50 rounded-2xl"
+                value={formData.endereco?.bairro}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    endereco: { ...formData.endereco, bairro: e.target.value },
+                  })
+                }
+              />
+              <input
+                placeholder="Cidade"
+                className="p-4 bg-gray-50 rounded-2xl"
+                value={formData.endereco?.cidade}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    endereco: { ...formData.endereco, cidade: e.target.value },
+                  })
+                }
+              />
+              <input
+                placeholder="UF"
+                className="p-4 bg-gray-50 rounded-2xl"
+                value={formData.endereco?.estado}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    endereco: { ...formData.endereco, estado: e.target.value },
+                  })
+                }
+              />
+            </div>
+          </div>
+        )}
+
         <button
           disabled={loading}
-          className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black shadow-xl"
+          className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black shadow-xl hover:scale-[1.02] transition-all"
         >
           {loading ? (
             <Loader2 className="animate-spin mx-auto" />
           ) : (
-            "SALVAR REGISTRO"
+            "SALVAR REGISTRO COMPLETO"
           )}
         </button>
       </form>

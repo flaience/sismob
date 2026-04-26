@@ -1,3 +1,4 @@
+//src/pessoas/pessoas.service.ts
 import {
   Injectable,
   Inject,
@@ -80,87 +81,92 @@ export class PessoasService {
   }
 
   // 4. MOTOR UNIVERSAL: SAVE (Inclusão e Alteração)
-  async save(dto: any, imobiliariaId: string) {
-    try {
-      return await this.db.transaction(async (tx) => {
-        const isUpdate = !!dto.id && dto.id !== 'undefined';
-        let userId = dto.id;
+  async save(dto: any, tenantId: string) {
+    return await this.db.transaction(async (tx) => {
+      try {
+        const isUpdate = !!dto.id;
+        let pessoaId = dto.id;
 
-        // Se for Corretor (Papel 1) e for NOVO, cria login
-        if (dto.papel === '1' && !isUpdate) {
-          const { data, error } =
-            await this.supabaseAdmin.auth.admin.createUser({
-              email: dto.email,
-              password: dto.senha || 'Sismob@123',
-              email_confirm: true,
-            });
-          if (error && error.message !== 'User already registered')
-            throw new Error(error.message);
-          if (data?.user) userId = data.user.id;
-        }
-
-        const payload = {
+        const dadosPessoa = {
+          tenant_id: tenantId,
+          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
           nome: dto.nome,
           email: dto.email,
           documento: dto.documento,
           telefone: dto.telefone,
           tipo: dto.tipo || 'f',
           papel: dto.papel,
-          imobiliaria_id: imobiliariaId,
           updated_at: new Date(),
-          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
         };
 
+        // 1. SALVAR PESSOA (Master)
         if (isUpdate) {
+          // Usamos 'as any' para evitar o erro de atribuição do PgTable
           await tx
             .update(schema.pessoas as any)
-            .set(payload)
-            .where(eq((schema.pessoas as any).id, userId));
+            .set(dadosPessoa)
+            .where(eq((schema.pessoas as any).id, pessoaId));
         } else {
-          const [nova] = await (tx.insert(schema.pessoas as any) as any)
-            .values({ ...payload, id: userId || undefined })
-            .returning();
-          userId = nova.id;
+          const [novaPessoa] = await (tx
+            .insert(schema.pessoas as any)
+            .values(dadosPessoa)
+            .returning() as any);
+          pessoaId = novaPessoa.id;
         }
 
-        // SALVAMENTO DE ENDEREÇO
-        if (dto.cep) {
-          const tableEnd = schema.enderecos as any;
-          const dadosEnd = {
-            cep: dto.cep,
-            logradouro: dto.logradouro,
-            numero: dto.numero,
-            bairro: dto.bairro,
-            cidade: dto.cidade,
-            estado: dto.estado,
-            pessoa_id: userId,
-          };
-          const exist = await tx
-            .select()
-            .from(tableEnd)
-            .where(eq(tableEnd.pessoa_id, userId))
-            .limit(1);
-          if (exist.length > 0) {
+        // 2. SALVAR ENDEREÇO (Detail)
+        if (dto.endereco) {
+          const { cep, logradouro, numero, bairro, cidade, estado } =
+            dto.endereco;
+
+          // Só salva se houver pelo menos o CEP ou Logradouro
+          if (cep || logradouro) {
+            // Remove endereço antigo para evitar duplicidade
             await tx
-              .update(tableEnd)
-              .set(dadosEnd)
-              .where(eq(tableEnd.pessoa_id, userId));
-          } else {
-            await tx.insert(tableEnd).values(dadosEnd);
+              .delete(schema.enderecos as any)
+              .where(eq((schema.enderecos as any).pessoa_id, pessoaId));
+
+            // Insere o novo
+            await tx.insert(schema.enderecos as any).values({
+              pessoa_id: pessoaId,
+              cep,
+              logradouro,
+              numero,
+              bairro,
+              cidade,
+              estado,
+            });
           }
         }
-        return { id: userId, success: true };
-      });
-    } catch (e: any) {
-      throw new InternalServerErrorException(e.message);
-    }
+
+        return { id: pessoaId, success: true };
+      } catch (error) {
+        console.error('❌ Erro na transação de salvar pessoa:', error.message);
+        throw new InternalServerErrorException(
+          'Falha ao persistir dados de pessoa e endereço.',
+        );
+      }
+    });
   }
 
   // 5. REMOÇÃO
   async remove(id: string, imobiliariaId: string) {
-    const table = schema.pessoas as any;
-    return await this.db
-      .delete(table)
-      .where(and(eq(table.id, id), eq(table.imobiliaria_id, imobiliariaId)));
+    try {
+      const table = schema.pessoas as any;
+
+      // ATENÇÃO: No seu schema a coluna é 'tenant_id'.
+      // O parâmetro que recebemos é 'imobiliariaId'.
+      return await this.db.delete(table).where(
+        and(
+          eq(table.id, id),
+          eq(table.tenant_id, imobiliariaId), // <--- AJUSTADO PARA tenant_id
+        ),
+      );
+    } catch (error) {
+      console.error('❌ Erro ao remover pessoa:', error.message);
+      throw new InternalServerErrorException(
+        'Não foi possível excluir o registro.',
+      );
+    }
   }
 }
