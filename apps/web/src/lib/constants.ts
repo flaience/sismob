@@ -1,3 +1,4 @@
+//src/lib/constants.ts
 export const PAPEIS = {
   EQUIPE: "1", // Corretores, Secretárias, Admin
   INTERESSADO: "2", // Leads (Só Nome/Whats/Email) - O "frio"
@@ -14,6 +15,6 @@ export const PAPEIS_LABELS = {
   [PAPEIS.PROPRIETARIO]: "Proprietário",
   [PAPEIS.INQUILINO]: "Inquilino",
   [PAPEIS.IMOBILIARIA]: "Imobiliária",
-  [PAPEIS.CONTA_SAAS]: "Assinante SaaS",
+  [PAPEIS.CONTA_SAAS]: "flaience - Conta SaaS",
   [PAPEIS.CLIENTE_COMPRADOR]: "Cliente Comprador",
 };

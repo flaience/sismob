@@ -108,6 +108,7 @@ export class PessoasService {
           papel: dto.papel,
           imobiliaria_id: imobiliariaId,
           updated_at: new Date(),
+          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
         };
 
         if (isUpdate) {
