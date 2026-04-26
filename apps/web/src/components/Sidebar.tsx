@@ -26,15 +26,16 @@ export default function Sidebar() {
   const [openGroup, setOpenGroup] = useState("");
 
   const menu = [
-    { title: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
+    { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" }, // Removido /admin
     {
       title: "CRM Pessoas",
       icon: Users,
       group: "crm",
       sub: [
-        { label: "Proprietários", href: "/admin/crm/proprietarios" },
-        { label: "Clientes/Leads", href: "/admin/crm/leads" },
-        { label: "Corretores/Equipe", href: "/admin/crm/equipe" },
+        // Ajustado de /admin/crm para /gestao para bater com a pasta [papel]
+        { label: "Proprietários", href: "/gestao/proprietarios" },
+        { label: "Clientes/Leads", href: "/gestao/leads" },
+        { label: "Corretores/Equipe", href: "/gestao/equipe" },
       ],
     },
     {
@@ -42,12 +43,12 @@ export default function Sidebar() {
       icon: Home,
       group: "ops",
       sub: [
-        { label: "Gestão de Imóveis", href: "/admin/imoveis" },
-        { label: "Negociações", href: "/admin/vendas/negociacoes" },
+        { label: "Gestão de Imóveis", href: "/imoveis" }, // Removido /admin
+        { label: "Negociações", href: "/vendas/negociacoes" },
         {
           label: "Cofre de Contratos",
           icon: FileCheck,
-          href: "/admin/vendas/contratos",
+          href: "/vendas/contratos",
         },
       ],
     },
@@ -56,9 +57,9 @@ export default function Sidebar() {
       icon: CreditCard,
       group: "fin",
       sub: [
-        { label: "Títulos Pagar/Receber", href: "/admin/financeiro/titulos" },
-        { label: "Livro Caixa", href: "/admin/financeiro/caixa" },
-        { label: "Contas Bancárias", href: "/admin/financeiro/bancos" },
+        { label: "Títulos Pagar/Receber", href: "/financeiro/titulos" },
+        { label: "Livro Caixa", href: "/financeiro/caixa" },
+        { label: "Contas Bancárias", href: "/financeiro/bancos" },
       ],
     },
     {
@@ -66,22 +67,12 @@ export default function Sidebar() {
       icon: Settings,
       group: "cfg",
       sub: [
-        { label: "Unidades/Filiais", href: "/admin/config/unidades" },
-        { label: "Atributos Imóveis", href: "/admin/config/atributos" },
-        { label: "Grupos de Caixa", href: "/admin/config/grupos-caixa" },
-      ],
-    },
-    {
-      title: "IA & Auditoria",
-      icon: Database,
-      group: "ai",
-      sub: [
-        { label: "Treinar Assistente", href: "/admin/ai/knowledge" },
-        { label: "Logs de Atividade", href: "/admin/ai/logs" },
+        { label: "Unidades/Filiais", href: "/config/unidades" },
+        { label: "Atributos Imóveis", href: "/config/atributos" },
+        { label: "Grupos de Caixa", href: "/config/grupos-caixa" },
       ],
     },
   ];
-
   const adminMenu = [
     { icon: LayoutDashboard, label: "Painel Geral", href: "/dashboard" },
     { icon: UserCog, label: "Proprietários", href: "/gestao/proprietarios" }, // Slug: proprietarios
