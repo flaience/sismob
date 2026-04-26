@@ -26,13 +26,31 @@ export class PessoasService {
 
   // 1. IDENTIFICAÇÃO PÚBLICA (DOMÍNIO)
   async findImobiliariaByHost(host: string) {
-    const table = schema.pessoas as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(and(eq(table.dominio, host), eq(table.papel, '5')))
-      .limit(1);
-    return results[0] || null;
+    try {
+      const table = schema.tenants as any;
+      // Busca por domínio customizado ou pelo slug
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(
+          or(
+            eq(table.dominio_customizado, host),
+            eq(table.slug, host.split('.')[0]),
+          ),
+        )
+        .limit(1);
+
+      if (results.length === 0) return null;
+      return results[0];
+    } catch (error) {
+      console.error(
+        '❌ Erro Crítico na Identificação do Tenant:',
+        error.message,
+      );
+      throw new InternalServerErrorException(
+        'Falha ao identificar unidade de negócio.',
+      );
+    }
   }
 
   // 2. BUSCA PARA O GRID (MATA O ERRO 500)
