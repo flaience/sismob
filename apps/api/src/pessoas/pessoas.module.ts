@@ -7,5 +7,6 @@ import { AuthModule } from '../auth/auth.module'; // <--- Adicione este import
   imports: [AuthModule], // <--- IMPORTANTE: Adicione o AuthModule aqui
   controllers: [PessoasController],
   providers: [PessoasService],
+  exports: [PessoasService],
 })
 export class PessoasModule {}

@@ -23,8 +23,17 @@ export class PessoasController {
   // 1. IDENTIFICAÇÃO (Sempre pública para o TenantContext)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
+    console.log(`🔍 Identificando Host: ${host}`);
+
     const imob = await this.pessoasService.findImobiliariaByHost(host);
-    if (!imob) throw new NotFoundException('Imobiliária não identificada.');
+
+    if (!imob) {
+      console.error(`❌ Host não encontrado no banco: ${host}`);
+      throw new NotFoundException(
+        'Imobiliária ou Admin não identificado para este domínio.',
+      );
+    }
+
     return imob;
   }
 
