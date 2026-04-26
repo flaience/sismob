@@ -26,16 +26,16 @@ export default function Sidebar() {
   const [openGroup, setOpenGroup] = useState("");
 
   const menu = [
-    { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" }, // Removido /admin
+    { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
     {
-      title: "CRM Pessoas",
+      title: "CRM Comercial",
       icon: Users,
       group: "crm",
       sub: [
-        // Ajustado de /admin/crm para /gestao para bater com a pasta [papel]
-        { label: "Proprietários", href: "/gestao/proprietarios" },
-        { label: "Clientes/Leads", href: "/gestao/leads" },
-        { label: "Corretores/Equipe", href: "/gestao/equipe" },
+        { label: "Leads / Interessados", href: "/gestao/leads" }, // PAPEL 2
+        { label: "Clientes Compradores", href: "/gestao/compradores" }, // PAPEL 7
+        { label: "Proprietários", href: "/gestao/proprietarios" }, // PAPEL 3
+        { label: "Inquilinos", href: "/gestao/inquilinos" }, // PAPEL 4
       ],
     },
     {
@@ -43,23 +43,8 @@ export default function Sidebar() {
       icon: Home,
       group: "ops",
       sub: [
-        { label: "Gestão de Imóveis", href: "/imoveis" }, // Removido /admin
-        { label: "Negociações", href: "/vendas/negociacoes" },
-        {
-          label: "Cofre de Contratos",
-          icon: FileCheck,
-          href: "/vendas/contratos",
-        },
-      ],
-    },
-    {
-      title: "Financeiro",
-      icon: CreditCard,
-      group: "fin",
-      sub: [
-        { label: "Títulos Pagar/Receber", href: "/financeiro/titulos" },
-        { label: "Livro Caixa", href: "/financeiro/caixa" },
-        { label: "Contas Bancárias", href: "/financeiro/bancos" },
+        { label: "Equipe", href: "/gestao/equipe" }, // PAPEL 1 - Nome simplificado
+        { label: "Gestão de Imóveis", href: "/imoveis" },
       ],
     },
     {
@@ -67,9 +52,9 @@ export default function Sidebar() {
       icon: Settings,
       group: "cfg",
       sub: [
-        { label: "Unidades/Filiais", href: "/config/unidades" },
-        { label: "Atributos Imóveis", href: "/config/atributos" },
-        { label: "Grupos de Caixa", href: "/config/grupos-caixa" },
+        { label: "Unidades / Filiais", href: "/configuracoes/unidades" }, // Caminho corrigido
+        { label: "Atributos Imóveis", href: "/configuracoes/atributos" },
+        { label: "Grupos de Caixa", href: "/configuracoes/grupos-caixa" },
       ],
     },
   ];

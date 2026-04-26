@@ -92,36 +92,59 @@ function FormPessoa() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
-              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
-                Nome Completo / Razão Social
+              <label className="text-xs font-bold text-gray-400 uppercase">
+                Nome Completo
               </label>
               <input
                 required
-                className="w-full p-4 bg-gray-50 rounded-2xl border-none"
+                className="w-full p-4 bg-gray-50 rounded-2xl"
                 value={formData.nome}
                 onChange={(e) =>
                   setFormData({ ...formData, nome: e.target.value })
                 }
               />
             </div>
+
+            {/* SE FOR EQUIPE (1), NÃO MOSTRA PF/PJ, MOSTRA CARGO */}
+            {papelId === PAPEIS.EQUIPE ? (
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase">
+                  Cargo / Função
+                </label>
+                <select
+                  className="w-full p-4 bg-gray-50 rounded-2xl"
+                  value={formData.cargo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cargo: e.target.value })
+                  }
+                >
+                  <option value="corretor">Corretor</option>
+                  <option value="secretaria">Secretária</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="gerente">Gerente</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase">
+                  Tipo
+                </label>
+                <select
+                  className="w-full p-4 bg-gray-50 rounded-2xl"
+                  value={formData.tipo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tipo: e.target.value })
+                  }
+                >
+                  <option value="f">Pessoa Física</option>
+                  <option value="j">Pessoa Jurídica</option>
+                </select>
+              </div>
+            )}
+
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
-                Tipo
-              </label>
-              <select
-                className="w-full p-4 bg-gray-50 rounded-2xl"
-                value={formData.tipo}
-                onChange={(e) =>
-                  setFormData({ ...formData, tipo: e.target.value })
-                }
-              >
-                <option value="f">Pessoa Física</option>
-                <option value="j">Pessoa Jurídica</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
-                CPF / CNPJ
+              <label className="text-xs font-bold text-gray-400 uppercase">
+                CPF / Documento
               </label>
               <input
                 required
@@ -132,20 +155,9 @@ function FormPessoa() {
                 }
               />
             </div>
+
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
-                E-mail
-              </label>
-              <input
-                className="w-full p-4 bg-gray-50 rounded-2xl"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-400 uppercase ml-2">
+              <label className="text-xs font-bold text-gray-400 uppercase">
                 Unidade / Filial
               </label>
               <select
@@ -156,7 +168,7 @@ function FormPessoa() {
                   setFormData({ ...formData, unidade_id: e.target.value })
                 }
               >
-                <option value="">Selecione...</option>
+                <option value="">Selecione a Filial...</option>
                 {unidades.map((u: any) => (
                   <option key={u.id} value={u.id}>
                     {u.nome}
