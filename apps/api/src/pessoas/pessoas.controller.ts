@@ -20,6 +20,10 @@ export class PessoasController {
     private readonly pessoasService: PessoasService,
   ) {}
 
+  @Get('teste-vivo')
+  teste() {
+    return { mensagem: 'O módulo de pessoas está carregado!' };
+  }
   // 1. IDENTIFICAÇÃO (Sempre pública para o TenantContext)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
