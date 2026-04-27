@@ -52,19 +52,20 @@ export class PessoasController {
   }
 
   // 3. BUSCA UM ÚNICO (Para carregar o formulário preenchido)
-  @Get(':id')
-  async findOne(
-    @Param('id') id: string,
-    @Query('imobiliariaId') imobId: string,
-  ) {
-    return this.pessoasService.findOne(id, imobId);
-  }
 
   // 4. MOTOR DE GRAVAÇÃO UNIFICADO (POST E PATCH chamam o 'save')
   @Post()
   async create(@Body() dto: any) {
     // Pegamos o ID da imobiliária que o site envia no formulário
     return this.pessoasService.save(dto, dto.imobiliariaId);
+  }
+
+  @Get(':id')
+  async findOne(
+    @Param('id') id: string,
+    @Query('imobiliariaId') imobId: string,
+  ) {
+    return this.pessoasService.findOne(id, imobId);
   }
 
   @Patch(':id')
