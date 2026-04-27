@@ -26,21 +26,26 @@ export class SaasService {
   }
 
   // 2. ONBOARDING INDUSTRIAL (Cria Empresa + Matriz + Admin)
+  // 2. ONBOARDING INDUSTRIAL (Cria Empresa + Matriz + Admin)
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx) => {
       try {
-        // A. Criar a Empresa (Tenant)
+        console.log(`🚀 Iniciando Onboarding para: ${dto.nomeEmpresa}`);
+
+        // A. Criar a Empresa (Tenant) - Ajustado para v5.1
         const [tenant] = await (tx
           .insert(schema.tenants as any)
           .values({
             nome_conta: dto.nomeEmpresa,
             slug: dto.slug,
             dominio_customizado: dto.dominio || null,
+            email_financeiro: dto.emailFinanceiro || dto.email, // <--- OBRIGATÓRIO
+            version_schema: '1.0.1', // <--- OBRIGATÓRIO PARA IA/RAG
             status: 'ativo',
           })
           .returning() as any);
 
-        // B. Criar a Unidade Matriz automaticamente
+        // B. Criar a Unidade Matriz automaticamente (Padrão Sismob)
         const [unidade] = await (tx
           .insert(schema.unidades as any)
           .values({
@@ -52,26 +57,28 @@ export class SaasService {
 
         // C. Criar o Usuário Admin da Imobiliária (Papel 6)
         await tx.insert(schema.pessoas as any).values({
+          id: sql`gen_random_uuid()`, // Garante um novo ID se não vier no DTO
           tenant_id: tenant.id,
           unidade_id: unidade.id,
           nome: dto.nomeResponsavel,
           email: dto.email,
           documento: dto.documento,
-          papel: '6', // Dono da Imobiliária (Papel SaaS)
+          papel: '6', // Dono da Imobiliária
           is_admin: true,
           cargo: 'gerente_geral',
         });
 
+        console.log(`✅ Onboarding concluído com sucesso: ${tenant.slug}`);
         return { success: true, tenantId: tenant.id, slug: tenant.slug };
       } catch (e) {
-        console.error('❌ Erro no Onboarding Transacional:', e.message);
+        console.error('❌ Erro Crítico no Onboarding:', e.message);
+        // O transaction fará o rollback automático aqui
         throw new InternalServerErrorException(
-          `Falha no Onboarding: ${e.message}`,
+          `Falha no processo de Onboarding: ${e.message}`,
         );
       }
     });
   }
-
   // 3. FINANCEIRO FLAIENCE: Ver faturamento consolidado
   async getFinanceiroFlaience() {
     try {

@@ -99,31 +99,59 @@ export class PessoasService {
   }
 
   // 4. MOTOR UNIVERSAL: SAVE (Inclusão e Alteração)
+  /**
+   * MOTOR DE GRAVAÇÃO UNIFICADO (Master/Detail: Pessoa + Endereço)
+   */
   async save(dto: any, tenantId: string) {
     return await this.db.transaction(async (tx) => {
       try {
         const isUpdate = !!dto.id;
         let pessoaId = dto.id;
 
+        // 1. Lógica Industrial: Se não vier unidade_id, busca a MATRIZ automaticamente
+        let unidadeIdFinal = dto.unidade_id ? Number(dto.unidade_id) : null;
+
+        if (!unidadeIdFinal) {
+          const matriz = await tx
+            .select()
+            .from(schema.unidades as any)
+            .where(
+              and(
+                eq((schema.unidades as any).tenant_id, tenantId),
+                eq((schema.unidades as any).is_matriz, true),
+              ),
+            )
+            .limit(1);
+
+          if (matriz.length > 0) {
+            unidadeIdFinal = matriz[0].id;
+          }
+        }
+
         const dadosPessoa = {
           tenant_id: tenantId,
-          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
+          unidade_id: unidadeIdFinal, // <--- Agora garantido
           nome: dto.nome,
           email: dto.email,
           documento: dto.documento,
           telefone: dto.telefone,
           tipo: dto.tipo || 'f',
           papel: dto.papel,
+          cargo: dto.cargo || null,
           updated_at: new Date(),
         };
 
-        // 1. SALVAR PESSOA (Master)
+        // 2. SALVAR PESSOA (Master)
         if (isUpdate) {
-          // Usamos 'as any' para evitar o erro de atribuição do PgTable
           await tx
             .update(schema.pessoas as any)
             .set(dadosPessoa)
-            .where(eq((schema.pessoas as any).id, pessoaId));
+            .where(
+              and(
+                eq((schema.pessoas as any).id, pessoaId),
+                eq((schema.pessoas as any).tenant_id, tenantId),
+              ),
+            );
         } else {
           const [novaPessoa] = await (tx
             .insert(schema.pessoas as any)
@@ -132,36 +160,39 @@ export class PessoasService {
           pessoaId = novaPessoa.id;
         }
 
-        // 2. SALVAR ENDEREÇO (Detail)
+        // 3. SALVAR ENDEREÇO (Detail)
         if (dto.endereco) {
           const { cep, logradouro, numero, bairro, cidade, estado } =
             dto.endereco;
 
-          // Só salva se houver pelo menos o CEP ou Logradouro
+          // Só processa endereço se houver o mínimo de informação
           if (cep || logradouro) {
-            // Remove endereço antigo para evitar duplicidade
+            // Remove endereço antigo para evitar duplicidade (Sempre limpa antes de gravar o novo)
             await tx
               .delete(schema.enderecos as any)
               .where(eq((schema.enderecos as any).pessoa_id, pessoaId));
 
-            // Insere o novo
+            // Insere o novo endereço vinculado à pessoa
             await tx.insert(schema.enderecos as any).values({
               pessoa_id: pessoaId,
-              cep,
-              logradouro,
-              numero,
-              bairro,
-              cidade,
-              estado,
+              cep: cep || '00000-000',
+              logradouro: logradouro || 'Não informado',
+              numero: numero || 'S/N',
+              bairro: bairro || 'Não informado',
+              cidade: cidade || 'Não informada',
+              estado: estado || '??',
             });
           }
         }
 
+        console.log(
+          `✅ Registro ${isUpdate ? 'atualizado' : 'criado'}: ${dto.nome} (ID: ${pessoaId})`,
+        );
         return { id: pessoaId, success: true };
       } catch (error) {
         console.error('❌ Erro na transação de salvar pessoa:', error.message);
         throw new InternalServerErrorException(
-          'Falha ao persistir dados de pessoa e endereço.',
+          `Falha ao persistir dados: ${error.message}`,
         );
       }
     });

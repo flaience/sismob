@@ -1,3 +1,4 @@
+// src/pessoas/pessoas.controller.ts
 import {
   Controller,
   Get,
@@ -28,14 +29,15 @@ export class PessoasController {
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
     console.log(`🔍 Identificando Host: ${host}`);
-
     const imob = await this.pessoasService.findImobiliariaByHost(host);
 
     if (!imob) {
-      console.error(`❌ Host não encontrado no banco: ${host}`);
-      throw new NotFoundException(
-        'Imobiliária ou Admin não identificado para este domínio.',
-      );
+      // MUDAMOS AQUI PARA TESTAR: Em vez de 404, retornamos um objeto de erro 200
+      return {
+        erro: true,
+        msg: `A rota funciona, mas o host ${host} não existe no seu banco de dados!`,
+        tentativa_slug: host.split('.')[0],
+      };
     }
 
     return imob;
