@@ -1,70 +1,67 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-// Importação base do Supabase (mais estável para Monorepos)
-import { createClient, type User, type Session } from "@supabase/supabase-js";
+import { createClient, type Session } from "@supabase/supabase-js";
 import api from "@/lib/api";
 
 const AuthContext = createContext<any>(null);
 
-// Inicializa o cliente fora para evitar recriações
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+// 1. Validação de Segurança das chaves
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("❌ ERRO: Variáveis de ambiente do Supabase não encontradas!");
+}
+
+const supabase = createClient(supabaseUrl || "", supabaseKey || "");
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // 1. Função Tipada para buscar o perfil no nosso Banco (Pessoas)
-    const fetchProfile = async (session: Session | null) => {
+  const fetchProfile = async (session: Session | null) => {
+    try {
       if (session?.user) {
-        try {
-          // Buscamos o papel/cargo na tabela 'pessoas' usando o UUID do login
-          const res = await api.get(`/pessoas/${session.user.id}`);
+        console.log("🔑 Usuário autenticado no Supabase:", session.user.email);
 
-          // Unificamos o objeto de Auth com os dados de Negócio (Papel/Cargo)
-          setUser({ ...session.user, ...res.data });
-        } catch (error) {
-          console.error(
-            "⚠️ Usuário autenticado, mas perfil não encontrado no banco.",
-          );
-          setUser(session.user); // Mantém o usuário básico se o perfil falhar
-        }
+        // Chamada à nossa API com tratamento de erro granulado
+        const res = await api
+          .get(`/pessoas/${session.user.id}`)
+          .catch((err) => {
+            console.warn(
+              "⚠️ Perfil não encontrado na tabela 'pessoas'. Criando objeto básico.",
+            );
+            return { data: { papel: "1", nome: session.user.email } }; // Fallback para não crashar
+          });
+
+        setUser({ ...session.user, ...res.data });
       } else {
         setUser(null);
       }
+    } catch (error) {
+      console.error("❌ Erro fatal no fetchProfile:", error);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    // 2. Checa sessão atual ao carregar a página
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchProfile(session);
     });
 
-    // 3. Escuta mudanças (Login, Logout, Troca de Senha)
-    // Tipamos explicitamente para matar os erros 7031 e 7006
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event: string, session: Session | null) => {
-        fetchProfile(session);
-      },
-    );
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      fetchProfile(session);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    window.location.href = "/login";
-  };
-
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, loading, supabase }}>
+      {children}
     </AuthContext.Provider>
   );
 }
