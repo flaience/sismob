@@ -1,8 +1,12 @@
 "use client";
 import { LayoutDashboard, Home, Users, Briefcase, Target } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { useTenant } from "@/context/TenantContext";
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const { tenant } = useTenant();
   const stats = [
     {
       label: "Imóveis",
@@ -27,11 +31,17 @@ export default function AdminDashboard() {
     },
   ];
 
+  if (!user || !tenant) return null;
+
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-black text-gray-900">
-        Painel de <span className="text-indigo-600">Gestão Sismob</span>
+      <h1 className="text-4xl font-black text-gray-900 tracking-tighter">
+        OLÁ, <span className="text-indigo-600">{user.nome?.toUpperCase()}</span>
       </h1>
+      <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">
+        Painel de Gestão • {tenant.nome_conta}
+      </p>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((item) => (
           <Link
