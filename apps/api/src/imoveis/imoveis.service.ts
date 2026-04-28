@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { FilesService } from '../files/files.service';
 
 @Injectable()
@@ -49,6 +49,28 @@ export class ImoveisService {
     });
     if (!result) throw new NotFoundException('Imóvel não encontrado.');
     return result;
+  }
+
+  async buscarPortal(filtros: any) {
+    const table = schema.imoveis as any;
+    let conds = [eq(table.status, 'disponivel')];
+
+    if (filtros.tipo) conds.push(eq(table.tipo, filtros.tipo));
+    if (filtros.finalidade)
+      conds.push(eq(table.finalidade, filtros.finalidade));
+    if (filtros.quartos)
+      conds.push(gte(table.quartos, Number(filtros.quartos)));
+    if (filtros.banheiros)
+      conds.push(gte(table.banheiros, Number(filtros.banheiros)));
+
+    // Filtro de Preço (Intervalo)
+    if (filtros.precoMin) conds.push(gte(table.preco_venda, filtros.precoMin));
+    if (filtros.precoMax) conds.push(lte(table.preco_venda, filtros.precoMax));
+
+    return await this.db
+      .select()
+      .from(table)
+      .where(and(...conds));
   }
 
   // 3. O "UPSERT" (GRAVAÇÃO E ALTERAÇÃO)

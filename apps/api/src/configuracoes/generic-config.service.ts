@@ -1,3 +1,4 @@
+// src/configuracoes/generic-config.service.ts
 import {
   Injectable,
   Inject,

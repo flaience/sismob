@@ -1,29 +1,27 @@
 "use client";
 import { useState } from "react";
-import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
   UserCog,
   Briefcase,
   Home,
-  Camera,
-  CreditCard,
-  Landmark,
   Settings,
   ChevronDown,
-  Search,
   Target,
-  FileCheck,
   ShieldAlert,
-  BarChart3,
-  Database,
+  Plus,
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "expo-router";
+import { usePathname } from "next/navigation";
+// Importe seu hook de autenticação para saber quem é o usuário
+import { useAuth } from "@/context/AuthContext";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
+  const pathname = usePathname();
+  const { user } = useAuth(); // Pega o usuário logado (Papel 0, 1, 6...)
 
   const menu = [
     { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -32,10 +30,10 @@ export default function Sidebar() {
       icon: Users,
       group: "crm",
       sub: [
-        { label: "Leads / Interessados", href: "/gestao/leads" }, // PAPEL 2
-        { label: "Clientes Compradores", href: "/gestao/compradores" }, // PAPEL 7
-        { label: "Proprietários", href: "/gestao/proprietarios" }, // PAPEL 3
-        { label: "Inquilinos", href: "/gestao/inquilinos" }, // PAPEL 4
+        { label: "Leads / Interessados", href: "/gestao/leads" },
+        { label: "Clientes Compradores", href: "/gestao/compradores" },
+        { label: "Proprietários", href: "/gestao/proprietarios" },
+        { label: "Inquilinos", href: "/gestao/inquilinos" },
       ],
     },
     {
@@ -43,7 +41,7 @@ export default function Sidebar() {
       icon: Home,
       group: "ops",
       sub: [
-        { label: "Equipe", href: "/gestao/equipe" }, // PAPEL 1 - Nome simplificado
+        { label: "Equipe", href: "/gestao/equipe" },
         { label: "Gestão de Imóveis", href: "/imoveis" },
       ],
     },
@@ -52,18 +50,11 @@ export default function Sidebar() {
       icon: Settings,
       group: "cfg",
       sub: [
-        { label: "Unidades / Filiais", href: "/configuracoes/unidades" }, // Caminho corrigido
+        { label: "Unidades / Filiais", href: "/configuracoes/unidades" },
         { label: "Atributos Imóveis", href: "/configuracoes/atributos" },
         { label: "Grupos de Caixa", href: "/configuracoes/grupos-caixa" },
       ],
     },
-  ];
-  const adminMenu = [
-    { icon: LayoutDashboard, label: "Painel Geral", href: "/dashboard" },
-    { icon: UserCog, label: "Proprietários", href: "/gestao/proprietarios" }, // Slug: proprietarios
-    { icon: Users, label: "Inquilinos", href: "/gestao/clientes" }, // Slug: clientes
-    { icon: Target, label: "Interessados", href: "/gestao/leads" }, // Slug: leads
-    { icon: Briefcase, label: "Minha Equipe", href: "/gestao/equipe" }, // Slug: equipe
   ];
 
   return (
@@ -82,7 +73,8 @@ export default function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto">
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
+        {/* MENU DINÂMICO DA IMOBILIÁRIA */}
         {menu.map((item) => (
           <div key={item.title}>
             <button
@@ -107,7 +99,7 @@ export default function Sidebar() {
                   <Link
                     key={s.href}
                     href={s.href}
-                    className="text-xs text-gray-500 hover:text-indigo-600 font-bold uppercase"
+                    className={`text-xs font-bold uppercase ${pathname === s.href ? "text-indigo-600" : "text-gray-400"}`}
                   >
                     {s.label}
                   </Link>
@@ -116,6 +108,22 @@ export default function Sidebar() {
             )}
           </div>
         ))}
+
+        {/* MÓDULO EXCLUSIVO FLAIENCE (SÓ APARECE PARA O LUIS - PAPEL 0) */}
+        {isExpanded && user?.papel === "0" && (
+          <div className="mt-10 pt-6 border-t border-gray-100">
+            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-4 mb-4">
+              Administração SaaS
+            </p>
+            <Link
+              href="/flaience/onboarding"
+              className="flex items-center gap-4 p-4 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+            >
+              <Plus size={20} />
+              <span className="text-sm font-bold">Nova Imobiliária</span>
+            </Link>
+          </div>
+        )}
       </nav>
     </aside>
   );
