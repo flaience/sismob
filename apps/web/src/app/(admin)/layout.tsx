@@ -1,4 +1,6 @@
 "use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useTenant } from "@/context/TenantContext";
@@ -10,14 +12,24 @@ export default function AdminLayout({
 }) {
   const { user, loading: authLoading } = useAuth();
   const { tenant, loading: tenantLoading } = useTenant();
+  const router = useRouter();
 
-  // Se estiver identificando, fica no branco para não crashar
-  if (authLoading || tenantLoading) return null;
+  // REDIRECIONAMENTO SEGURO: Apenas dentro do useEffect
+  useEffect(() => {
+    if (!authLoading && !tenantLoading) {
+      if (!user || !tenant) {
+        router.push("/login");
+      }
+    }
+  }, [user, tenant, authLoading, tenantLoading, router]);
 
-  // Se não tem usuário, manda para o login (Impede o acesso direto pela URL)
-  if (!user || !tenant) {
-    if (typeof window !== "undefined") window.location.href = "/login";
-    return null;
+  // Enquanto carrega, mostra tela limpa (Evita crash de leitura de null)
+  if (authLoading || tenantLoading || !user || !tenant) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+      </div>
+    );
   }
 
   return (
