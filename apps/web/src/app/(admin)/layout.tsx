@@ -1,18 +1,23 @@
-//src/app/(admin)/layout.tsx
+"use client";
 import Sidebar from "@/components/Sidebar";
+import { useAuth } from "@/context/AuthContext";
+import { useTenant } from "@/context/TenantContext";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, loading: authLoading } = useAuth();
+  const { tenant } = useTenant();
+
+  // Se estiver carregando o login, não desenha nada (evita o Application Error)
+  if (authLoading) return null;
+
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
-      {/* Espaçamento lateral apenas para o Admin ver o menu */}
-      <main className="flex-1 pl-0 md:pl-32 p-4 md:p-10">
-        <div className="max-w-7xl mx-auto">{children}</div>
-      </main>
+      <main className="flex-1 ml-[84px] p-4 md:p-10">{children}</main>
     </div>
   );
 }
