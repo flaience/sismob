@@ -15,18 +15,20 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      alert("Erro ao logar: " + error.message);
+      alert("Erro: " + error.message);
       setLoading(false);
-    } else {
-      router.push("/dashboard"); // Redireciona para a home
-      router.refresh(); // Atualiza a sidebar para mostrar o menu admin
+      return;
     }
+
+    // MÁGICA INDUSTRIAL: Em vez de push imediato, limpamos o cache e aguardamos
+    // Isso garante que os Contextos (Auth e Tenant) se atualizem antes da troca de página
+    window.location.href = "/dashboard";
   };
 
   return (
