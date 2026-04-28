@@ -8,23 +8,32 @@ export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const { tenant, loading: tenantLoading } = useTenant();
 
-  // 1. O SEGREDO: Se estiver carregando, mostra um Spinner centralizado
-  // Isso impede o Next.js de tentar ler 'user.nome' enquanto é null
+  // 1. Guardião de Carregamento
   if (authLoading || tenantLoading) {
     return (
-      <div className="h-[60vh] w-full flex flex-col items-center justify-center">
+      <div className="h-[80vh] w-full flex flex-col items-center justify-center">
         <Loader2 className="animate-spin text-indigo-600 mb-4" size={40} />
         <p className="text-gray-400 font-black uppercase text-xs tracking-widest">
-          Sincronizando Dados...
+          Sincronizando...
         </p>
       </div>
     );
   }
 
-  // 2. Proteção de Segurança: Caso não encontre usuário
-  if (!user || !tenant) return null;
+  // 2. Proteção de Dados (Caso o login falhe ou o banco esteja vazio)
+  if (!user || !tenant) {
+    return (
+      <div className="p-10 bg-red-50 rounded-[3rem] border border-red-100 text-center">
+        <h2 className="text-red-600 font-black text-2xl">
+          DADOS NÃO ENCONTRADOS
+        </h2>
+        <p className="text-red-400">
+          Verifique se o seu perfil existe na tabela 'pessoas'.
+        </p>
+      </div>
+    );
+  }
 
-  // 3. Ajuste de Links: Mudamos de '/admin/...' para '/gestao/...' para bater com suas pastas
   const stats = [
     {
       label: "Imóveis",
@@ -49,17 +58,19 @@ export default function AdminDashboard() {
     },
   ];
 
+  // 3. Tratamento seguro do Nome para evitar o Application Error
+  const nomeExibicao = user?.nome
+    ? user.nome.split(" ")[0].toUpperCase()
+    : "USUÁRIO";
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-white p-12 rounded-[3rem] shadow-sm border border-gray-100">
         <h1 className="text-4xl font-black text-gray-900 tracking-tighter">
-          OLÁ,{" "}
-          <span className="text-indigo-600">
-            {user.nome?.split(" ")[0].toUpperCase()}
-          </span>
+          OLÁ, <span className="text-indigo-600">{nomeExibicao}</span>
         </h1>
         <p className="text-gray-400 font-bold uppercase text-xs tracking-widest mt-2">
-          Painel de Gestão • {tenant.nome_conta}
+          Painel de Gestão • {tenant.nome_conta || "Imobiliária"}
         </p>
       </div>
 
