@@ -1,21 +1,34 @@
 "use client";
-export default function SimpleLayout({
+import Sidebar from "@/components/Sidebar";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div style={{ background: "#f3f4f6", minHeight: "100vh" }}>
-      <div
-        style={{
-          background: "white",
-          padding: "20px",
-          borderBottom: "1px solid #ddd",
-        }}
-      >
-        <strong>SISMOB BARRA DE TESTE</strong>
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) router.push("/login");
+  }, [user, loading, router]);
+
+  if (loading)
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-white font-black text-indigo-600 animate-pulse">
+        SISMOB • SINCRONIZANDO...
       </div>
-      <main>{children}</main>
+    );
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      <main className="flex-1 ml-[84px] p-4 md:p-10">
+        <div className="max-w-7xl mx-auto">{children}</div>
+      </main>
     </div>
   );
 }
