@@ -79,19 +79,19 @@ export class PessoasService {
   }
 
   // 3. BUSCA UM ÚNICO (PARA EDIÇÃO)
-  async findOne(id: string, imobId: string) {
+  async findOne(id: string) {
     try {
       const table = schema.pessoas as any;
+      // Busca direta pelo ID (UUID)
       const results = await this.db
         .select()
         .from(table)
-        .where(and(eq(table.id, id), eq(table.tenant_id, imobId)));
+        .where(eq(table.id, id))
+        .limit(1);
 
-      // O SEGREDO: Se vier uma lista, retorna apenas o primeiro objeto
-      // Se a lista estiver vazia, retorna null
       return results.length > 0 ? results[0] : null;
     } catch (error) {
-      console.error('❌ Erro no Service findOne:', error.message);
+      console.error('❌ Erro ao buscar pessoa por ID:', error.message);
       return null;
     }
   }
