@@ -12,12 +12,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (session: any) => {
     try {
       if (session?.user) {
-        const res = await api
-          .get(`/pessoas/${session.user.id}`)
-          .catch(() => ({ data: null }));
-        const userData = Array.isArray(res.data) ? res.data[0] : res.data;
-        setUser({ ...session.user, ...userData });
+        const res = await api.get(`/pessoas/${session.user.id}`);
+
+        // TRATAMENTO INDUSTRIAL: Pega o primeiro item se vier array
+        const data = Array.isArray(res.data) ? res.data[0] : res.data;
+
+        if (data) {
+          console.log("✅ Perfil Sincronizado:", data.nome);
+          setUser({ ...session.user, ...data });
+        } else {
+          setUser(session.user); // Fallback apenas com dados do Auth
+        }
       }
+    } catch (e) {
+      console.warn("⚠️ Perfil não encontrado no banco.");
+      if (session?.user) setUser(session.user);
     } finally {
       setLoading(false);
     }

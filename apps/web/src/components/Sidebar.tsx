@@ -7,6 +7,7 @@ import {
   Settings,
   Plus,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -26,6 +27,32 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
 
+  const canSee = (allowedCargos: string[]) => {
+    if (user?.papel === "0") return true; // Super-Admin vê TUDO
+    return allowedCargos.includes(user?.cargo || "");
+  };
+
+  const menu = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      href: "/dashboard",
+      visible: true,
+    },
+    {
+      title: "Financeiro",
+      icon: CreditCard,
+      href: "/financeiro/caixa",
+      visible: canSee(["financeiro", "gerente"]), // Só o financeiro e gerente vêem
+    },
+    {
+      title: "Nova Imobiliária",
+      icon: Plus,
+      href: "/onboarding",
+      visible: user?.papel === "0", // SÓ O LUIS VÊ
+    },
+  ];
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -33,13 +60,6 @@ export default function Sidebar() {
   if (!mounted || !user) return null;
 
   // 2. ARRAY DE MENU COM HREFS GARANTIDOS
-  const menu: MenuItem[] = [
-    { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-    { title: "Proprietários", icon: Users, href: "/gestao/proprietarios" },
-    { title: "Interessados", icon: Users, href: "/gestao/leads" },
-    { title: "Meus Imóveis", icon: Home, href: "/imoveis" },
-    { title: "Configurações", icon: Settings, href: "/configuracoes/unidades" },
-  ];
 
   return (
     <aside
