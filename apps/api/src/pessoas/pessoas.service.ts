@@ -54,6 +54,8 @@ export class PessoasService {
   }
 
   // 2. BUSCA PARA O GRID (MATA O ERRO 500)
+  // teste
+
   async findByRole(papel: string, imobiliariaId: string, search?: string) {
     try {
       // Usamos nomes físicos do banco para não haver erro de tradução
