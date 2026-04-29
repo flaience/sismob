@@ -1,9 +1,15 @@
 {
-  "extends": "@repo/typescript-config/react-library.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "strictNullChecks": true
+    "target": "ESNext",
+    "module": "CommonJS",
+    "outDir": "dist", // Onde o código compilado vai cair
+    "rootDir": "./src", // <--- ADICIONE ESTA LINHA EXATAMENTE AQUI
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+    // ... outras configurações
   },
-  "include": ["src"],
+  "include": ["src/**/*"], // Garanta que ele só inclua a pasta src
   "exclude": ["node_modules", "dist"]
 }

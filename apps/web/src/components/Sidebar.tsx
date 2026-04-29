@@ -1,130 +1,120 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
-  UserCog,
-  Briefcase,
   Home,
   Settings,
-  ChevronDown,
-  Target,
-  ShieldAlert,
   Plus,
+  ChevronRight,
 } from "lucide-react";
-import { Link } from "expo-router";
-import { usePathname } from "next/navigation";
-// Importe seu hook de autenticação para saber quem é o usuário
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
+
+// 1. DEFINIÇÃO DE TIPO PARA O MANTALIDADE INDUSTRIAL
+interface MenuItem {
+  title: string;
+  icon: any;
+  href: string; // Obrigatório para evitar o erro TS(2322)
+  group?: string;
+}
 
 export default function Sidebar() {
+  const [mounted, setMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [openGroup, setOpenGroup] = useState("");
   const pathname = usePathname();
-  const { user } = useAuth(); // Pega o usuário logado (Papel 0, 1, 6...)
+  const { user } = useAuth();
 
-  const menu = [
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !user) return null;
+
+  // 2. ARRAY DE MENU COM HREFS GARANTIDOS
+  const menu: MenuItem[] = [
     { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-    {
-      title: "CRM Comercial",
-      icon: Users,
-      group: "crm",
-      sub: [
-        { label: "Leads / Interessados", href: "/gestao/leads" },
-        { label: "Clientes Compradores", href: "/gestao/compradores" },
-        { label: "Proprietários", href: "/gestao/proprietarios" },
-        { label: "Inquilinos", href: "/gestao/inquilinos" },
-      ],
-    },
-    {
-      title: "Operacional",
-      icon: Home,
-      group: "ops",
-      sub: [
-        { label: "Equipe", href: "/gestao/equipe" },
-        { label: "Gestão de Imóveis", href: "/imoveis" },
-      ],
-    },
-    {
-      title: "Configurações",
-      icon: Settings,
-      group: "cfg",
-      sub: [
-        { label: "Unidades / Filiais", href: "/configuracoes/unidades" },
-        { label: "Atributos Imóveis", href: "/configuracoes/atributos" },
-        { label: "Grupos de Caixa", href: "/configuracoes/grupos-caixa" },
-      ],
-    },
+    { title: "Proprietários", icon: Users, href: "/gestao/proprietarios" },
+    { title: "Interessados", icon: Users, href: "/gestao/leads" },
+    { title: "Meus Imóveis", icon: Home, href: "/imoveis" },
+    { title: "Configurações", icon: Settings, href: "/configuracoes/unidades" },
   ];
 
   return (
     <aside
       style={{ width: isExpanded ? 260 : 84 }}
-      className="fixed left-6 top-6 bottom-6 z-50 bg-white/95 backdrop-blur-xl shadow-2xl rounded-[2.5rem] border border-gray-100 flex flex-col p-4 transition-all duration-300"
+      className="fixed left-6 top-6 bottom-6 z-50 bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 overflow-hidden border border-gray-100"
     >
-      <div className="flex items-center gap-3 mb-8 px-2 pt-2">
-        <div className="bg-indigo-600 p-3 rounded-2xl text-white">
-          <Home size={24} />
-        </div>
-        {isExpanded && (
-          <span className="font-black text-xl text-gray-800 tracking-tighter uppercase">
-            SIS<span className="text-indigo-600">MOB</span>
-          </span>
-        )}
+      {/* LOGO / HOME ICON */}
+      <div className="bg-indigo-600 p-3 rounded-2xl text-white w-fit mb-8 shadow-lg shadow-indigo-100">
+        <Home size={24} />
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
-        {/* MENU DINÂMICO DA IMOBILIÁRIA */}
-        {menu.map((item) => (
-          <div key={item.title}>
-            <button
-              onClick={() => {
-                setIsExpanded(true);
-                setOpenGroup(openGroup === item.group ? "" : item.group || "");
-              }}
-              className="w-full flex items-center justify-between p-4 rounded-2xl text-gray-400 hover:bg-indigo-50 transition-all"
+      {/* NAVEGAÇÃO PRINCIPAL */}
+      <nav className="flex-1 space-y-2">
+        {menu.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.title}
+              href={item.href} // Agora o TS sabe que sempre existirá uma string
+              className={`
+                flex items-center gap-4 p-4 rounded-2xl transition-all group
+                ${isActive ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" : "text-gray-400 hover:bg-indigo-50 hover:text-indigo-600"}
+              `}
             >
-              <div className="flex items-center gap-4">
-                <item.icon size={22} />
-                {isExpanded && (
-                  <span className="text-sm font-bold">{item.title}</span>
-                )}
-              </div>
-              {isExpanded && item.sub && <ChevronDown size={14} />}
-            </button>
+              <item.icon
+                size={22}
+                className={
+                  isActive ? "text-white" : "group-hover:text-indigo-600"
+                }
+              />
+              {isExpanded && (
+                <span className="font-bold text-sm whitespace-nowrap">
+                  {item.title}
+                </span>
+              )}
+            </Link>
+          );
+        })}
 
-            {isExpanded && openGroup === item.group && item.sub && (
-              <div className="ml-12 flex flex-col gap-2 pb-4">
-                {item.sub.map((s) => (
-                  <Link
-                    key={s.href}
-                    href={s.href}
-                    className={`text-xs font-bold uppercase ${pathname === s.href ? "text-indigo-600" : "text-gray-400"}`}
-                  >
-                    {s.label}
-                  </Link>
-                ))}
-              </div>
+        {/* ÁREA EXCLUSIVA SUPER-ADMIN (LUIS PAPEL 0) */}
+        {user?.papel === "0" && (
+          <div className="mt-8 pt-6 border-t border-gray-50 space-y-2">
+            {isExpanded && (
+              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4 mb-2">
+                SaaS Flaience
+              </p>
             )}
-          </div>
-        ))}
-
-        {/* MÓDULO EXCLUSIVO FLAIENCE (SÓ APARECE PARA O LUIS - PAPEL 0) */}
-        {isExpanded && user?.papel === "0" && (
-          <div className="mt-10 pt-6 border-t border-gray-100">
-            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-4 mb-4">
-              Administração SaaS
-            </p>
             <Link
               href="/flaience/onboarding"
-              className="flex items-center gap-4 p-4 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+              className={`
+                flex items-center gap-4 p-4 rounded-2xl transition-all
+                ${pathname === "/flaience/onboarding" ? "bg-orange-500 text-white shadow-orange-100" : "bg-gray-50 text-gray-500 hover:bg-orange-50 hover:text-orange-600"}
+              `}
             >
-              <Plus size={20} />
-              <span className="text-sm font-bold">Nova Imobiliária</span>
+              <Plus size={22} />
+              {isExpanded && (
+                <span className="font-bold text-sm whitespace-nowrap">
+                  Nova Imobiliária
+                </span>
+              )}
             </Link>
           </div>
         )}
       </nav>
+
+      {/* BOTÃO DE EXPANDIR (CONTROLE VISUAL) */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="mt-auto flex items-center justify-center p-4 bg-gray-50 rounded-2xl text-gray-400 hover:text-indigo-600 transition-all"
+      >
+        <ChevronRight
+          size={20}
+          className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+        />
+      </button>
     </aside>
   );
 }
