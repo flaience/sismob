@@ -14,20 +14,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const res = await api.get(`/pessoas/${session.user.id}`);
 
-        // MÁGICA INDUSTRIAL: Se vier um Array, pega o primeiro. Se não, usa o objeto.
-        const userData = Array.isArray(res.data) ? res.data[0] : res.data;
+        // TRATAMENTO INDUSTRIAL DE ARRAY VS OBJETO
+        const data = res.data;
+        const userData = Array.isArray(data) ? data[0] : data;
 
         if (userData) {
-          console.log("✅ Perfil identificado:", userData.nome);
           setUser({ ...session.user, ...userData });
         } else {
           setUser(session.user);
         }
       }
     } catch (e) {
-      console.error("❌ Erro na sincronização");
+      console.warn("⚠️ Perfil não encontrado.");
     } finally {
-      setLoading(false); // DESTRAVA A TELA
+      setLoading(false); // ISSO DESTRAVA O "SISMOB CARREGANDO"
     }
   };
 
