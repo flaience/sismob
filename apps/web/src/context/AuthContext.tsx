@@ -13,46 +13,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (session?.user) {
         const res = await api.get(`/pessoas/${session.user.id}`);
-
-        // TRATAMENTO INDUSTRIAL DE ARRAY VS OBJETO
-        const data = res.data;
-        const userData = Array.isArray(data) ? data[0] : data;
-
-        if (userData) {
-          setUser({ ...session.user, ...userData });
-        } else {
-          setUser(session.user);
-        }
+        const data = Array.isArray(res.data) ? res.data[0] : res.data;
+        setUser({ ...session.user, ...data });
       }
     } catch (e) {
-      console.warn("⚠️ Perfil não encontrado.");
+      console.warn("⚠️ Perfil não sincronizado.");
+      if (session?.user) setUser(session.user);
     } finally {
-      setLoading(false); // ISSO DESTRAVA O "SISMOB CARREGANDO"
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchProfile(session);
-    });
-
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => fetchProfile(session));
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      fetchProfile(session);
-    });
-
+    } = supabase.auth.onAuthStateChange((_event, session) =>
+      fetchProfile(session),
+    );
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    window.location.href = "/login";
-  };
-
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signOut: () => supabase.auth.signOut() }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -60,7 +47,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined)
-    return { user: null, loading: true, signOut: () => {} };
-  return context;
+  return context || { user: null, loading: true };
 };

@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
+import { useTenant } from "@/context/TenantContext";
 import Sidebar from "@/components/Sidebar";
 
 export default function AdminLayout({
@@ -7,17 +8,29 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { tenant, loading: tenantLoading } = useTenant();
 
-  // Enquanto carrega, mostra apenas o spinner
-  if (loading)
+  // DEBUG NO CONSOLE PARA VOCÊ VER QUEM ESTÁ TRAVANDO
+  console.log("ESTADO ATUAL:", {
+    authLoading,
+    tenantLoading,
+    hasUser: !!user,
+    hasTenant: !!tenant,
+  });
+
+  if (authLoading || tenantLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-white font-black text-indigo-600 animate-pulse">
-        SISMOB • CARREGANDO...
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+          {authLoading ? "Aguardando Usuário... " : ""}
+          {tenantLoading ? "Aguardando Imobiliária..." : ""}
+        </div>
       </div>
     );
+  }
 
-  // Se não tem usuário após o loading, manda pro login
   if (!user) {
     if (typeof window !== "undefined") window.location.href = "/login";
     return null;

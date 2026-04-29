@@ -9,6 +9,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // FAILSAFE: Se a API travar, libera o sistema em 3 segundos
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          "⚠️ [SISMOB] Timeout na identificação. Forçando liberação.",
+        );
+        setLoading(false);
+      }
+    }, 3000);
+
     async function identificar() {
       try {
         const host = window.location.hostname;
@@ -17,30 +27,27 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             ? "sismob.flaience.com"
             : host;
 
-        console.log("🔍 Identificando:", queryHost);
         const res = await api.get(
           `/pessoas/config/identificar?host=${queryHost}`,
         );
 
-        if (res.data) {
-          setTenant(res.data);
+        // TRATAMENTO DE ARRAY: Se o backend mandou [{...}], pega o primeiro
+        const data = Array.isArray(res.data) ? res.data[0] : res.data;
+
+        if (data) {
+          console.log("✅ [SISMOB] Tenant Identificado:", data.nome_conta);
+          setTenant(data);
         }
       } catch (e) {
-        console.error("❌ Erro na identificação do Tenant");
+        console.error("❌ [SISMOB] Erro ao identificar tenant.");
       } finally {
         setLoading(false);
+        clearTimeout(timer);
       }
     }
+
     identificar();
   }, []);
-
-  // SEGREDO: Se ainda estiver carregando, não libera os filhos para não dar erro de undefined
-  if (loading)
-    return (
-      <div style={{ padding: "20px", color: "gray" }}>
-        SISMOB: Identificando Imobiliária...
-      </div>
-    );
 
   return (
     <TenantContext.Provider value={{ tenant, loading }}>
