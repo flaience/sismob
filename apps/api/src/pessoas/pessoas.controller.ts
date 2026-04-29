@@ -1,49 +1,26 @@
-// src/pessoas/pessoas.controller.ts
 import {
   Controller,
   Get,
   Post,
   Body,
   Query,
-  Request,
-  NotFoundException,
+  Param,
   Delete,
   Patch,
-  Param,
-  Inject,
 } from '@nestjs/common';
 import { PessoasService } from './pessoas.service';
 
 @Controller('pessoas')
 export class PessoasController {
-  constructor(
-    @Inject(PessoasService)
-    private readonly pessoasService: PessoasService,
-  ) {}
+  constructor(private readonly pessoasService: PessoasService) {}
 
-  @Get('teste-vivo')
-  teste() {
-    return { mensagem: 'O módulo de pessoas está carregado!' };
-  }
-  // 1. IDENTIFICAÇÃO (Sempre pública para o TenantContext)
+  // Rota de Identificação
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
-    console.log(`🔍 Identificando Host: ${host}`);
-    const imob = await this.pessoasService.findImobiliariaByHost(host);
-
-    if (!imob) {
-      // MUDAMOS AQUI PARA TESTAR: Em vez de 404, retornamos um objeto de erro 200
-      return {
-        erro: true,
-        msg: `A rota funciona, mas o host ${host} não existe no seu banco de dados!`,
-        tentativa_slug: host.split('.')[0],
-      };
-    }
-
-    return imob;
+    return this.pessoasService.findImobiliariaByHost(host);
   }
 
-  // 2. LISTAGEM DO GRID (Mata o erro 500)
+  // Listagem do Grid
   @Get()
   async findAll(
     @Query('papel') papel: string,
@@ -53,33 +30,24 @@ export class PessoasController {
     return this.pessoasService.findByRole(papel, imobId, search);
   }
 
-  // 3. BUSCA UM ÚNICO (Para carregar o formulário preenchido)
-
-  // 4. MOTOR DE GRAVAÇÃO UNIFICADO (POST E PATCH chamam o 'save')
-  @Post()
-  async create(@Body() dto: any) {
-    // Pegamos o ID da imobiliária que o site envia no formulário
-    return this.pessoasService.save(dto, dto.imobiliariaId);
-  }
-
-  @Post('save')
-  async save(@Body() dto: any) {
-    // O imobiliariaId vem do formulário (TenantContext)
-    return this.pessoasService.save(dto, dto.imobiliariaId);
-  }
-
+  // Busca por ID
   @Get(':id')
   async findOne(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
-    // Agora passa EXATAMENTE os dois argumentos que o service espera
     return this.pessoasService.findOne(id, tid);
   }
+
+  // Salvar (POST e PATCH chamam o save com 2 argumentos)
+  @Post()
+  async create(@Body() dto: any) {
+    return this.pessoasService.save(dto, dto.imobiliariaId);
+  }
+
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any) {
-    // Garantimos que o ID da URL vá para o método save
     return this.pessoasService.save({ ...dto, id }, dto.imobiliariaId);
   }
 
-  // 5. REMOÇÃO
+  // Remover
   @Delete(':id')
   async remove(
     @Param('id') id: string,

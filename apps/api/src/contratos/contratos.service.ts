@@ -1,3 +1,4 @@
+//src/contratos/contratos.service.ts
 import {
   Injectable,
   Inject,
@@ -23,12 +24,19 @@ export class ContratosService {
    */
   async gerarContrato(templateId: number, dados: any) {
     try {
-      // 1. Busca o template usando a forma estável de SELECT
-      // O 'as any' no schema e no eq resolve o erro de Overload do TypeScript 5.9
+      // 1. ACESSO INDUSTRIAL: Usamos o casting no objeto schema inteiro
+      // Isso ignora o erro de "Property does not exist" durante o build
+      const dbSchema = schema as any;
+      const tableTemplates = dbSchema.templatesContratos;
+
+      if (!tableTemplates) {
+        throw new Error('Tabela templatesContratos não encontrada no Schema.');
+      }
+
       const results = await this.db
         .select()
-        .from(schema.templatesContratos as any)
-        .where(eq((schema.templatesContratos as any).id, templateId))
+        .from(tableTemplates)
+        .where(eq(tableTemplates.id, templateId))
         .limit(1);
 
       const template = results[0];
