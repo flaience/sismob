@@ -1,9 +1,17 @@
+"use client";
+import { Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import SismobFormMaster from "@/components/SismobFormMaster";
+import { PAPEIS_LABELS } from "@/lib/constants";
 
-export default function ManutencaoPessoa() {
+function ManutencaoContent() {
+  const { papel } = useParams();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+
   return (
     <SismobFormMaster
-      title="Cadastro de Pessoa"
+      title={PAPEIS_LABELS[papel as string] || "Registro"}
       endpoint="/pessoas"
       sections={[
         {
@@ -11,39 +19,25 @@ export default function ManutencaoPessoa() {
           fields: [
             {
               name: "nome",
-              label: "Nome / Razão Social",
+              label: "Nome Completo",
               type: "text",
               fullWidth: true,
             },
-            {
-              name: "tipo",
-              label: "Tipo",
-              type: "select",
-              options: [
-                { label: "Física", value: "f" },
-                { label: "Jurídica", value: "j" },
-              ],
-            },
-            { name: "documento", label: "CPF / CNPJ", type: "text" },
-            { name: "unidade_id", label: "Unidade", type: "select" },
-          ],
-        },
-        {
-          title: "Localização",
-          fields: [
-            { name: "cep", label: "CEP", type: "text" },
-            {
-              name: "logradouro",
-              label: "Endereço",
-              type: "text",
-              fullWidth: true,
-            },
-            { name: "numero", label: "Número", type: "text" },
-            { name: "cidade", label: "Cidade", type: "text" },
+            { name: "email", label: "E-mail", type: "text" },
+            { name: "documento", label: "CPF/CNPJ", type: "text" },
           ],
         },
       ]}
-      aiHelp="Ensine o Agente MCP sobre como cadastrar pessoas neste campo..."
     />
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense
+      fallback={<div className="p-10 font-black">Preparando ambiente...</div>}
+    >
+      <ManutencaoContent />
+    </Suspense>
   );
 }
