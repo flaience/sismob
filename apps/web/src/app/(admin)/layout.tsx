@@ -8,38 +8,19 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading: authLoading } = useAuth();
-  const { tenant, loading: tenantLoading } = useTenant();
+  const { loading: authLoading } = useAuth();
+  const { loading: tenantLoading } = useTenant();
 
-  // DEBUG NO CONSOLE PARA VOCÊ VER QUEM ESTÁ TRAVANDO
-  console.log("ESTADO ATUAL:", {
-    authLoading,
-    tenantLoading,
-    hasUser: !!user,
-    hasTenant: !!tenant,
-  });
-
-  if (authLoading || tenantLoading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
-        <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-          {authLoading ? "Aguardando Usuário... " : ""}
-          {tenantLoading ? "Aguardando Imobiliária..." : ""}
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    if (typeof window !== "undefined") window.location.href = "/login";
-    return null;
-  }
-
+  // EM VEZ DE BLOQUEAR A TELA TODA, MOSTRA UMA BARRA DISCRETA
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
-      <main className="flex-1 ml-[84px] p-4 md:p-10">{children}</main>
+      <main className="flex-1 ml-[84px] p-4 md:p-10">
+        {(authLoading || tenantLoading) && (
+          <div className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 animate-pulse z-[9999]" />
+        )}
+        <div className="max-w-7xl mx-auto">{children}</div>
+      </main>
     </div>
   );
 }

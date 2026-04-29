@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import api from "@/lib/api";
 
-const AuthContext = createContext<any>(undefined);
+const AuthContext = createContext<any>({ user: null, loading: true });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -12,13 +12,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (session: any) => {
     try {
       if (session?.user) {
-        const res = await api.get(`/pessoas/${session.user.id}`);
-        const data = Array.isArray(res.data) ? res.data[0] : res.data;
-        setUser({ ...session.user, ...data });
+        const res = await api
+          .get(`/pessoas/${session.user.id}`)
+          .catch(() => ({ data: null }));
+        const userData = Array.isArray(res.data) ? res.data[0] : res.data;
+        setUser({ ...session.user, ...userData });
       }
-    } catch (e) {
-      console.warn("⚠️ Perfil não sincronizado.");
-      if (session?.user) setUser(session.user);
     } finally {
       setLoading(false);
     }
@@ -30,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ data: { session } }) => fetchProfile(session));
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) =>
+    } = supabase.auth.onAuthStateChange((_evt, session) =>
       fetchProfile(session),
     );
     return () => subscription.unsubscribe();
@@ -45,7 +44,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  return context || { user: null, loading: true };
-};
+export const useAuth = () => useContext(AuthContext);
