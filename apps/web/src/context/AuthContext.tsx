@@ -1,45 +1,46 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase"; // Agora o nome bate!
 import api from "@/lib/api";
+import { Session } from "@supabase/supabase-js";
 
-const AuthContext = createContext<any>(null);
-
-// Validação segura de ENV
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (id: string, baseUser: any) => {
-    try {
-      const res = await api.get(`/pessoas/${id}`);
-      setUser({ ...baseUser, ...res.data });
-    } catch (e) {
-      setUser(baseUser);
-    } finally {
-      setLoading(false);
+  const fetchProfile = async (session: Session | null) => {
+    if (session?.user) {
+      try {
+        const res = await api.get(`/pessoas/${session.user.id}`);
+        setUser({ ...session.user, ...res.data });
+      } catch (e) {
+        setUser(session.user);
+      }
+    } else {
+      setUser(null);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) fetchProfile(session.user.id, session.user);
-      else setLoading(false);
-    });
+    // 1. Pegando a sessão inicial de forma tipada
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }: { data: { session: Session | null } }) => {
+        fetchProfile(session);
+      });
 
+    // 2. Escutando mudanças (Login/Logout) com tipos corretos
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) fetchProfile(session.user.id, session.user);
-      else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
+    } = supabase.auth.onAuthStateChange(
+      (_event: string, session: Session | null) => {
+        fetchProfile(session);
+      },
+    );
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -52,4 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) return { user: null, loading: true };
+  return context;
+};
