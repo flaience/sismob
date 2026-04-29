@@ -12,37 +12,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (session: any) => {
     try {
       if (session?.user) {
-        console.log(
-          "🔍 [SISMOB] Buscando perfil do banco para UUID:",
-          session.user.id,
-        );
+        const res = await api.get(`/pessoas/${session.user.id}`);
 
-        // Tentativa de buscar papel/cargo na tabela 'pessoas'
-        const res = await api
-          .get(`/pessoas/${session.user.id}`)
-          .catch((err) => {
-            console.warn(
-              "⚠️ [SISMOB] Perfil não encontrado no banco. Erro:",
-              err.message,
-            );
-            return { data: null };
-          });
+        // MÁGICA INDUSTRIAL: Se vier um Array, pega o primeiro. Se não, usa o objeto.
+        const userData = Array.isArray(res.data) ? res.data[0] : res.data;
 
-        if (res.data) {
-          console.log("✅ [SISMOB] Perfil sincronizado com sucesso!");
-          setUser({ ...session.user, ...res.data });
+        if (userData) {
+          console.log("✅ Perfil identificado:", userData.nome);
+          setUser({ ...session.user, ...userData });
         } else {
-          console.log("ℹ️ [SISMOB] Usando apenas dados básicos do Auth.");
           setUser(session.user);
         }
-      } else {
-        setUser(null);
       }
-    } catch (error) {
-      console.error("❌ [SISMOB] Erro fatal na sincronização:", error);
+    } catch (e) {
+      console.error("❌ Erro na sincronização");
     } finally {
-      // OBRIGATÓRIO: Destrava a tela de 'Sincronizando' independente do resultado
-      setLoading(false);
+      setLoading(false); // DESTRAVA A TELA
     }
   };
 

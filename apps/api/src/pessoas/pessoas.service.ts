@@ -79,23 +79,21 @@ export class PessoasService {
   }
 
   // 3. BUSCA UM ÚNICO (PARA EDIÇÃO)
-  async findOne(id: string, imobiliariaId: string) {
-    const table = schema.pessoas as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(and(eq(table.id, id), eq(table.imobiliaria_id, imobiliariaId)))
-      .limit(1);
-    const pessoa = results[0];
-    if (pessoa) {
-      const tableEnd = schema.enderecos as any;
-      const ends = await this.db
+  async findOne(id: string, imobId: string) {
+    try {
+      const table = schema.pessoas as any;
+      const results = await this.db
         .select()
-        .from(tableEnd)
-        .where(eq(tableEnd.pessoa_id, id));
-      return { ...pessoa, enderecos: ends };
+        .from(table)
+        .where(and(eq(table.id, id), eq(table.tenant_id, imobId)));
+
+      // O SEGREDO: Se vier uma lista, retorna apenas o primeiro objeto
+      // Se a lista estiver vazia, retorna null
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('❌ Erro no Service findOne:', error.message);
+      return null;
     }
-    return null;
   }
 
   // 4. MOTOR UNIVERSAL: SAVE (Inclusão e Alteração)
