@@ -1,3 +1,4 @@
+//src/context/AuthContext.tsx
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 // 1. IMPORTAÇÃO DO TIPO QUE ESTAVA FALTANDO

@@ -170,3 +170,14 @@ export const contratosDocumentos = pgTable("contratos_documentos", {
 
   created_at: timestamp("created_at").defaultNow(),
 });
+
+// packages/database/schema.ts
+// Adicione esta exportação ao arquivo
+
+export const templatesContratos = pgTable("templates_contratos", {
+  id: serial("id").primaryKey(),
+  tenant_id: uuid("tenant_id").references(() => tenants.id),
+  titulo: varchar("titulo", { length: 255 }).notNull(),
+  conteudo: text("conteudo").notNull(),
+  tipo: varchar("tipo", { length: 50 }), // 'saas', 'venda', 'locacao'
+});

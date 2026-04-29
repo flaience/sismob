@@ -62,14 +62,17 @@ export class PessoasController {
     return this.pessoasService.save(dto, dto.imobiliariaId);
   }
 
-  @Get(':id')
-  async findOne(
-    @Param('id') id: string,
-    @Query('imobiliariaId') imobId: string,
-  ) {
-    return this.pessoasService.findOne(id, imobId);
+  @Post('save')
+  async save(@Body() dto: any) {
+    // O imobiliariaId vem do formulário (TenantContext)
+    return this.pessoasService.save(dto, dto.imobiliariaId);
   }
 
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
+    // Agora passa EXATAMENTE os dois argumentos que o service espera
+    return this.pessoasService.findOne(id, tid);
+  }
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any) {
     // Garantimos que o ID da URL vá para o método save

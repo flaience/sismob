@@ -1,5 +1,6 @@
+"use client";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Home, User } from "lucide-react";
 
 export default function PortalLayout({
   children,
@@ -7,19 +8,38 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="px-8 py-6 flex justify-between items-center border-b border-gray-50 bg-white/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="font-black text-xl text-indigo-600 uppercase">
-          SIS<span className="text-gray-900">MOB</span>
-        </div>
+    <div className="min-h-screen bg-[#F8F9FA] selection:bg-indigo-100 selection:text-indigo-700">
+      {/* NAVBAR TRANSPARENTE E MODERNA */}
+      <nav className="fixed top-0 left-0 right-0 z-[100] px-6 py-8 flex justify-between items-center max-w-7xl mx-auto pointer-events-none">
+        <Link
+          href="/"
+          className="pointer-events-auto bg-white/80 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/20"
+        >
+          <div className="flex items-center gap-2">
+            <div className="bg-indigo-600 p-2 rounded-xl text-white">
+              <Home size={20} />
+            </div>
+            <span className="font-black text-xl tracking-tighter uppercase text-slate-900">
+              SIS<span className="text-indigo-600">MOB</span>
+            </span>
+          </div>
+        </Link>
+
         <Link
           href="/login"
-          className="flex items-center gap-2 text-gray-400 hover:text-indigo-600 text-[10px] font-bold uppercase tracking-widest transition-all"
+          className="pointer-events-auto bg-slate-900 text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-105 transition-all flex items-center gap-2"
         >
-          <Lock size={14} /> Acesso Restrito
+          <User size={16} /> Área Restrita
         </Link>
-      </header>
-      <main className="w-full">{children}</main>
+      </nav>
+
+      <main>{children}</main>
+
+      <footer className="bg-white py-20 px-10 text-center border-t border-gray-100">
+        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.3em]">
+          Powered by Flaience Holding
+        </p>
+      </footer>
     </div>
   );
 }

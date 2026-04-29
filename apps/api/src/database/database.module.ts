@@ -10,13 +10,17 @@ import * as schema from '@sismob/database';
       provide: 'DRIZZLE_CONNECTION',
       useFactory: () => {
         const connectionString = process.env.DATABASE_URL;
-        if (!connectionString) throw new Error('DATABASE_URL is missing');
+
+        if (!connectionString) {
+          throw new Error('❌ DATABASE_URL não configurada no ambiente.');
+        }
 
         const queryClient = postgres(connectionString);
 
-        // O SEGREDO: O segundo argumento { schema } habilita o this.db.query
-        // Usamos 'as any' para evitar que o TypeScript trave o build por conflito de versões
-        return drizzle(queryClient, { schema }) as any;
+        // CORREÇÃO INDUSTRIAL:
+        // Se o Drizzle reclama de 2 argumentos, passamos como um objeto único.
+        // Se ainda assim ele chiar, usamos o casting de função (drizzle as any)
+        return (drizzle as any)(queryClient, { schema });
       },
     },
   ],
