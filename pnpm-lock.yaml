@@ -298,6 +298,13 @@ importers:
       drizzle-orm:
         specifier: 0.36.1
         version: 0.36.1(@types/react@19.2.2)(postgres@3.4.4)(react@19.0.0)
+      postgres:
+        specifier: 3.4.4
+        version: 3.4.4
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.2
 
   packages/eslint-config:
     devDependencies:
