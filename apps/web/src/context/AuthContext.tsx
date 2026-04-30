@@ -11,45 +11,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (session: Session | null) => {
-    // TIMER DE EMERGÊNCIA: Se a API travar, libera o Dashboard em 4s de qualquer jeito
-    const safetyTimer = setTimeout(() => {
-      if (loading) {
-        console.warn(
-          "⚠️ [SISMOB] Timeout de sincronização! Forçando liberação...",
-        );
-        setLoading(false);
-      }
-    }, 4000);
-
     try {
       if (session?.user) {
-        console.log("🔍 [SISMOB] Buscando perfil para:", session.user.id);
-
-        // Chamada à API com timeout implícito pelo catch
+        // Tentativa de busca com timeout de 5 segundos
         const res = await api
-          .get(`/pessoas/${session.user.id}`)
-          .catch((err) => {
-            console.error("❌ [SISMOB] Erro na API /pessoas:", err.message);
-            return { data: null };
-          });
+          .get(`/pessoas/${session.user.id}`, { timeout: 5000 })
+          .catch(() => ({ data: null }));
 
         const dbData = Array.isArray(res.data) ? res.data[0] : res.data;
 
         if (dbData) {
-          console.log("✅ [SISMOB] Perfil DB OK:", dbData.nome);
           setUser({ ...session.user, ...dbData });
         } else {
-          console.warn("ℹ️ [SISMOB] Perfil não encontrado no banco.");
+          // Se não achou no banco, loga com os dados básicos do Supabase
           setUser(session.user);
         }
       } else {
         setUser(null);
       }
-    } catch (error) {
-      console.error("❌ [SISMOB] Erro fatal no AuthContext");
     } finally {
-      clearTimeout(safetyTimer);
-      setLoading(false); // DESTRAVA A TELA
+      // ESTA LINHA É O SEU "BOTÃO DE PÂNICO" - ELA DESTRAVA A TELA
+      setLoading(false);
     }
   };
 
