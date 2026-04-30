@@ -1,14 +1,10 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
+import { type Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase"; // <--- USANDO O SEU SINGLETON PARA EVITAR MULTIPLAS INSTÂNCIAS
 import api from "@/lib/api";
 
 const AuthContext = createContext<any>(undefined);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -17,14 +13,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (session: Session | null) => {
     try {
       if (session?.user) {
-        // Log industrial para você copiar o ID se precisar sincronizar o banco
+        // Log para auditoria e sincronia de banco
         console.log("🔑 [SISMOB] Sincronizando UUID:", session.user.id);
 
         const res = await api
           .get(`/pessoas/${session.user.id}`)
           .catch(() => ({ data: null }));
 
-        // TRATAMENTO INDUSTRIAL: Garante que pegamos o objeto e não a lista []
+        // TRATAMENTO INDUSTRIAL: Resolve o conflito de Lista vs Objeto do Drizzle
         const dbData = Array.isArray(res.data) ? res.data[0] : res.data;
 
         if (dbData) {
@@ -40,21 +36,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
     } catch (error) {
-      console.error("❌ [SISMOB] Erro na sincronização");
+      console.error("❌ [SISMOB] Erro fatal na sincronização de perfil.");
     } finally {
-      setLoading(false); // ISSO DESTRAVA O DASHBOARD
+      // OBRIGATÓRIO: Destrava o Dashboard independente de sucesso ou erro
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // 1. Pegando a sessão inicial de forma tipada (Resolve erro TS7031)
+    // 1. Pegando a sessão inicial de forma tipada (Matando erro TS7031)
     supabase.auth
       .getSession()
       .then(({ data: { session } }: { data: { session: Session | null } }) => {
         fetchProfile(session);
       });
 
-    // 2. Escutando mudanças de auth (Resolve erro TS7006)
+    // 2. Escutando mudanças de auth (Matando erro TS7006)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -81,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  // Proteção para o hook nunca retornar null
+  // Proteção para o hook nunca retornar null durante o boot do React
   if (context === undefined)
     return { user: null, loading: true, signOut: () => {} };
   return context;

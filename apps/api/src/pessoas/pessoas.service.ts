@@ -9,20 +9,14 @@ export class PessoasService {
 
   // 2. Busca por ID Único (Resolvendo erro do Controller)
   async findOne(id: string) {
-    try {
-      const table = schema.pessoas as any;
-      const results = await this.db
-        .select()
-        .from(table)
-        .where(eq(table.id, id))
-        .limit(1);
-
-      // Retorna o objeto puro se existir, senão null
-      return results.length > 0 ? results[0] : null;
-    } catch (error) {
-      console.error('❌ Erro ao buscar pessoa:', error.message);
-      return null;
-    }
+    const table = schema.pessoas as any;
+    const results = await this.db
+      .select()
+      .from(table)
+      .where(eq(table.id, id))
+      .limit(1);
+    // Garante que retorna nulo se não achar, ou o primeiro objeto (sem colchetes)
+    return results.length > 0 ? results[0] : null;
   }
   // 3. Salvar (Inclusão e Alteração) - RECEBE 2 ARGUMENTOS
   async save(dto: any, tenantId: string) {
