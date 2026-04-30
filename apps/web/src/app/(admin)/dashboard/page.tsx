@@ -1,3 +1,4 @@
+//src/app/(admin)/dashboard/page.tsx
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useTenant } from "@/context/TenantContext";

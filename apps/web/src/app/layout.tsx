@@ -1,6 +1,4 @@
-// src/app/layout.tsx (O PAI DE TODOS)
-import type { Metadata } from "next";
-import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 import { TenantProvider } from "@/context/TenantContext";
 
 export default function RootLayout({
@@ -10,10 +8,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className="bg-slate-50 antialiased overflow-x-hidden">
-        <TenantProvider>
-          {children} {/* <--- APENAS ISSO! Nada de Sidebar aqui. */}
-        </TenantProvider>
+      <body>
+        <AuthProvider>
+          <TenantProvider>{children}</TenantProvider>
+        </AuthProvider>
       </body>
     </html>
   );

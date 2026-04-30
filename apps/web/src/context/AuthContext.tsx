@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { type Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase"; // <--- USANDO O SEU SINGLETON PARA EVITAR MULTIPLAS INSTÂNCIAS
+import { supabase } from "@/lib/supabase";
 import api from "@/lib/api";
 
 const AuthContext = createContext<any>(undefined);
@@ -11,66 +11,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (session: Session | null) => {
+    // TIMER DE EMERGÊNCIA: Se a API travar, libera o Dashboard em 4s de qualquer jeito
+    const safetyTimer = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          "⚠️ [SISMOB] Timeout de sincronização! Forçando liberação...",
+        );
+        setLoading(false);
+      }
+    }, 4000);
+
     try {
       if (session?.user) {
-        // Log para auditoria e sincronia de banco
-        console.log("🔑 [SISMOB] Sincronizando UUID:", session.user.id);
+        console.log("🔍 [SISMOB] Buscando perfil para:", session.user.id);
 
+        // Chamada à API com timeout implícito pelo catch
         const res = await api
           .get(`/pessoas/${session.user.id}`)
-          .catch(() => ({ data: null }));
+          .catch((err) => {
+            console.error("❌ [SISMOB] Erro na API /pessoas:", err.message);
+            return { data: null };
+          });
 
-        // TRATAMENTO INDUSTRIAL: Resolve o conflito de Lista vs Objeto do Drizzle
         const dbData = Array.isArray(res.data) ? res.data[0] : res.data;
 
         if (dbData) {
-          console.log("✅ [SISMOB] Perfil DB encontrado:", dbData.nome);
+          console.log("✅ [SISMOB] Perfil DB OK:", dbData.nome);
           setUser({ ...session.user, ...dbData });
         } else {
-          console.warn(
-            "ℹ️ [SISMOB] Perfil não está no DB, usando e-mail do Auth.",
-          );
+          console.warn("ℹ️ [SISMOB] Perfil não encontrado no banco.");
           setUser(session.user);
         }
       } else {
         setUser(null);
       }
     } catch (error) {
-      console.error("❌ [SISMOB] Erro fatal na sincronização de perfil.");
+      console.error("❌ [SISMOB] Erro fatal no AuthContext");
     } finally {
-      // OBRIGATÓRIO: Destrava o Dashboard independente de sucesso ou erro
-      setLoading(false);
+      clearTimeout(safetyTimer);
+      setLoading(false); // DESTRAVA A TELA
     }
   };
 
   useEffect(() => {
-    // 1. Pegando a sessão inicial de forma tipada (Matando erro TS7031)
     supabase.auth
       .getSession()
-      .then(({ data: { session } }: { data: { session: Session | null } }) => {
-        fetchProfile(session);
-      });
+      .then(({ data: { session } }) => fetchProfile(session));
 
-    // 2. Escutando mudanças de auth (Matando erro TS7006)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event: string, session: Session | null) => {
-        fetchProfile(session);
-      },
-    );
+    } = supabase.auth.onAuthStateChange((_evt, session) => {
+      fetchProfile(session);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    window.location.href = "/login";
-  };
-
   return (
-    <AuthContext.Provider value={{ user, loading, signOut, supabase }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signOut: () => supabase.auth.signOut(),
+        supabase,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -78,8 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  // Proteção para o hook nunca retornar null durante o boot do React
-  if (context === undefined)
-    return { user: null, loading: true, signOut: () => {} };
+  // Se o contexto falhar, retorna um estado que não trava a tela
+  if (context === undefined) return { user: null, loading: false };
   return context;
 };
