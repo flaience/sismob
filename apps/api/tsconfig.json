@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
+    /* 1. SILENCIA OS ERROS DE DEPRECIAÇÃO */
+    "ignoreDeprecations": "5.0",
+
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "outDir": "./dist",
 
-    // 1. O SEGREDO: Permitir que o TS saia da pasta 'api'
     "rootDir": "../../",
     "baseUrl": "../../",
 
@@ -16,11 +18,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "strict": false,
+
     "paths": {
       "@sismob/database": ["packages/database/index.ts"]
     }
   },
-  // 2. INCLUIR O PROJETO INTEIRO NO RADAR
+  /* 3. INCLUÍMOS EXPLICITAMENTE O QUE DEVE SER COMPILADO */
   "include": [
     "src/**/*",
     "../../packages/database/index.ts",
