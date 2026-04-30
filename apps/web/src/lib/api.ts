@@ -1,3 +1,4 @@
+//src/lib/api.ts
 import axios from "axios";
 import { supabase } from "./supabase"; // Importando o objeto pronto
 

@@ -8,16 +8,22 @@ export class PessoasService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   // 2. Busca por ID Único (Resolvendo erro do Controller)
-  async findOne(id: string, imobId: string) {
-    const table = schema.pessoas as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(and(eq(table.id, id), eq(table.tenant_id, imobId)))
-      .limit(1);
-    return results[0] || null;
-  }
+  async findOne(id: string) {
+    try {
+      const table = schema.pessoas as any;
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1);
 
+      // Retorna o objeto puro se existir, senão null
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('❌ Erro ao buscar pessoa:', error.message);
+      return null;
+    }
+  }
   // 3. Salvar (Inclusão e Alteração) - RECEBE 2 ARGUMENTOS
   async save(dto: any, tenantId: string) {
     const table = schema.pessoas as any;
