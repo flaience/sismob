@@ -4,16 +4,27 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "outDir": "./dist",
-    "rootDir": "./",
+
+    // 1. O SEGREDO: Permitir que o TS saia da pasta 'api'
+    "rootDir": "../../",
+    "baseUrl": "../../",
+
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
     "paths": {
-      "@sismob/database": ["../../packages/database/index.ts"]
+      "@sismob/database": ["packages/database/index.ts"]
     }
   },
-  "include": ["src/**/*"],
+  // 2. INCLUIR O PROJETO INTEIRO NO RADAR
+  "include": [
+    "src/**/*",
+    "../../packages/database/index.ts",
+    "../../packages/database/schema.ts"
+  ],
   "exclude": ["node_modules", "dist", "test"]
 }
