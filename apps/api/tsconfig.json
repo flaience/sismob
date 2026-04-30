@@ -1,25 +1,19 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "5.0",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
-
-    // 1. CONFIGURAÇÃO DE PRECISÃO:
     "outDir": "./dist",
-    "rootDir": "../../", // <--- Aponta para a raiz do monorepo (C:\sismob)
-
+    "rootDir": "./",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": false,
     "paths": {
       "@sismob/database": ["../../packages/database/index.ts"]
     }
   },
-  "include": ["src/**/*", "../../packages/database/**/*"], // Inclui o banco no build
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test"]
 }
