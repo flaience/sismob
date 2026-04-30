@@ -1,89 +1,75 @@
 "use client";
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase"; // Importando o objeto constante
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { LogIn, ShieldCheck, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  // Garante que o componente só renderize no cliente (Mata o Application Error)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        alert("Erro ao entrar: " + error.message);
-        setLoading(false);
-      } else {
-        // Redirecionamento forçado para limpar o cache de erro
-        window.location.href = "/dashboard";
-      }
-    } catch (err) {
-      alert("Falha na conexão com o servidor.");
+    if (error) {
+      alert("Falha no acesso: " + error.message);
       setLoading(false);
+    } else {
+      window.location.href = "/dashboard";
     }
   };
 
-  if (!mounted) return null;
-
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="bg-white p-12 rounded-[3rem] shadow-2xl w-full max-w-lg border border-gray-100">
-        <div className="text-center mb-10">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tighter uppercase">
-            SIS<span className="text-indigo-600">MOB</span>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl border border-slate-100 p-12 space-y-8 animate-in fade-in zoom-in duration-500">
+        <div className="text-center space-y-2">
+          <div className="bg-brand w-16 h-16 rounded-3xl flex items-center justify-center text-white mx-auto shadow-lg shadow-indigo-200">
+            <ShieldCheck size={32} />
+          </div>
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
+            SIS<span className="text-brand">MOB</span>
           </h1>
-          <p className="text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest">
-            Acesse sua imobiliária
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+            Acesso Industrial Flaience
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
-              E-mail
-            </label>
+          <div className="space-y-4">
             <input
               type="email"
+              placeholder="E-mail corporativo"
               required
-              className="w-full p-5 bg-gray-50 rounded-3xl border-none focus:ring-2 focus:ring-indigo-600 font-bold"
-              value={email}
+              className="w-full p-5 bg-slate-50 rounded-2xl border-none focus:ring-2 ring-brand font-bold transition-all outline-none"
               onChange={(e) => setEmail(e.target.value)}
             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
-              Senha
-            </label>
             <input
               type="password"
+              placeholder="Senha de acesso"
               required
-              className="w-full p-5 bg-gray-50 rounded-3xl border-none focus:ring-2 focus:ring-indigo-600 font-bold"
-              value={password}
+              className="w-full p-5 bg-slate-50 rounded-2xl border-none focus:ring-2 ring-brand font-bold transition-all outline-none"
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center"
+            className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-lg shadow-xl hover:bg-brand transition-all flex items-center justify-center gap-2 group"
           >
-            {loading ? "CARREGANDO..." : "ENTRAR NO SISTEMA"}
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <LogIn
+                size={20}
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            )}
+            ENTRAR NO SISTEMA
           </button>
         </form>
       </div>

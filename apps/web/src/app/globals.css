@@ -1,12 +1,23 @@
 @import "tailwindcss";
 @source "../../**/*.{ts,tsx}";
-/* Opcional: Um reset básico para o corpo da página */
+
+@theme {
+  --color-brand: #4f46e5; /* Indigo 600 */
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
+
 body {
-  @apply bg-gray-50 text-gray-900;
-  margin: 0;
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Scrollbar fina para parecer sistema moderno */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full;
 }
