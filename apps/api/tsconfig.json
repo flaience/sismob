@@ -1,16 +1,13 @@
 {
   "compilerOptions": {
-    /* 1. CALA OS AVISOS DE DEPRECIAÇÃO DO TS 5.5+ */
-    "ignoreDeprecations": "6.0",
-
     "module": "CommonJS",
     "moduleResolution": "Node",
     "target": "ES2021",
     "outDir": "./dist",
 
-    /* 2. CONFIGURAÇÃO DE FRONTEIRA MONOREPO */
+    /* CONFIGURAÇÃO DE FRONTEIRA MONOREPO */
     "baseUrl": "../../",
-    "rootDir": "../../",
+    "rootDir": "src",
 
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -21,19 +18,16 @@
     "strict": false,
 
     "paths": {
-      "@sismob/database": ["packages/database/index.ts"]
+      "@sismob/*": ["packages/*/index.d.ts"]
     }
   },
   "include": [
-    "src/**/*",
-    "../../packages/database/index.ts",
-    "../../packages/database/schema.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "test",
-    "../../packages/database/drizzle.config.ts",
-    "../../packages/database/drizzle/**/*"
+    "test"
   ]
 }
+
