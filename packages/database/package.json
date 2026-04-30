@@ -2,8 +2,8 @@
   "name": "@sismob/database",
   "version": "1.0.0",
   "private": true,
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx migrate.ts"
