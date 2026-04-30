@@ -8,12 +8,12 @@ export class PessoasService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   // 2. Busca por ID Único (Resolvendo erro do Controller)
-  async findOne(id: string) {
+  async findOne(id: string, tenantId: string) {
     const table = schema.pessoas as any;
     const results = await this.db
       .select()
       .from(table)
-      .where(eq(table.id, id))
+      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
       .limit(1);
     // Garante que retorna nulo se não achar, ou o primeiro objeto (sem colchetes)
     return results.length > 0 ? results[0] : null;
