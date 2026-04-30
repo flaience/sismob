@@ -5,7 +5,9 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022",
 
-    /* O SEGREDO: Removemos o rootDir e deixamos o TS decidir */
+    // 1. CONFIGURAÇÃO DE PRECISÃO:
+    "outDir": "./dist",
+    "rootDir": "../../", // <--- Aponta para a raiz do monorepo (C:\sismob)
 
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -18,7 +20,6 @@
       "@sismob/database": ["../../packages/database/index.ts"]
     }
   },
-  /* IMPORTANTE: Aqui incluímos apenas a pasta src */
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../packages/database/**/*"], // Inclui o banco no build
   "exclude": ["node_modules", "dist", "test"]
 }
