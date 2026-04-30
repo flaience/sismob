@@ -1,19 +1,26 @@
 {
   "compilerOptions": {
     "module": "CommonJS",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
     "target": "ES2021",
+    "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
     "paths": {
       "@sismob/database": ["../../packages/database/index.ts"]
     }
   },
-  /* 3. INCLUÍMOS EXPLICITAMENTE O QUE DEVE SER COMPILADO */
-  "include": [
-    "src/**/*",
-    "../../packages/database/index.ts",
-    "../../packages/database/schema.ts"
-  ],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test"]
 }
