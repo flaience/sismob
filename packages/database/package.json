@@ -1,20 +1,12 @@
 {
   "name": "@sismob/database",
   "version": "1.0.0",
-  "private": true,
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx migrate.ts"
+    "build": "drizzle-kit generate && tsc"
   },
   "dependencies": {
-    "drizzle-orm": "0.33.0",
-    "postgres": "3.4.4"
-  },
-  "devDependencies": {
-    "drizzle-kit": "0.30.1",
-    "dotenv": "^16.4.5",
-    "tsx": "^4.7.1"
+    "drizzle-orm": "0.36.1"
   }
 }

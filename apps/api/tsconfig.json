@@ -1,26 +1,12 @@
 {
   "compilerOptions": {
-    /* 1. SILENCIA OS ERROS DE DEPRECIAÇÃO */
-    "ignoreDeprecations": "5.0",
-
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "target": "ES2022",
+    "module": "CommonJS",
+    "target": "ES2021",
     "outDir": "./dist",
-
-    "rootDir": "../../",
-    "baseUrl": "../../",
-
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": false,
-
+    "rootDir": "./src",
+    "baseUrl": "./",
     "paths": {
-      "@sismob/database": ["packages/database/index.ts"]
+      "@sismob/database": ["../../packages/database/index.ts"]
     }
   },
   /* 3. INCLUÍMOS EXPLICITAMENTE O QUE DEVE SER COMPILADO */
