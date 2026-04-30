@@ -78,8 +78,11 @@ export class ContratosService {
         linkPdf: res.data.url, // O n8n deve devolver a URL do arquivo no Supabase
         status: 'pronto_para_assinatura',
       };
-    } catch (error) {
-      console.error('❌ Erro no Motor de Contratos:', error.message);
+    } catch (error: any) {
+      console.error(
+        '❌ [SISMOB] Erro no Motor de Contratos:',
+        error.message || error,
+      );
       throw new InternalServerErrorException(
         `Falha ao gerar documento: ${error.message}`,
       );

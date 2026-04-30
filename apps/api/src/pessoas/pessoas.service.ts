@@ -8,15 +8,32 @@ export class PessoasService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   // 2. Busca por ID Único (Resolvendo erro do Controller)
-  async findOne(id: string) {
-    const table = schema.pessoas as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(eq(table.id, id))
-      .limit(1);
-    // Garante que retorna nulo se não achar, ou o primeiro objeto (sem colchetes)
-    return results.length > 0 ? results[0] : null;
+  // apps/api/src/pessoas/pessoas.service.ts
+
+  // Procure o método findOne e substitua por este:
+  async findOne(id: string, tenantId: string) {
+    // <--- AGORA RECEBE 2 ARGUMENTOS
+    try {
+      const table = schema.pessoas as any;
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(
+          and(
+            eq(table.id, id),
+            eq(table.tenant_id, tenantId), // <--- SEGURANÇA: Só acha se pertencer à empresa
+          ),
+        )
+        .limit(1);
+
+      return results.length > 0 ? results[0] : null;
+    } catch (error: any) {
+      console.error(
+        '❌ [SISMOB] Erro no Service findOne:',
+        error.message || error,
+      );
+      return null;
+    }
   }
   // 3. Salvar (Inclusão e Alteração) - RECEBE 2 ARGUMENTOS
   async save(dto: any, tenantId: string) {

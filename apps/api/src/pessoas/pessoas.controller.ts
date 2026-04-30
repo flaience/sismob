@@ -32,7 +32,11 @@ export class PessoasController {
 
   // Busca por ID
   @Get(':id')
-  async findOne(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
+  async findOne(
+    @Param('id') id: string,
+    @Query('imobiliariaId') tid: string, // Pegamos o ID da imobiliária da URL
+  ) {
+    // Agora o Service e o Controller falam a mesma língua
     return this.pessoasService.findOne(id, tid);
   }
 

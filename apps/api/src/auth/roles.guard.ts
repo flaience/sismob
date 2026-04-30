@@ -44,8 +44,8 @@ export class RolesGuard implements CanActivate {
       );
 
       return temAcesso;
-    } catch (error) {
-      console.error('❌ Erro no RolesGuard:', error.message);
+    } catch (error: any) {
+      console.error('❌ [SISMOB] Erro no RolesGuard:', error.message || error);
       return false;
     }
   }
