@@ -1,38 +1,27 @@
+//src/app/(admin)/gestao/[papel]/page.tsx
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import SismobListMaster from "@/components/SismobListMaster";
-import { PAPEIS, PAPEIS_LABELS } from "@/lib/constants";
+import { MAPA_MODULOS } from "../mapa-modulos";
 
-export default function CRMGrid() {
+export default function GenericGrid() {
   const { papel } = useParams();
-  const router = useRouter();
+  const config = (MAPA_MODULOS as any)[papel as string];
 
-  // Mapeamento de URL para ID do Banco
-  const tradutor: any = {
-    leads: PAPEIS.INTERESSADO,
-    compradores: PAPEIS.CLIENTE_COMPRADOR,
-    proprietarios: PAPEIS.PROPRIETARIO,
-    inquilinos: PAPEIS.INQUILINO,
-    equipe: PAPEIS.EQUIPE,
-  };
-
-  const papelId = tradutor[papel as string];
+  if (!config)
+    return (
+      <div className="p-20 text-center font-black">Módulo em construção...</div>
+    );
 
   return (
     <SismobListMaster
-      title={PAPEIS_LABELS[papelId] || "Gestão"}
-      endpoint="/pessoas"
-      filters={{ papel: papelId }} // Filtro automático para o GenericService
-      columns={[
-        { label: "Nome", key: "nome" },
-        { label: "E-mail", key: "email" },
-        { label: "Documento", key: "documento" },
-      ]}
-      onAdd={() => router.push(`/gestao/${papel}/manutencao?papel=${papelId}`)}
+      title={config.title}
+      endpoint={`/${config.entity}`}
+      filters={{ papel: config.papel }}
+      columns={config.columns}
+      onAdd={() => (window.location.href = `/gestao/${papel}/manutencao`)}
       onEdit={(item: any) =>
-        router.push(
-          `/gestao/${papel}/manutencao?id=${item.id}&papel=${papelId}`,
-        )
+        (window.location.href = `/gestao/${papel}/manutencao?id=${item.id}`)
       }
     />
   );
