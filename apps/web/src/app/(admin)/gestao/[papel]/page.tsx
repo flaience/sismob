@@ -2,11 +2,11 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import SismobListMaster from "@/components/SismobListMaster";
-import { MAPA_MODULOS } from "../mapa-modulos";
+import { MAPA_SISMOB } from "../mapa-modulos";
 
 export default function GenericGrid() {
   const { papel } = useParams();
-  const config = (MAPA_MODULOS as any)[papel as string];
+  const config = (MAPA_SISMOB as any)[papel as string];
 
   if (!config)
     return (

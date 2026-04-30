@@ -1,11 +1,17 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "5.0",
+    /* 1. CALA OS AVISOS DE DEPRECIAÇÃO DO TS 5.5+ */
+    "ignoreDeprecations": "6.0",
+
     "module": "CommonJS",
+    "moduleResolution": "Node",
     "target": "ES2021",
     "outDir": "./dist",
+
+    /* 2. CONFIGURAÇÃO DE FRONTEIRA MONOREPO */
     "baseUrl": "../../",
     "rootDir": "../../",
+
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
@@ -13,6 +19,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": false,
     "strict": false,
+
     "paths": {
       "@sismob/database": ["packages/database/index.ts"]
     }

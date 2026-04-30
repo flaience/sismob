@@ -1,5 +1,5 @@
 //src/app/(admin)/gestao/mapa-modulos.ts
-export const MAPA_MODULOS = {
+export const MAPA_SISMOB = {
   bancos: {
     title: "Bancos",
     entity: "bancos",
@@ -106,6 +106,25 @@ export const MAPA_MODULOS = {
             type: "text",
             fullWidth: true,
           },
+        ],
+      },
+      {
+        title: "Mídia Imersiva (Diferencial)",
+        fields: [
+          {
+            name: "video_url",
+            label: "Link do Vídeo (Drone/YouTube)",
+            type: "text",
+            fullWidth: true,
+          },
+          {
+            name: "tour_360_url",
+            label: "Link do Tour Virtual (360)",
+            type: "text",
+            fullWidth: true,
+          },
+          { name: "lat", label: "Latitude para Mapa", type: "text" },
+          { name: "lng", label: "Longitude para Mapa", type: "text" },
         ],
       },
     ],
