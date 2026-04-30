@@ -16,7 +16,6 @@
       "@sismob/database": ["packages/database/index.ts"]
     }
   },
-  /* O SEGREDO ESTÁ AQUI: Limitamos o que o compilador enxerga */
   "include": [
     "src/**/*",
     "../../packages/database/index.ts",
@@ -26,7 +25,7 @@
     "node_modules",
     "dist",
     "test",
-    "../../packages/database/drizzle.config.ts", // IGNORA O INTRUSO
-    "../../packages/database/drizzle/**/*" // IGNORA AS MIGRAÇÕES
+    "../../packages/database/drizzle.config.ts",
+    "../../packages/database/drizzle/**/*"
   ]
 }
