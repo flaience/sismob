@@ -1,26 +1,33 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "5.0",
     "module": "CommonJS",
-    "declaration": true,
-    "removeComments": true,
+    "target": "ES2021",
+    "outDir": "./dist",
+    "baseUrl": "../../",
+    "rootDir": "../../",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
+    "strict": false,
     "paths": {
-      "@sismob/database": ["../../packages/database/index.ts"]
+      "@sismob/database": ["packages/database/index.ts"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test"]
+  /* 2. INCLUÍMOS TUDO NO RADAR */
+  "include": [
+    "src/**/*",
+    "../../packages/database/index.ts",
+    "../../packages/database/schema.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "../../packages/database/drizzle.config.ts",
+    "../../packages/database/drizzle/**/*"
+  ]
 }

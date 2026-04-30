@@ -1,6 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import * as postgres from 'postgres'; // 1. MUDANÇA DE SINTAXE PARA COMPATIBILIDADE
 import * as schema from '@sismob/database';
 
 @Global()
@@ -12,15 +12,16 @@ import * as schema from '@sismob/database';
         const connectionString = process.env.DATABASE_URL;
 
         if (!connectionString) {
-          throw new Error('❌ DATABASE_URL não configurada no ambiente.');
+          throw new Error('❌ [SISMOB] DATABASE_URL não configurada.');
         }
 
-        const queryClient = postgres(connectionString);
+        // 2. TRATAMENTO INDUSTRIAL: Garante que pegamos a função independente do bundle
+        const postgresClient = ((postgres as any).default || postgres)(
+          connectionString,
+        );
 
-        // CORREÇÃO INDUSTRIAL:
-        // Se o Drizzle reclama de 2 argumentos, passamos como um objeto único.
-        // Se ainda assim ele chiar, usamos o casting de função (drizzle as any)
-        return (drizzle as any)(queryClient, { schema });
+        // 3. RETORNO DRIZZLE
+        return (drizzle as any)(postgresClient, { schema });
       },
     },
   ],
