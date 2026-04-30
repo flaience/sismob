@@ -2,7 +2,7 @@ import axios from "axios";
 import { supabase } from "./supabase"; // Importando o objeto pronto
 
 const api = axios.create({
-  baseURL: "https://sismobapi-production.up.railway.app", // Sua URL do Railway
+  baseURL: "https://sismob-production-ca9b.up.railway.app", // Sua URL do Railway
 });
 
 // INTERCEPTOR BLINDADO

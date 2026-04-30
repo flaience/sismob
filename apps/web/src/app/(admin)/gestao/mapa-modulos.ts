@@ -326,4 +326,69 @@ export const MAPA_MODULOS = {
       },
     ],
   },
+  // 11. CONFIGURAÇÕES - ATRIBUTOS (COMODIDADES)
+  "atributos-itens": {
+    title: "Itens e Comodidades",
+    entity: "configuracoes/atributos",
+    columns: [{ label: "Nome do Item", key: "nome" }],
+    sections: [
+      {
+        title: "Cadastro de Item",
+        fields: [
+          {
+            name: "nome",
+            label: "Ex: Piscina Aquecida, Academia, Laje",
+            type: "text",
+            fullWidth: true,
+          },
+          {
+            name: "categoria_id",
+            label: "Categoria (Lazer, Estrutura...)",
+            type: "select",
+          },
+        ],
+      },
+    ],
+    aiMetadata:
+      "Atributos são usados para filtros avançados no portal. Ensine o corretor a marcar todos os itens para melhorar o SEO do imóvel.",
+  },
+
+  // 12. OPERACIONAL - VISTORIAS
+  vistorias: {
+    title: "Vistorias de Imóveis",
+    entity: "operacional/vistorias",
+    columns: [
+      { label: "Imóvel", key: "imovel_id" },
+      { label: "Data", key: "data_vistoria" },
+      { label: "Status", key: "status" },
+    ],
+    sections: [
+      {
+        title: "Dados da Vistoria",
+        fields: [
+          {
+            name: "imovel_id",
+            label: "Selecionar Imóvel",
+            type: "select",
+            fullWidth: true,
+          },
+          {
+            name: "tipo",
+            label: "Entrada ou Saída?",
+            type: "select",
+            options: [
+              { label: "Entrada", value: "e" },
+              { label: "Saída", value: "s" },
+            ],
+          },
+          {
+            name: "observacoes",
+            label: "Notas da Vistoria",
+            type: "text",
+            fullWidth: true,
+          },
+        ],
+      },
+    ],
+  },
 };

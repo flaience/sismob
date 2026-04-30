@@ -5,6 +5,7 @@
     "target": "ES2021",
     "outDir": "./dist",
     "baseUrl": "../../",
+    "rootDir": "../../",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
