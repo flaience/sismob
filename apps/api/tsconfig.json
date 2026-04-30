@@ -4,16 +4,17 @@
     "target": "ES2021",
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": "./",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "../../",
     "paths": {
-      "@sismob/database": ["../../packages/database/index.ts"]
+      "@sismob/*": ["packages/*/index.d.ts"]
     }
   },
-  /* 3. INCLUÍMOS EXPLICITAMENTE O QUE DEVE SER COMPILADO */
   "include": [
-    "src/**/*",
-    "../../packages/database/index.ts",
-    "../../packages/database/schema.ts"
+    "src/**/*"
   ],
   "exclude": ["node_modules", "dist", "test"]
 }
