@@ -6,19 +6,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1. CORS configurado para aceitar o seu domínio da Vercel
+  // 1. LIBERAÇÃO TOTAL DE CORS (Para não haver mais erro 404/Timeout no prefetch)
   app.enableCors({
-    origin: ['https://sismob.flaience.com', 'http://localhost:3001'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    origin: true, // Aceita qualquer origem (Vercel, localhost, etc)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  // 2. O Railway injeta a porta automaticamente na variável PORT
   const port = process.env.PORT || 3005;
-
-  // 3. O SEGREDO: '0.0.0.0' permite conexões externas no Railway
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 Sismob API rodando na porta: ${port}`);

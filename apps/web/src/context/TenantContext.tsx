@@ -17,7 +17,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         );
         setLoading(false);
       }
-    }, 3000);
+    }, 15000);
 
     async function identificar() {
       try {

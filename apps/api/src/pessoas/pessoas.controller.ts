@@ -14,6 +14,15 @@ import { PessoasService } from './pessoas.service';
 export class PessoasController {
   constructor(private readonly pessoasService: PessoasService) {}
 
+  // ESTA É A ROTA DE DIAGNÓSTICO:
+  @Get('teste-vivo')
+  teste() {
+    return {
+      status: 'SISMOB ONLINE',
+      timestamp: new Date().toISOString(),
+      mensagem: 'Se você lê isso, o Railway está funcionando perfeitamente!',
+    };
+  }
   // Rota de Identificação
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
