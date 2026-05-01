@@ -1,3 +1,4 @@
+import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { TenantProvider } from "@/context/TenantContext";
 
