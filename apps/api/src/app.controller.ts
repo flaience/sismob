@@ -7,6 +7,8 @@ export class AppController {
     return {
       servidor: 'SISMOB ONLINE',
       timestamp: new Date().toISOString(),
+      api: 'v1.0.51',
+      banco: 'Conectado ao Supabase',
     };
   }
 }

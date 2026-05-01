@@ -13,20 +13,25 @@ import * as schema from '@sismob/database';
       useFactory: () => {
         const connectionString = process.env.DATABASE_URL;
 
-        if (!connectionString) throw new Error('DATABASE_URL ausente');
+        if (!connectionString) {
+          console.error('❌ [SISMOB] DATABASE_URL AUSENTE!');
+          throw new Error('DATABASE_URL ausente');
+        }
 
-        console.log('📡 Tentando conectar ao Supabase...');
+        console.log('📡 [SISMOB] Tentando pulso no Supabase...');
 
+        // USANDO SINTAXE DE CONEXÃO ÚNICA E RÁPIDA PARA BOOT
         const postgresClient = ((postgres as any).default || postgres)(
           connectionString,
           {
-            max: 5, // Poucas conexões para não estourar o limite
-            ssl: 'require', // Obrigatório
-            connect_timeout: 5, // Se não conectar em 5s, ele explode o erro e libera o boot
-            idle_timeout: 10,
+            max: 5, // Mínimo de conexões para o plano Hobby
+            ssl: 'require', // OBRIGATÓRIO PARA SUPABASE
+            connect_timeout: 10, // Desiste em 10s para não travar o Railway
+            idle_timeout: 20,
           },
         );
 
+        console.log('✅ [SISMOB] Conexão com banco preparada.');
         return (drizzle as any)(postgresClient, { schema });
       },
     },
