@@ -14,6 +14,11 @@ import { PessoasService } from './pessoas.service';
 export class PessoasController {
   constructor(private readonly pessoasService: PessoasService) {}
 
+  // 1. ROTA ESTÁTICA PRIMEIRO (Evita 404)
+  @Get('config/identificar')
+  async identificar(@Query('host') host: string) {
+    return this.pessoasService.findImobiliariaByHost(host);
+  }
   // ESTA É A ROTA DE DIAGNÓSTICO:
   @Get('teste-vivo')
   teste() {
@@ -24,10 +29,6 @@ export class PessoasController {
     };
   }
   // Rota de Identificação
-  @Get('config/identificar')
-  async identificar(@Query('host') host: string) {
-    return this.pessoasService.findImobiliariaByHost(host);
-  }
 
   // Listagem do Grid
   @Get()

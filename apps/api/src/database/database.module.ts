@@ -21,9 +21,10 @@ import * as schema from '@sismob/database';
         const postgresClient = ((postgres as any).default || postgres)(
           connectionString,
           {
-            max: 10, // Máximo de conexões (Evita travar o Supabase)
-            idle_timeout: 20, // Fecha conexões ociosas em 20s
-            connect_timeout: 10, // Tempo limite para conectar (10s)
+            max: 10,
+            ssl: 'require', // <--- ISSO É OBRIGATÓRIO PARA O SUPABASE NO RAILWAY
+            idle_timeout: 20,
+            connect_timeout: 10,
           },
         );
 

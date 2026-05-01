@@ -1,10 +1,12 @@
-// apps/api/src/app.controller.ts
 import { Controller, Get } from '@nestjs/common';
 
-@Controller('debug')
+@Controller() // Sem prefixo, rota raiz
 export class AppController {
-  @Get('status')
-  check() {
-    return { status: 'Sismob API Online', timestamp: new Date() };
+  @Get()
+  ping() {
+    return {
+      servidor: 'SISMOB ONLINE',
+      timestamp: new Date().toISOString(),
+    };
   }
 }

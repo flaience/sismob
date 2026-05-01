@@ -1,12 +1,12 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller'; // <--- ADICIONADO PARA DEBUG
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { PessoasModule } from './pessoas/pessoas.module';
 import { ImoveisModule } from './imoveis/imoveis.module';
 import { FilesModule } from './files/files.module';
-import { ConfiguracoesModule } from './configuracoes/configuracoes.module'; // O novo motor genérico
+import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
 
 @Module({
   imports: [
@@ -18,5 +18,6 @@ import { ConfiguracoesModule } from './configuracoes/configuracoes.module'; // O
     FilesModule,
     ConfiguracoesModule,
   ],
+  controllers: [AppController], // <--- REGISTRADO AQUI PARA O 'PULSO' FUNCIONAR
 })
 export class AppModule {}
