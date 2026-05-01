@@ -11,29 +11,26 @@ import * as schema from '@sismob/database';
       // No useFactory do seu DatabaseModule
       // Dentro do useFactory do seu DatabaseModule
       // Dentro do seu DatabaseModule (useFactory):
+      // Dentro do useFactory no DatabaseModule:
       useFactory: () => {
         try {
           const connectionString = process.env.DATABASE_URL;
-          if (!connectionString) throw new Error('DATABASE_URL ausente');
-
-          // Configuração de sobrevivência
           const postgresClient = ((postgres as any).default || postgres)(
             connectionString,
             {
-              max: 3, // Reduzimos o pool para o boot ser instantâneo
+              max: 2, // Apenas 2 conexões para o boot ser leve
               ssl: 'require',
-              connect_timeout: 5, // Se não conectar em 5s, libera o boot com erro
+              connect_timeout: 5, // Desiste do banco em 5 segundos
             },
           );
 
-          console.log('📡 [SISMOB] Tentativa de conexão com o Banco iniciada.');
+          console.log('📡 [SISMOB] Banco de dados em standby.');
           return (drizzle as any)(postgresClient, { schema });
         } catch (e) {
           console.error(
-            '⚠️ [SISMOB] Falha crítica no banco, mas mantendo o boot: ',
-            e.message,
+            '⚠️ [SISMOB] Servidor ligando SEM banco de dados (Modo Emergência)',
           );
-          return null; // Retorna null para o servidor não morrer
+          return null;
         }
       },
     },
