@@ -49,6 +49,20 @@ export class PessoasService {
   }
 
   // 4. Identificação por Host
+  // async findImobiliariaByHost(host: string) {
+  //   const table = schema.tenants as any;
+  //   const results = await this.db
+  //     .select()
+  //     .from(table)
+  //     .where(
+  //       or(
+  //         eq(table.dominio_customizado, host),
+  //         eq(table.slug, host.split('.')[0]),
+  //       ),
+  //     )
+  //     .limit(1);
+  //   return results[0] || null;
+  // }
   async findImobiliariaByHost(host: string) {
     const table = schema.tenants as any;
     const results = await this.db
@@ -61,9 +75,10 @@ export class PessoasService {
         ),
       )
       .limit(1);
-    return results[0] || null;
-  }
 
+    // O SEGREDO: Se houver resultado, envia o item 0. Se não, null.
+    return results.length > 0 ? results[0] : null;
+  }
   // 5. Busca por Papel
   async findByRole(papel: string, imobId: string, search?: string) {
     const table = schema.pessoas as any;

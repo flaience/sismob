@@ -17,16 +17,24 @@ export class PessoasController {
   // 1. ROTA ESTÁTICA PRIMEIRO (Evita 404)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
-    console.log(`🔍 [SISMOB] Identificando Host: ${host}`);
-    const imob = await this.pessoasService.findImobiliariaByHost(host);
+    try {
+      console.log(`🔍 [SISMOB] Buscando Host: ${host}`);
+      const imob = await this.pessoasService.findImobiliariaByHost(host);
 
-    if (!imob) {
-      // Em vez de dar erro 404, retornamos um objeto vazio para não travar o frontend
-      return { id: null, nome_conta: 'Imobiliária não cadastrada' };
+      // MUDANÇA INDUSTRIAL: Nunca retorne 404 aqui.
+      if (!imob) {
+        return {
+          id: null,
+          nome_conta: 'Não identificada',
+          aviso: "Verifique se o slug 'sismob' existe no banco.",
+        };
+      }
+
+      return imob;
+    } catch (error) {
+      return { id: null, erro: error.message };
     }
-    return imob;
   }
-
   // Busca por ID
   @Get(':id')
   async findOne(
