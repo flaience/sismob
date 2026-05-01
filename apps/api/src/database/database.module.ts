@@ -10,29 +10,31 @@ import * as schema from '@sismob/database';
       provide: 'DRIZZLE_CONNECTION',
       // No useFactory do seu DatabaseModule
       // Dentro do useFactory do seu DatabaseModule
+      // Dentro do seu DatabaseModule (useFactory):
       useFactory: () => {
-        const connectionString = process.env.DATABASE_URL;
+        try {
+          const connectionString = process.env.DATABASE_URL;
+          if (!connectionString) throw new Error('DATABASE_URL ausente');
 
-        if (!connectionString) {
-          console.error('❌ [SISMOB] DATABASE_URL AUSENTE!');
-          throw new Error('DATABASE_URL ausente');
+          // Configuração de sobrevivência
+          const postgresClient = ((postgres as any).default || postgres)(
+            connectionString,
+            {
+              max: 3, // Reduzimos o pool para o boot ser instantâneo
+              ssl: 'require',
+              connect_timeout: 5, // Se não conectar em 5s, libera o boot com erro
+            },
+          );
+
+          console.log('📡 [SISMOB] Tentativa de conexão com o Banco iniciada.');
+          return (drizzle as any)(postgresClient, { schema });
+        } catch (e) {
+          console.error(
+            '⚠️ [SISMOB] Falha crítica no banco, mas mantendo o boot: ',
+            e.message,
+          );
+          return null; // Retorna null para o servidor não morrer
         }
-
-        console.log('📡 [SISMOB] Tentando pulso no Supabase...');
-
-        // USANDO SINTAXE DE CONEXÃO ÚNICA E RÁPIDA PARA BOOT
-        const postgresClient = ((postgres as any).default || postgres)(
-          connectionString,
-          {
-            max: 5, // Mínimo de conexões para o plano Hobby
-            ssl: 'require', // OBRIGATÓRIO PARA SUPABASE
-            connect_timeout: 10, // Desiste em 10s para não travar o Railway
-            idle_timeout: 20,
-          },
-        );
-
-        console.log('✅ [SISMOB] Conexão com banco preparada.');
-        return (drizzle as any)(postgresClient, { schema });
       },
     },
   ],
