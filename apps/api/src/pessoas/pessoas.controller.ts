@@ -15,6 +15,16 @@ import { PessoasService } from './pessoas.service';
 export class PessoasController {
   constructor(private readonly pessoasService: PessoasService) {}
 
+  // ESTA É A ROTA DE DIAGNÓSTICO:
+  @Get('teste-vivo')
+  teste() {
+    return {
+      status: 'SISMOB ONLINE',
+      timestamp: new Date().toISOString(),
+      mensagem: 'Se você lê isso, o Railway está funcionando perfeitamente!',
+    };
+  }
+
   // 1. ROTA ESTÁTICA PRIMEIRO (Evita 404)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
@@ -45,15 +55,7 @@ export class PessoasController {
     // Agora o Service e o Controller falam a mesma língua
     return this.pessoasService.findOne(id, tid);
   }
-  // ESTA É A ROTA DE DIAGNÓSTICO:
-  @Get('teste-vivo')
-  teste() {
-    return {
-      status: 'SISMOB ONLINE',
-      timestamp: new Date().toISOString(),
-      mensagem: 'Se você lê isso, o Railway está funcionando perfeitamente!',
-    };
-  }
+
   // Rota de Identificação
 
   // Listagem do Grid
