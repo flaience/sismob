@@ -9,27 +9,24 @@ import * as schema from '@sismob/database';
     {
       provide: 'DRIZZLE_CONNECTION',
       // No useFactory do seu DatabaseModule
+      // Dentro do useFactory do seu DatabaseModule
       useFactory: () => {
         const connectionString = process.env.DATABASE_URL;
 
-        if (!connectionString) {
-          throw new Error('❌ [SISMOB] DATABASE_URL não configurada.');
-        }
+        if (!connectionString) throw new Error('DATABASE_URL ausente');
 
-        // 1. TRATAMENTO INDUSTRIAL + OTIMIZAÇÃO DE POOL
-        // Pegamos a função correta e já injetamos as configurações de performance
+        console.log('📡 Tentando conectar ao Supabase...');
+
         const postgresClient = ((postgres as any).default || postgres)(
           connectionString,
           {
-            max: 10,
-            ssl: 'require', // <--- ISSO É OBRIGATÓRIO PARA O SUPABASE NO RAILWAY
-            idle_timeout: 20,
-            connect_timeout: 10,
+            max: 5, // Poucas conexões para não estourar o limite
+            ssl: 'require', // Obrigatório
+            connect_timeout: 5, // Se não conectar em 5s, ele explode o erro e libera o boot
+            idle_timeout: 10,
           },
         );
 
-        // 2. RETORNO DRIZZLE
-        // O casting 'as any' garante que o Drizzle aceite o cliente mesmo com mismatch de versão
         return (drizzle as any)(postgresClient, { schema });
       },
     },

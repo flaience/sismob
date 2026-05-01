@@ -4,23 +4,24 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // Criamos o app SEM travar no banco
   const app = await NestFactory.create(AppModule);
 
-  // LIBERAÇÃO TOTAL DE FRONTEIRA (Mata o erro de CORS)
+  // 1. LIBERAÇÃO TOTAL PARA TESTE (CORS NUCLEAR)
   app.enableCors({
-    origin: true, // Aceita qualquer site (Vercel, Localhost, etc)
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    allowedHeaders: '*',
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   const port = process.env.PORT || 3005;
 
-  // 0.0.0.0 é vital para o Railway
-  await app.listen(port, '0.0.0.0');
+  // 2. LOG DE SEGURANÇA: Para você ver no Railway que ele ligou
+  console.log('🏗️ Iniciando servidor na porta ' + port);
 
-  console.log(`🚀 Sismob API rodando na porta: ${port}`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 SISMOB PRONTO PARA RECEBER CONEXÕES`);
 }
 bootstrap();
