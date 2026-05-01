@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 
 const api = axios.create({
   baseURL: "https://sismob-production-ca9b.up.railway.app",
-  timeout: 10000, // <--- SE A API NÃO RESPONDER EM 8S, ELA CANCELA E O DASHBOARD ABRE
+  timeout: 30000, // <--- SE A API NÃO RESPONDER EM 8S, ELA CANCELA E O DASHBOARD ABRE
 });
 
 api.interceptors.request.use(async (config) => {

@@ -17,7 +17,24 @@ export class PessoasController {
   // 1. ROTA ESTÁTICA PRIMEIRO (Evita 404)
   @Get('config/identificar')
   async identificar(@Query('host') host: string) {
-    return this.pessoasService.findImobiliariaByHost(host);
+    console.log(`🔍 [SISMOB] Identificando Host: ${host}`);
+    const imob = await this.pessoasService.findImobiliariaByHost(host);
+
+    if (!imob) {
+      // Em vez de dar erro 404, retornamos um objeto vazio para não travar o frontend
+      return { id: null, nome_conta: 'Imobiliária não cadastrada' };
+    }
+    return imob;
+  }
+
+  // Busca por ID
+  @Get(':id')
+  async findOne(
+    @Param('id') id: string,
+    @Query('imobiliariaId') tid: string, // Pegamos o ID da imobiliária da URL
+  ) {
+    // Agora o Service e o Controller falam a mesma língua
+    return this.pessoasService.findOne(id, tid);
   }
   // ESTA É A ROTA DE DIAGNÓSTICO:
   @Get('teste-vivo')
@@ -38,16 +55,6 @@ export class PessoasController {
     @Query('search') search: string,
   ) {
     return this.pessoasService.findByRole(papel, imobId, search);
-  }
-
-  // Busca por ID
-  @Get(':id')
-  async findOne(
-    @Param('id') id: string,
-    @Query('imobiliariaId') tid: string, // Pegamos o ID da imobiliária da URL
-  ) {
-    // Agora o Service e o Controller falam a mesma língua
-    return this.pessoasService.findOne(id, tid);
   }
 
   // Salvar (POST e PATCH chamam o save com 2 argumentos)
