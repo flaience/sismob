@@ -4,20 +4,26 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('SISMOB_BOOT');
 
-  app.enableCors({ origin: '*', credentials: true });
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  try {
+    logger.log('1. Iniciando NestFactory...');
+    const app = await NestFactory.create(AppModule);
 
-  // O Railway vai injetar 3005 aqui se você configurou na variável
-  const port = process.env.PORT || 3005;
+    logger.log('2. Configurando CORS e Pipes...');
+    app.enableCors({ origin: '*', credentials: true });
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  // 🚨 O TIRO DE MISERICÓRDIA NO 502:
-  // Você PRECISA passar '0.0.0.0'. Se deixar vazio, ele usa 'localhost'
-  // e o Railway não consegue falar com o container.
-  await app.listen(port, '0.0.0.0');
+    // Forçamos 3005 para bater com o seu Target Port no Railway
+    const port = process.env.PORT || 3005;
 
-  logger.log(`🚀 SERVIDOR SISMOB ATIVO NA PORTA: ${port}`);
+    logger.log(`3. Tentando abrir porta ${port} na interface 0.0.0.0...`);
+    await app.listen(port, '0.0.0.0');
+
+    logger.log(`🚀 SUCESSO: Servidor Sismob ouvindo na porta ${port}`);
+  } catch (error) {
+    logger.error('❌ ERRO FATAL NO BOOTSTRAP:', error.stack);
+    process.exit(1); // Força o container a mostrar o erro e reiniciar
+  }
 }
 bootstrap();
