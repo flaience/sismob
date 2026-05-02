@@ -1,40 +1,57 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { type Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { type Session } from "@supabase/supabase-js";
 import api from "@/lib/api";
+import { useTenant } from "./TenantContext"; // <--- IMPORTANTE
 
 const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { tenant } = useTenant(); // Pegamos a imobiliária identificada
 
   const fetchProfile = async (session: Session | null) => {
+    // 1. O SEGREDO: Se tem sessão mas ainda não identificou a imobiliária, ESPERA.
+    if (session?.user && !tenant?.id) {
+      console.log("⏳ [AUTH] Aguardando identificação da imobiliária...");
+      return;
+    }
+
     try {
-      if (session?.user) {
-        // Tentativa de busca com timeout de 5 segundos
-        const res = await api
-          .get(`/pessoas/${session.user.id}`, { timeout: 5000 })
-          .catch(() => ({ data: null }));
+      if (session?.user && tenant?.id) {
+        console.log(
+          `🔍 [AUTH] Buscando perfil de ${session.user.email} na imobiliária ${tenant.nome_conta}`,
+        );
 
-        const dbData = Array.isArray(res.data) ? res.data[0] : res.data;
+        const res = await api.get(`/pessoas/${session.user.id}`, {
+          params: { imobiliariaId: tenant.id }, // <--- Passa o ID certo para o findOne(id, tenantId)
+        });
 
-        if (dbData) {
-          setUser({ ...session.user, ...dbData });
+        // O seu backend já retorna objeto, mas o casting aqui é por segurança industrial
+        const userData = Array.isArray(res.data) ? res.data[0] : res.data;
+
+        if (userData) {
+          console.log(
+            "✅ [AUTH] Luis identificado como Papel:",
+            userData.papel,
+          );
+          setUser({ ...session.user, ...userData });
         } else {
-          // Se não achou no banco, loga com os dados básicos do Supabase
           setUser(session.user);
         }
       } else {
         setUser(null);
       }
+    } catch (error) {
+      console.error("❌ [AUTH] Erro na sincronização");
     } finally {
-      // ESTA LINHA É O SEU "BOTÃO DE PÂNICO" - ELA DESTRAVA A TELA
       setLoading(false);
     }
   };
 
+  // RE-SINCRONIZA toda vez que a imobiliária ou a sessão mudar
   useEffect(() => {
     supabase.auth
       .getSession()
@@ -42,12 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_evt, session) => {
-      fetchProfile(session);
-    });
+    } = supabase.auth.onAuthStateChange((_evt, session) =>
+      fetchProfile(session),
+    );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [tenant?.id]); // <--- A MÁGICA: O perfil é buscado assim que o Tenant chega
 
   return (
     <AuthContext.Provider
@@ -65,7 +82,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  // Se o contexto falhar, retorna um estado que não trava a tela
-  if (context === undefined) return { user: null, loading: false };
+  if (context === undefined) return { user: null, loading: true };
   return context;
 };

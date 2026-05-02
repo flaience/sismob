@@ -65,6 +65,53 @@ export const MAPA_SISMOB = {
     ],
   },
 
+  imobiliarias: {
+    title: "Rede de Imobiliárias (Tenants)",
+    entity: "saas/onboarding", // Rota que o seu SaasController atende
+    columns: [
+      { label: "Nome", key: "nome_conta" },
+      { label: "Slug", key: "slug" },
+    ],
+    sections: [
+      {
+        title: "Dados da Empresa",
+        fields: [
+          {
+            name: "nomeEmpresa",
+            label: "Nome da Imobiliária",
+            type: "text",
+            required: true,
+          },
+          { name: "slug", label: "Slug / Link", type: "text", required: true },
+          {
+            name: "email_financeiro",
+            label: "E-mail Cobrança",
+            type: "text",
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Dono da Conta (Admin)",
+        fields: [
+          {
+            name: "nomeDono",
+            label: "Nome do Dono",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "email",
+            label: "E-mail de Login",
+            type: "text",
+            required: true,
+          },
+          { name: "documento", label: "CPF", type: "text", required: true },
+        ],
+      },
+    ],
+  },
+
   onboarding: {
     title: "Nova Imobiliária Cliente",
     entity: "saas/onboarding",

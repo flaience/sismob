@@ -187,7 +187,14 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-
+      <div className="p-4 bg-slate-100 rounded-2xl mb-4">
+        <p className="text-[10px] font-black text-slate-400 uppercase">
+          Debug Acesso
+        </p>
+        <p className="text-xs font-bold text-indigo-600">
+          Papel Atual: {user?.papel || "Nulo"}
+        </p>
+      </div>
       {/* LOGOUT */}
       <div className="pt-4 border-t border-slate-50">
         <button
