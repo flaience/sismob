@@ -6,27 +6,20 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  // Criamos a instância
+  // 1. Criamos o app
   const app = await NestFactory.create(AppModule);
 
-  // 1. CONFIGURAÇÃO DE CORS RADICAL
-  // Isso libera Geral: Vercel, Localhost e qualquer navegador.
-  app.enableCors({
-    origin: (origin, callback) => callback(null, true),
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-    allowedHeaders: '*',
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  });
-
+  // 2. CORS total para não termos erros mentirosos
+  app.enableCors({ origin: '*', credentials: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
+  // 3. A PORTA QUE O RAILWAY QUER
   const port = process.env.PORT || 3000;
 
-  // 2. LIGAR O MOTOR
+  // 4. O SEGREDO: O listen deve ser a última coisa, mas ele não pode travar.
+  // Usamos '0.0.0.0' para o Railway enxergar o container.
   await app.listen(port, '0.0.0.0');
 
-  logger.log(`🚀 SISMOB ONLINE NA PORTA ${port}`);
+  logger.log(`🚀 SERVIDOR SISMOB ATIVO NA PORTA: ${port}`);
 }
 bootstrap();

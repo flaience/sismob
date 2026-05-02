@@ -12,25 +12,28 @@ import * as schema from '@sismob/database';
       // Dentro do useFactory do seu DatabaseModule
       // Dentro do seu DatabaseModule (useFactory):
       // Dentro do useFactory no DatabaseModule:
+      // Dentro do useFactory do seu DatabaseModule:
       useFactory: () => {
         try {
           const connectionString = process.env.DATABASE_URL;
+          if (!connectionString) throw new Error('DATABASE_URL ausente');
 
-          // O SEGREDO: Se o banco demorar mais de 5s, o servidor ignora e liga
+          console.log('📡 [SISMOB] Tentando pulso no Supabase...');
+
           const postgresClient = ((postgres as any).default || postgres)(
             connectionString,
             {
-              max: 2,
+              max: 2, // Apenas 2 conexões para o boot ser instantâneo
               ssl: 'require',
-              connect_timeout: 5, // <--- NÃO DEIXE O BOOT TRAVADO AQUI
+              connect_timeout: 5, // Se não conectar em 5s, ele explode o erro e libera o boot
             },
           );
 
-          console.log('📡 [SISMOB] Driver de banco pronto.');
           return (drizzle as any)(postgresClient, { schema });
         } catch (e) {
+          // ESTA LINHA SALVA O SEU DEPLOY:
           console.error(
-            '⚠️ [SISMOB] Erro no banco, mas mantendo boot operacional.',
+            '⚠️ [SISMOB] Banco de dados offline, mas mantendo o servidor ligado para diagnóstico.',
           );
           return null;
         }
