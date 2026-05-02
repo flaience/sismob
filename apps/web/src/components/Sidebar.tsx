@@ -14,6 +14,8 @@ import {
   Landmark,
   ShieldCheck,
   LogOut,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,16 +31,17 @@ export default function Sidebar() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
   if (!mounted || !user) return null;
 
-  // ESTRUTURA DE MENU ALINHADA COM AS PASTAS [papel] e [slug]
+  // 1. MAPEAMENTO DE MENUS OPERACIONAIS
   const menuGroups = [
     {
       title: "CRM Comercial",
       icon: Users,
       group: "crm",
       items: [
-        { label: "Interessados (Leads)", href: "/gestao/leads", icon: Target },
+        { label: "Leads / Interessados", href: "/gestao/leads", icon: Target },
         {
           label: "Clientes Compradores",
           href: "/gestao/compradores",
@@ -57,7 +60,7 @@ export default function Sidebar() {
       icon: Home,
       group: "ops",
       items: [
-        { label: "Meus Imóveis", href: "/imoveis", icon: Home }, // Pasta física: app/imoveis
+        { label: "Gestão de Imóveis", href: "/gestao/imoveis", icon: Home },
         { label: "Minha Equipe", href: "/gestao/equipe", icon: Briefcase },
       ],
     },
@@ -68,22 +71,48 @@ export default function Sidebar() {
       items: [
         {
           label: "Unidades / Filiais",
-          href: "/configuracoes/unidades",
+          href: "/gestao/unidades",
           icon: Landmark,
         },
-        { label: "Bancos", href: "/configuracoes/bancos", icon: CreditCard },
+        { label: "Bancos", href: "/gestao/bancos", icon: CreditCard },
+        {
+          label: "Itens / Atributos",
+          href: "/gestao/atributos-itens",
+          icon: Settings,
+        },
       ],
     },
   ];
+
+  // 2. MÓDULO EXCLUSIVO FLAIENCE (SÓ PARA O LUIS - PAPEL 0)
+  if (user?.papel === "0") {
+    menuGroups.push({
+      title: "Admin Flaience",
+      icon: ShieldCheck,
+      group: "flaience",
+      items: [
+        {
+          label: "Gestão de Imobiliárias",
+          href: "/gestao/imobiliarias",
+          icon: Building2,
+        },
+        {
+          label: "Faturamento SaaS",
+          href: "/gestao/faturamento",
+          icon: BarChart3,
+        },
+      ],
+    });
+  }
 
   return (
     <aside
       style={{ width: isExpanded ? 280 : 84 }}
       className="fixed left-6 top-6 bottom-6 z-50 bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 overflow-hidden border border-slate-100"
     >
-      {/* LOGO */}
+      {/* LOGO SISMOB */}
       <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg">
+        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100">
           <Home size={24} />
         </div>
         {isExpanded && (
@@ -94,14 +123,18 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
-        {/* DASHBOARD SEMPRE VISÍVEL */}
+        {/* DASHBOARD */}
         <Link
           href="/dashboard"
-          className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/dashboard" ? "bg-indigo-600 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
+          className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+            pathname === "/dashboard"
+              ? "bg-indigo-600 text-white shadow-xl"
+              : "text-slate-400 hover:bg-slate-50"
+          }`}
         >
           <LayoutDashboard size={22} />
           {isExpanded && (
-            <span className="font-bold text-sm">Dashboard Principal</span>
+            <span className="font-bold text-sm">Painel Geral</span>
           )}
         </Link>
 
@@ -113,7 +146,11 @@ export default function Sidebar() {
                 setIsExpanded(true);
                 setOpenGroup(openGroup === group.group ? "" : group.group);
               }}
-              className="w-full flex items-center justify-between p-4 rounded-2xl text-slate-400 hover:bg-slate-50 transition-all"
+              className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                openGroup === group.group
+                  ? "bg-slate-50 text-indigo-600"
+                  : "text-slate-400 hover:bg-slate-50"
+              }`}
             >
               <div className="flex items-center gap-4">
                 <group.icon size={22} />
@@ -124,7 +161,7 @@ export default function Sidebar() {
               {isExpanded && (
                 <ChevronDown
                   size={14}
-                  className={openGroup === group.group ? "rotate-180" : ""}
+                  className={`transition-transform ${openGroup === group.group ? "rotate-180" : ""}`}
                 />
               )}
             </button>
@@ -135,7 +172,11 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-4 p-3 rounded-xl text-xs font-bold uppercase tracking-widest ${pathname === item.href ? "text-indigo-600 bg-indigo-50" : "text-slate-400 hover:text-indigo-600"}`}
+                    className={`flex items-center gap-4 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                      pathname === item.href
+                        ? "text-indigo-600 bg-indigo-50"
+                        : "text-slate-400 hover:text-indigo-600"
+                    }`}
                   >
                     <item.icon size={16} />
                     {item.label}
@@ -145,37 +186,20 @@ export default function Sidebar() {
             )}
           </div>
         ))}
-
-        {/* MÓDULO SUPER-ADMIN (SÓ PARA O LUIS) */}
-        {isExpanded && user?.papel === "0" && (
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-4 mb-4">
-              Administração SaaS
-            </p>
-            <Link
-              href="/onboarding"
-              className="flex items-center gap-4 p-4 rounded-2xl bg-slate-900 text-white shadow-xl hover:bg-indigo-600 transition-all group"
-            >
-              <Plus
-                size={20}
-                className="group-hover:rotate-90 transition-transform"
-              />
-              <span className="text-sm font-bold">Nova Imobiliária</span>
-            </Link>
-          </div>
-        )}
       </nav>
 
       {/* LOGOUT */}
-      <button
-        onClick={signOut}
-        className="mt-auto flex items-center gap-4 p-4 rounded-2xl text-red-400 hover:bg-red-50 transition-all"
-      >
-        <LogOut size={22} />
-        {isExpanded && (
-          <span className="font-bold text-sm">Sair do Sistema</span>
-        )}
-      </button>
+      <div className="pt-4 border-t border-slate-50">
+        <button
+          onClick={signOut}
+          className="w-full flex items-center gap-4 p-4 rounded-2xl text-red-400 hover:bg-red-50 transition-all"
+        >
+          <LogOut size={22} />
+          {isExpanded && (
+            <span className="font-bold text-sm">Sair do Sistema</span>
+          )}
+        </button>
+      </div>
     </aside>
   );
 }

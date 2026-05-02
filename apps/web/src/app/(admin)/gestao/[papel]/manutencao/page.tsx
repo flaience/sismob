@@ -2,32 +2,30 @@
 import { Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import SismobFormMaster from "@/components/SismobFormMaster";
-import { PAPEIS_LABELS } from "@/lib/constants";
+import { MAPA_SISMOB } from "../../mapa-modulos";
 
-function ManutencaoContent() {
-  const { papel } = useParams();
+function ManutencaoDinamica() {
+  const { papel } = useParams(); // ex: leads, proprietarios, imobiliarias
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
+  // Busca a configuração no seu MAPA_SISMOB
+  const config = (MAPA_SISMOB as any)[papel as string];
+
+  if (!config) {
+    return (
+      <div className="p-20 text-center font-black">
+        Módulo "{papel}" não configurado no Mapa.
+      </div>
+    );
+  }
+
   return (
     <SismobFormMaster
-      title={PAPEIS_LABELS[papel as string] || "Registro"}
-      endpoint="/pessoas"
-      sections={[
-        {
-          title: "Identificação",
-          fields: [
-            {
-              name: "nome",
-              label: "Nome Completo",
-              type: "text",
-              fullWidth: true,
-            },
-            { name: "email", label: "E-mail", type: "text" },
-            { name: "documento", label: "CPF/CNPJ", type: "text" },
-          ],
-        },
-      ]}
+      title={config.title}
+      endpoint={config.entity}
+      sections={config.sections}
+      aiHelp={config.aiMetadata}
     />
   );
 }
@@ -35,9 +33,13 @@ function ManutencaoContent() {
 export default function Page() {
   return (
     <Suspense
-      fallback={<div className="p-10 font-black">Preparando ambiente...</div>}
+      fallback={
+        <div className="p-20 animate-pulse font-black text-indigo-600">
+          INICIANDO MOTOR DE GESTÃO...
+        </div>
+      }
     >
-      <ManutencaoContent />
+      <ManutencaoDinamica />
     </Suspense>
   );
 }
