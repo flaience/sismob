@@ -1,29 +1,18 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
+// apps/api/src/main.ts
 async function bootstrap() {
-  const logger = new Logger('SISMOB_BOOT');
+  const app = await NestFactory.create(AppModule);
+  app.enableCors({ origin: '*' });
 
-  try {
-    logger.log('1. Iniciando NestFactory...');
-    const app = await NestFactory.create(AppModule);
+  // 1. PEGA A PORTA DO RAILWAY
+  const port = process.env.PORT || 3000;
 
-    logger.log('2. Configurando CORS e Pipes...');
-    app.enableCors({ origin: '*', credentials: true });
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  // 2. ESCUTA EM TODAS AS INTERFACES (Obrigatório para container)
+  await app.listen(port, '0.0.0.0');
 
-    // Forçamos 3005 para bater com o seu Target Port no Railway
-    const port = process.env.PORT || 3005;
-
-    logger.log(`3. Tentando abrir porta ${port} na interface 0.0.0.0...`);
-    await app.listen(port, '0.0.0.0');
-
-    logger.log(`🚀 SUCESSO: Servidor Sismob ouvindo na porta ${port}`);
-  } catch (error) {
-    logger.error('❌ ERRO FATAL NO BOOTSTRAP:', error.stack);
-    process.exit(1); // Força o container a mostrar o erro e reiniciar
-  }
+  console.log(`🚀 SERVIDOR SISMOB ATIVO NA PORTA: ${port}`);
 }
 bootstrap();
