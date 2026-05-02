@@ -3,137 +3,178 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
+  UserCog,
+  Briefcase,
   Home,
   Settings,
+  ChevronDown,
+  Target,
   Plus,
-  ChevronRight,
   CreditCard,
+  Landmark,
+  ShieldCheck,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
-
-// 1. DEFINIÇÃO DE TIPO PARA O MANTALIDADE INDUSTRIAL
-interface MenuItem {
-  title: string;
-  icon: any;
-  href: string; // Obrigatório para evitar o erro TS(2322)
-  group?: string;
-}
+import { useAuth } from "@/context/AuthContext";
 
 export default function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [openGroup, setOpenGroup] = useState("");
   const pathname = usePathname();
-  const { user } = useAuth();
-
-  const canSee = (allowedCargos: string[]) => {
-    if (user?.papel === "0") return true; // Super-Admin vê TUDO
-    return allowedCargos.includes(user?.cargo || "");
-  };
-
-  const menu = [
-    {
-      title: "Dashboard",
-      icon: LayoutDashboard,
-      href: "/dashboard",
-      visible: true,
-    },
-    {
-      title: "Financeiro",
-      icon: CreditCard,
-      href: "/financeiro/caixa",
-      visible: canSee(["financeiro", "gerente"]), // Só o financeiro e gerente vêem
-    },
-    {
-      title: "Nova Imobiliária",
-      icon: Plus,
-      href: "/onboarding",
-      visible: user?.papel === "0", // SÓ O LUIS VÊ
-    },
-  ];
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
   if (!mounted || !user) return null;
 
-  // 2. ARRAY DE MENU COM HREFS GARANTIDOS
+  // ESTRUTURA DE MENU ALINHADA COM AS PASTAS [papel] e [slug]
+  const menuGroups = [
+    {
+      title: "CRM Comercial",
+      icon: Users,
+      group: "crm",
+      items: [
+        { label: "Interessados (Leads)", href: "/gestao/leads", icon: Target },
+        {
+          label: "Clientes Compradores",
+          href: "/gestao/compradores",
+          icon: ShieldCheck,
+        },
+        {
+          label: "Proprietários",
+          href: "/gestao/proprietarios",
+          icon: UserCog,
+        },
+        { label: "Inquilinos", href: "/gestao/inquilinos", icon: Users },
+      ],
+    },
+    {
+      title: "Operacional",
+      icon: Home,
+      group: "ops",
+      items: [
+        { label: "Meus Imóveis", href: "/imoveis", icon: Home }, // Pasta física: app/imoveis
+        { label: "Minha Equipe", href: "/gestao/equipe", icon: Briefcase },
+      ],
+    },
+    {
+      title: "Configurações",
+      icon: Settings,
+      group: "cfg",
+      items: [
+        {
+          label: "Unidades / Filiais",
+          href: "/configuracoes/unidades",
+          icon: Landmark,
+        },
+        { label: "Bancos", href: "/configuracoes/bancos", icon: CreditCard },
+      ],
+    },
+  ];
 
   return (
     <aside
-      style={{ width: isExpanded ? 260 : 84 }}
-      className="fixed left-6 top-6 bottom-6 z-50 bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 overflow-hidden border border-gray-100"
+      style={{ width: isExpanded ? 280 : 84 }}
+      className="fixed left-6 top-6 bottom-6 z-50 bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 overflow-hidden border border-slate-100"
     >
-      {/* LOGO / HOME ICON */}
-      <div className="bg-indigo-600 p-3 rounded-2xl text-white w-fit mb-8 shadow-lg shadow-indigo-100">
-        <Home size={24} />
+      {/* LOGO */}
+      <div className="flex items-center gap-3 mb-8 px-2">
+        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg">
+          <Home size={24} />
+        </div>
+        {isExpanded && (
+          <span className="font-black text-xl text-slate-900 tracking-tighter uppercase">
+            SIS<span className="text-indigo-600">MOB</span>
+          </span>
+        )}
       </div>
 
-      {/* NAVEGAÇÃO PRINCIPAL */}
-      <nav className="flex-1 space-y-2">
-        {menu.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.title}
-              href={item.href} // Agora o TS sabe que sempre existirá uma string
-              className={`
-                flex items-center gap-4 p-4 rounded-2xl transition-all group
-                ${isActive ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" : "text-gray-400 hover:bg-indigo-50 hover:text-indigo-600"}
-              `}
-            >
-              <item.icon
-                size={22}
-                className={
-                  isActive ? "text-white" : "group-hover:text-indigo-600"
-                }
-              />
-              {isExpanded && (
-                <span className="font-bold text-sm whitespace-nowrap">
-                  {item.title}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
+        {/* DASHBOARD SEMPRE VISÍVEL */}
+        <Link
+          href="/dashboard"
+          className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/dashboard" ? "bg-indigo-600 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
+        >
+          <LayoutDashboard size={22} />
+          {isExpanded && (
+            <span className="font-bold text-sm">Dashboard Principal</span>
+          )}
+        </Link>
 
-        {/* ÁREA EXCLUSIVA SUPER-ADMIN (LUIS PAPEL 0) */}
-        {user?.papel === "0" && (
-          <div className="mt-8 pt-6 border-t border-gray-50 space-y-2">
-            {isExpanded && (
-              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4 mb-2">
-                SaaS Flaience
-              </p>
-            )}
-            <Link
-              href="/flaience/onboarding"
-              className={`
-                flex items-center gap-4 p-4 rounded-2xl transition-all
-                ${pathname === "/flaience/onboarding" ? "bg-orange-500 text-white shadow-orange-100" : "bg-gray-50 text-gray-500 hover:bg-orange-50 hover:text-orange-600"}
-              `}
+        {/* GRUPOS DINÂMICOS */}
+        {menuGroups.map((group) => (
+          <div key={group.group} className="space-y-1">
+            <button
+              onClick={() => {
+                setIsExpanded(true);
+                setOpenGroup(openGroup === group.group ? "" : group.group);
+              }}
+              className="w-full flex items-center justify-between p-4 rounded-2xl text-slate-400 hover:bg-slate-50 transition-all"
             >
-              <Plus size={22} />
+              <div className="flex items-center gap-4">
+                <group.icon size={22} />
+                {isExpanded && (
+                  <span className="font-bold text-sm">{group.title}</span>
+                )}
+              </div>
               {isExpanded && (
-                <span className="font-bold text-sm whitespace-nowrap">
-                  Nova Imobiliária
-                </span>
+                <ChevronDown
+                  size={14}
+                  className={openGroup === group.group ? "rotate-180" : ""}
+                />
               )}
+            </button>
+
+            {isExpanded && openGroup === group.group && (
+              <div className="ml-4 flex flex-col gap-1 animate-in slide-in-from-top-2 duration-300">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-4 p-3 rounded-xl text-xs font-bold uppercase tracking-widest ${pathname === item.href ? "text-indigo-600 bg-indigo-50" : "text-slate-400 hover:text-indigo-600"}`}
+                  >
+                    <item.icon size={16} />
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* MÓDULO SUPER-ADMIN (SÓ PARA O LUIS) */}
+        {isExpanded && user?.papel === "0" && (
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-4 mb-4">
+              Administração SaaS
+            </p>
+            <Link
+              href="/onboarding"
+              className="flex items-center gap-4 p-4 rounded-2xl bg-slate-900 text-white shadow-xl hover:bg-indigo-600 transition-all group"
+            >
+              <Plus
+                size={20}
+                className="group-hover:rotate-90 transition-transform"
+              />
+              <span className="text-sm font-bold">Nova Imobiliária</span>
             </Link>
           </div>
         )}
       </nav>
 
-      {/* BOTÃO DE EXPANDIR (CONTROLE VISUAL) */}
+      {/* LOGOUT */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="mt-auto flex items-center justify-center p-4 bg-gray-50 rounded-2xl text-gray-400 hover:text-indigo-600 transition-all"
+        onClick={signOut}
+        className="mt-auto flex items-center gap-4 p-4 rounded-2xl text-red-400 hover:bg-red-50 transition-all"
       >
-        <ChevronRight
-          size={20}
-          className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
-        />
+        <LogOut size={22} />
+        {isExpanded && (
+          <span className="font-bold text-sm">Sair do Sistema</span>
+        )}
       </button>
     </aside>
   );
