@@ -7,6 +7,7 @@ import { PessoasModule } from './pessoas/pessoas.module';
 import { ImoveisModule } from './imoveis/imoveis.module';
 import { FilesModule } from './files/files.module';
 import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
+import { SaasModule } from './saas/saas.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
     AuthModule,
     PessoasModule,
     ImoveisModule,
+    SaasModule,
     FilesModule,
     ConfiguracoesModule,
   ],
