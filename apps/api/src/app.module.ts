@@ -15,6 +15,7 @@ import { SaasModule } from './saas/saas.module';
     DatabaseModule,
     AuthModule,
     PessoasModule,
+    SaasModule,
     ImoveisModule,
     SaasModule,
     FilesModule,
