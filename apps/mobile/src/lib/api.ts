@@ -3,8 +3,7 @@ import axios from "axios";
 // Usamos a URL que já está voando no Railway
 const api = axios.create({
   baseURL:
-    process.env.EXPO_PUBLIC_API_URL ||
-    "https://api-sismob-production.up.railway.app",
+    process.env.EXPO_PUBLIC_API_URL || "sismob-production.up.railway.app",
 });
 
 // Interceptor para injetar o Token no futuro

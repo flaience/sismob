@@ -16,22 +16,21 @@ import * as schema from '@sismob/database';
         try {
           const connectionString = process.env.DATABASE_URL;
 
-          // Configuração de conexão extremamente leve para não travar o boot
+          // O SEGREDO: Se o banco demorar mais de 5s, o servidor ignora e liga
           const postgresClient = ((postgres as any).default || postgres)(
             connectionString,
             {
-              max: 1, // Apenas 1 conexão para o teste
+              max: 2,
               ssl: 'require',
-              connect_timeout: 5, // Se não conectar em 5s, não mata o servidor
+              connect_timeout: 5, // <--- NÃO DEIXE O BOOT TRAVADO AQUI
             },
           );
 
-          console.log('📡 [SISMOB] Tentando pulso no banco...');
+          console.log('📡 [SISMOB] Driver de banco pronto.');
           return (drizzle as any)(postgresClient, { schema });
         } catch (e) {
-          // SE O BANCO FALHAR, O SERVIDOR CONTINUA VIVO
           console.error(
-            '⚠️ [SISMOB] Banco de dados offline, mas mantendo o servidor ligado.',
+            '⚠️ [SISMOB] Erro no banco, mas mantendo boot operacional.',
           );
           return null;
         }
