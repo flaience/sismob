@@ -26,56 +26,46 @@ export class SaasService {
   }
 
   // 2. ONBOARDING INDUSTRIAL (Cria Empresa + Matriz + Admin)
-  // 2. ONBOARDING INDUSTRIAL (Cria Empresa + Matriz + Admin)
   async onboarding(dto: any) {
-    return await this.db.transaction(async (tx) => {
+    return await this.db.transaction(async (tx: any) => {
       try {
-        console.log(`🚀 Iniciando Onboarding para: ${dto.nomeEmpresa}`);
-
-        // A. Criar a Empresa (Tenant) - Ajustado para v5.1
-        const [tenant] = await (tx
+        // 1. Criar a Empresa (Tenant)
+        const [tenant] = await tx
           .insert(schema.tenants as any)
           .values({
             nome_conta: dto.nomeEmpresa,
             slug: dto.slug,
-            dominio_customizado: dto.dominio || null,
-            email_financeiro: dto.emailFinanceiro || dto.email, // <--- OBRIGATÓRIO
-            version_schema: '1.0.1', // <--- OBRIGATÓRIO PARA IA/RAG
+            email_financeiro: dto.email_financeiro,
             status: 'ativo',
+            version_schema: '1.0.1',
           })
-          .returning() as any);
+          .returning();
 
-        // B. Criar a Unidade Matriz automaticamente (Padrão Sismob)
-        const [unidade] = await (tx
+        // 2. Criar a Unidade Matriz Automática
+        const [unidade] = await tx
           .insert(schema.unidades as any)
           .values({
             tenant_id: tenant.id,
-            nome: 'MATRIZ - CENTRAL',
+            nome: 'MATRIZ',
             is_matriz: true,
           })
-          .returning() as any);
+          .returning();
 
-        // C. Criar o Usuário Admin da Imobiliária (Papel 6)
+        // 3. Criar o Usuário Dono (Admin)
         await tx.insert(schema.pessoas as any).values({
-          id: sql`gen_random_uuid()`, // Garante um novo ID se não vier no DTO
           tenant_id: tenant.id,
           unidade_id: unidade.id,
-          nome: dto.nomeResponsavel,
+          nome: dto.nomeDono,
           email: dto.email,
           documento: dto.documento,
-          papel: '6', // Dono da Imobiliária
+          papel: '6', // Papel 6 = Dono da Imobiliária
           is_admin: true,
           cargo: 'gerente_geral',
         });
 
-        console.log(`✅ Onboarding concluído com sucesso: ${tenant.slug}`);
-        return { success: true, tenantId: tenant.id, slug: tenant.slug };
+        return { success: true, tenantId: tenant.id };
       } catch (e) {
-        console.error('❌ Erro Crítico no Onboarding:', e.message);
-        // O transaction fará o rollback automático aqui
-        throw new InternalServerErrorException(
-          `Falha no processo de Onboarding: ${e.message}`,
-        );
+        throw new InternalServerErrorException(`Erro no Banco: ${e.message}`);
       }
     });
   }

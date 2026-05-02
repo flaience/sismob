@@ -65,6 +65,61 @@ export const MAPA_SISMOB = {
     ],
   },
 
+  onboarding: {
+    title: "Nova Imobiliária Cliente",
+    entity: "saas/onboarding",
+    sections: [
+      {
+        title: "Dados da Empresa (Faturamento)",
+        fields: [
+          {
+            name: "nomeEmpresa",
+            label: "Nome da Imobiliária",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          {
+            name: "slug",
+            label: "Link de Acesso (Ex: silva-imoveis)",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "email_financeiro",
+            label: "E-mail para Cobrança",
+            type: "text",
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Dados do Proprietário (Admin)",
+        fields: [
+          {
+            name: "nomeDono",
+            label: "Nome do Responsável",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "email",
+            label: "E-mail de Login",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "documento",
+            label: "CPF do Dono",
+            type: "text",
+            required: true,
+          },
+        ],
+      },
+    ],
+    aiMetadata:
+      "Este módulo cria o Tenant, a Matriz e o Usuário Mestre. É a porta de entrada do ecossistema Flaience.",
+  },
   // 3. IMÓVEIS (A JÓIA DA COROA)
   imoveis: {
     title: "Gestão de Imóveis",
