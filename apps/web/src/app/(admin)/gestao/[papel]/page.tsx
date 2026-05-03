@@ -1,45 +1,32 @@
 "use client";
-import { Suspense } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import SismobFormMaster from "@/components/SismobFormMaster";
+import { useParams, useRouter } from "next/navigation";
+import SismobListMaster from "@/components/SismobListMaster";
 import { MAPA_SISMOB } from "../mapa-modulos";
 
 export const dynamic = "force-dynamic";
 
-function ManutencaoDinamica() {
+export default function GenericGridPage() {
   const { papel } = useParams();
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
-
-  // Puxa a configuração do seu mapa mestre
+  const router = useRouter();
   const config = (MAPA_SISMOB as any)[papel as string];
 
-  if (!config) {
+  if (!config)
     return (
       <div className="p-20 text-center font-black">Módulo não mapeado.</div>
     );
-  }
 
   return (
-    <SismobFormMaster
+    <SismobListMaster
       title={config.title}
-      endpoint={config.entity} // ex: pessoas ou imoveis
-      sections={config.sections}
+      endpoint={`/${config.entity}`}
+      filters={config.papel ? { papel: config.papel } : {}}
+      columns={config.columns}
       aiHelp={config.aiMetadata}
-    />
-  );
-}
-
-export default function Page() {
-  return (
-    <Suspense
-      fallback={
-        <div className="p-20 animate-pulse font-black text-indigo-600 uppercase">
-          Iniciando Motor Industrial...
-        </div>
+      // O SEGREDO: O botão "Novo" leva para a subpasta /manutencao
+      onAdd={() => router.push(`/gestao/${papel}/manutencao`)}
+      onEdit={(item: any) =>
+        router.push(`/gestao/${papel}/manutencao?id=${item.id}`)
       }
-    >
-      <ManutencaoDinamica />
-    </Suspense>
+    />
   );
 }

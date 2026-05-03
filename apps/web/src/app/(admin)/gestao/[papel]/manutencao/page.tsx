@@ -4,21 +4,17 @@ import { useParams, useSearchParams } from "next/navigation";
 import SismobFormMaster from "@/components/SismobFormMaster";
 import { MAPA_SISMOB } from "../../mapa-modulos";
 
+export const dynamic = "force-dynamic";
+
 function ManutencaoDinamica() {
-  const { papel } = useParams(); // ex: leads, proprietarios, imobiliarias
+  const { papel } = useParams();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
-  // Busca a configuração no seu MAPA_SISMOB
   const config = (MAPA_SISMOB as any)[papel as string];
 
-  if (!config) {
-    return (
-      <div className="p-20 text-center font-black">
-        Módulo "{papel}" não configurado no Mapa.
-      </div>
-    );
-  }
+  if (!config)
+    return <div className="p-20 text-center">Módulo não mapeado.</div>;
 
   return (
     <SismobFormMaster
@@ -34,8 +30,8 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="p-20 animate-pulse font-black text-indigo-600">
-          INICIANDO MOTOR DE GESTÃO...
+        <div className="p-20 animate-pulse font-black text-indigo-600 uppercase">
+          Iniciando Motor Industrial...
         </div>
       }
     >
