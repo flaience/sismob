@@ -1,4 +1,6 @@
 import CrudMaster from "@/components/CrudMaster";
+
+export const dynamic = "force-dynamic";
 export default function AtributosPage() {
   return (
     <CrudMaster

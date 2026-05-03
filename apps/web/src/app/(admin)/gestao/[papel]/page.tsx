@@ -2,8 +2,9 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import SismobListMaster from "@/components/SismobListMaster";
-import { MAPA_SISMOB } from "../mapa-modulos";
 
+import { MAPA_SISMOB } from "../mapa-modulos";
+export const dynamic = "force-dynamic";
 export default function GenericGrid() {
   const { papel } = useParams();
   const router = useRouter();

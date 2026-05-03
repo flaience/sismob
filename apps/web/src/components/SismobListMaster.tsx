@@ -13,10 +13,10 @@ export default function SismobListMaster({
   onAdd,
   onEdit,
 }: any) {
-  const { tenant } = useTenant();
+  const context = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const { tenant } = context || { tenant: null };
   // 1. GARANTIA DE COLUNAS: Se não vier do mapa, usa o padrão para não dar erro de .map
   const colunasEfetivas =
     columns && Array.isArray(columns)
