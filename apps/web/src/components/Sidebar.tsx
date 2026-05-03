@@ -32,9 +32,10 @@ export default function Sidebar() {
     setMounted(true);
   }, []);
 
-  if (!mounted || !user) return null;
+  // 1. FAILSAFE: Se o componente ainda não montou, não renderiza (evita erro de hidratação)
+  if (!mounted) return null;
 
-  // 1. MAPEAMENTO DE MENUS OPERACIONAIS
+  // 2. MAPEAMENTO DE MENUS OPERACIONAIS
   const menuGroups = [
     {
       title: "CRM Comercial",
@@ -84,8 +85,8 @@ export default function Sidebar() {
     },
   ];
 
-  // 2. MÓDULO EXCLUSIVO FLAIENCE (SÓ PARA O LUIS - PAPEL 0)
-  if (user?.papel === "0") {
+  // 3. O SEGREDO DO LUIS (Usamos == em vez de === para ignorar se é String ou Número)
+  if (user?.papel == "0") {
     menuGroups.push({
       title: "Admin Flaience",
       icon: ShieldCheck,
@@ -108,11 +109,11 @@ export default function Sidebar() {
   return (
     <aside
       style={{ width: isExpanded ? 280 : 84 }}
-      className="fixed left-6 top-6 bottom-6 z-50 bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 overflow-hidden border border-slate-100"
+      className="fixed left-6 top-6 bottom-6 z-[999] bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 border border-slate-100"
     >
-      {/* LOGO SISMOB */}
+      {/* LOGO */}
       <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100">
+        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg">
           <Home size={24} />
         </div>
         {isExpanded && (
@@ -122,8 +123,7 @@ export default function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
-        {/* DASHBOARD */}
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
         <Link
           href="/dashboard"
           className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
@@ -138,7 +138,6 @@ export default function Sidebar() {
           )}
         </Link>
 
-        {/* GRUPOS DINÂMICOS */}
         {menuGroups.map((group) => (
           <div key={group.group} className="space-y-1">
             <button
@@ -161,7 +160,7 @@ export default function Sidebar() {
               {isExpanded && (
                 <ChevronDown
                   size={14}
-                  className={`transition-transform ${openGroup === group.group ? "rotate-180" : ""}`}
+                  className={openGroup === group.group ? "rotate-180" : ""}
                 />
               )}
             </button>
@@ -187,24 +186,35 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="p-4 bg-slate-100 rounded-2xl mb-4">
-        <p className="text-[10px] font-black text-slate-400 uppercase">
-          Debug Acesso
-        </p>
-        <p className="text-xs font-bold text-indigo-600">
-          Papel Atual: {user?.papel || "Nulo"}
-        </p>
-      </div>
-      {/* LOGOUT */}
-      <div className="pt-4 border-t border-slate-50">
+
+      {/* DEBUG PARA O LUIS (Removeremos depois) */}
+      {isExpanded && (
+        <div className="p-4 bg-slate-50 rounded-2xl mb-4 border border-dashed border-slate-200">
+          <p className="text-[9px] font-black text-slate-400 uppercase">
+            Acesso: {user?.nome}
+          </p>
+          <p className="text-[9px] font-bold text-indigo-600 uppercase">
+            Nível: {user?.papel || "Nulo"}
+          </p>
+        </div>
+      )}
+
+      {/* FOOTER / LOGOUT */}
+      <div className="pt-4 border-t border-slate-50 space-y-2">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-center p-3 text-slate-300 hover:text-indigo-600"
+        >
+          <ChevronDown
+            className={`transition-transform duration-500 ${isExpanded ? "rotate-90" : "-rotate-90"}`}
+          />
+        </button>
         <button
           onClick={signOut}
           className="w-full flex items-center gap-4 p-4 rounded-2xl text-red-400 hover:bg-red-50 transition-all"
         >
           <LogOut size={22} />
-          {isExpanded && (
-            <span className="font-bold text-sm">Sair do Sistema</span>
-          )}
+          {isExpanded && <span className="font-bold text-sm">Sair</span>}
         </button>
       </div>
     </aside>

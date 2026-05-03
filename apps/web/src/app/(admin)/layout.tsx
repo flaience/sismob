@@ -8,17 +8,21 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading: authLoading } = useAuth();
-  const { loading: tenantLoading } = useTenant();
+  const { user, loading: authLoading } = useAuth();
+  const { tenant } = useTenant();
 
-  // EM VEZ DE BLOQUEAR A TELA TODA, MOSTRA UMA BARRA DISCRETA
+  // 1. Enquanto carrega o básico, mostra um fundo neutro
+  if (authLoading) {
+    return <div className="h-screen w-full bg-slate-50 animate-pulse" />;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden">
+      {/* 2. A SIDEBAR (Ocupa espaço fixo de 84px ou 280px) */}
       <Sidebar />
-      <main className="flex-1 ml-[84px] p-4 md:p-10">
-        {(authLoading || tenantLoading) && (
-          <div className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 animate-pulse z-[9999]" />
-        )}
+
+      {/* 3. ÁREA DE CONTEÚDO (O ml-[84px] garante que a sidebar não cubra o texto) */}
+      <main className="flex-1 ml-[84px] p-4 md:p-10 h-screen overflow-y-auto">
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
     </div>
