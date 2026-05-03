@@ -14,11 +14,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (session: Session | null) => {
     // 1. O SEGREDO: Se tem sessão mas ainda não identificou a imobiliária, ESPERA.
-    if (session?.user && !tenant?.id) {
-      console.log("⏳ [AUTH] Aguardando identificação da imobiliária...");
+    if (!session?.user?.id || !tenant?.id) {
+      console.log("⏳ [SISMOB] Aguardando dados para sincronizar perfil...");
       return;
     }
-
     try {
       if (session?.user && tenant?.id) {
         console.log(
@@ -26,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
 
         const res = await api.get(`/pessoas/${session.user.id}`, {
-          params: { imobiliariaId: tenant.id }, // <--- Passa o ID certo para o findOne(id, tenantId)
+          params: { imobiliariaId: tenant.id },
         });
 
         // O seu backend já retorna objeto, mas o casting aqui é por segurança industrial

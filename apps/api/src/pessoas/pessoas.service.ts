@@ -12,26 +12,26 @@ export class PessoasService {
 
   // Procure o método findOne e substitua por este:
   async findOne(id: string, tenantId: string) {
-    // <--- AGORA RECEBE 2 ARGUMENTOS
+    // 1. O TIRO DE MISERICÓRDIA NO ERRO:
+    // Se o ID ou o TenantId forem nulos ou a string "undefined", aborta com segurança.
+    if (!id || !tenantId || id === 'undefined' || tenantId === 'undefined') {
+      console.warn(
+        `⚠️ [SISMOB] Tentativa de busca com ID inválido: id=${id}, tenant=${tenantId}`,
+      );
+      return null;
+    }
+
     try {
       const table = schema.pessoas as any;
       const results = await this.db
         .select()
         .from(table)
-        .where(
-          and(
-            eq(table.id, id),
-            eq(table.tenant_id, tenantId), // <--- SEGURANÇA: Só acha se pertencer à empresa
-          ),
-        )
+        .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
         .limit(1);
 
       return results.length > 0 ? results[0] : null;
     } catch (error: any) {
-      console.error(
-        '❌ [SISMOB] Erro no Service findOne:',
-        error.message || error,
-      );
+      console.error('❌ [SISMOB] Erro no Service findOne:', error.message);
       return null;
     }
   }
@@ -64,20 +64,26 @@ export class PessoasService {
   //   return results[0] || null;
   // }
   async findImobiliariaByHost(host: string) {
-    const table = schema.tenants as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(
-        or(
-          eq(table.dominio_customizado, host),
-          eq(table.slug, host.split('.')[0]),
-        ),
-      )
-      .limit(1);
+    // Proteção contra host vazio
+    if (!host || host === 'undefined') return null;
 
-    // O SEGREDO: Se houver resultado, envia o item 0. Se não, null.
-    return results.length > 0 ? results[0] : null;
+    try {
+      const table = schema.tenants as any;
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(
+          or(
+            eq(table.dominio_customizado, host),
+            eq(table.slug, host.split('.')[0]),
+          ),
+        )
+        .limit(1);
+
+      return results.length > 0 ? results[0] : null;
+    } catch (e) {
+      return null;
+    }
   }
   // 5. Busca por Papel
   async findByRole(papel: string, imobId: string, search?: string) {
