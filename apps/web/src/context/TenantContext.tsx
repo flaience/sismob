@@ -57,4 +57,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useTenant = () => useContext(TenantContext);
+export const useTenant = () => {
+  const context = useContext(TenantContext);
+  // Se o contexto ainda não existe (momento do build), retorna um objeto seguro
+  if (!context) {
+    return { tenant: null, loading: true };
+  }
+  return context;
+};

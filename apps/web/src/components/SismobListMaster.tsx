@@ -17,6 +17,7 @@ export default function SismobListMaster({
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { tenant } = context || { tenant: null };
+
   // 1. GARANTIA DE COLUNAS: Se não vier do mapa, usa o padrão para não dar erro de .map
   const colunasEfetivas =
     columns && Array.isArray(columns)
@@ -27,33 +28,26 @@ export default function SismobListMaster({
         ];
 
   useEffect(() => {
+    // 2. BLINDAGEM: Se não tem tenant (como no build da Vercel), não faz nada
+    if (!tenant?.id) return;
+
     const loadData = async () => {
-      if (!tenant?.id) return;
       setLoading(true);
       try {
         const res = await api.get(endpoint, {
           params: { imobiliariaId: tenant.id, ...filters },
         });
-
-        // TRATAMENTO INDUSTRIAL:
-        // Se o backend enviar um objeto único em vez de lista,
-        // nós transformamos em lista para o .map não crashar.
-        const resultado = Array.isArray(res.data)
-          ? res.data
-          : res.data
-            ? [res.data]
-            : [];
-
-        setData(resultado);
+        setData(
+          Array.isArray(res.data) ? res.data : res.data ? [res.data] : [],
+        );
       } catch (e) {
-        console.error("❌ [SISMOB] Erro ao carregar dados do Grid:", e);
-        setData([]);
+        console.error("Erro no Grid:", e);
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [tenant, endpoint, JSON.stringify(filters)]);
+  }, [tenant?.id, endpoint, JSON.stringify(filters)]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

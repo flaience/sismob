@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 import CrudMaster from "@/components/CrudMaster";
 export default function GruposCaixaPage() {
   return (
