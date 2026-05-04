@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Edit3, Mic, Loader2, Trash2 } from "lucide-react";
+import { Plus, Edit3, Mic, Trash2, Search, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
 import { useRouter } from "next/navigation";
@@ -10,16 +10,11 @@ export default function SismobListMaster({ config, papelUrl }: any) {
   const router = useRouter();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(""); // 1. ESTADO DA BUSCA
 
-  // 1. MAPEAMENTO DE VARIÁVEIS DO CONFIG
-  const columns =
-    config?.columns && Array.isArray(config.columns)
-      ? config.columns
-      : [{ label: "Nome", key: "nome" }];
+  const columns = config?.columns || [{ label: "Nome", key: "nome" }];
+  const endpoint = config?.entity;
 
-  const endpoint = config?.entity; // Ex: "pessoas" ou "imoveis"
-
-  // 2. FUNÇÃO DE CARGA (loadData) - Centralizada para ser reutilizada no refresh
   const loadData = useCallback(async () => {
     if (!tenant?.id || !endpoint) return;
 
@@ -28,11 +23,11 @@ export default function SismobListMaster({ config, papelUrl }: any) {
       const res = await api.get(`/${endpoint}`, {
         params: {
           imobiliariaId: tenant.id,
-          papel: config.papel, // Se for o caso de pessoas
+          papel: config.papel,
+          search: searchTerm, // 2. ENVIA O TERMO PARA A API
         },
       });
 
-      // Garantia de dados em formato de array
       const resultado = Array.isArray(res.data)
         ? res.data
         : res.data
@@ -40,83 +35,84 @@ export default function SismobListMaster({ config, papelUrl }: any) {
           : [];
       setData(resultado);
     } catch (e) {
-      console.error("❌ [SISMOB] Erro ao carregar dados:", e);
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, endpoint, config.papel]);
+  }, [tenant?.id, endpoint, config.papel, searchTerm]);
 
-  // 3. FUNÇÃO DE EXCLUSÃO (handleDelete)
   const handleDelete = async (id: string) => {
-    if (!confirm("⚠️ Deseja excluir este registro permanentemente?")) return;
-
+    if (!confirm("⚠️ Confirmar exclusão?")) return;
     try {
-      // Chamada industrial passando o tenantId por segurança
       await api.delete(`/${endpoint}/${id}`, {
         params: { imobiliariaId: tenant?.id },
       });
-
-      // Refresh automático após deletar
       loadData();
     } catch (error) {
-      alert("Erro ao excluir registro. Verifique as dependências.");
+      alert("Erro ao excluir.");
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const delayDebounceFn = setTimeout(() => {
+      loadData();
+    }, 500); // 3. AGUARDA 500ms SEM DIGITAR PARA BUSCAR (ECONOMIA DE API)
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, loadData]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
-      {/* HEADER INDUSTRIAL */}
-      <header className="flex justify-between items-center bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">
-            {config?.title || "Gestão"}
+    <div className="space-y-4 animate-in fade-in duration-500">
+      {/* HEADER COMPACTO COM BUSCA */}
+      <header className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-[300px]">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+            {config?.title}
           </h1>
-          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
-            Painel de Controle • {tenant?.nome_conta}
-          </p>
+
+          {/* BARRA DE BUSCA INDUSTRIAL */}
+          <div className="relative flex-1 max-w-sm">
+            <Search
+              className="absolute left-4 top-3.5 text-slate-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Pesquisar registros..."
+              className="w-full pl-12 p-3 bg-slate-50 rounded-2xl border-none font-bold text-sm focus:ring-2 ring-indigo-600 outline-none transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="flex gap-4">
-          {/* Botão de Ajuda IA (MCP) */}
-          <button
-            onClick={() =>
-              alert(
-                `🤖 AGENTE SISMOB: \n\n${config.aiMetadata || "Sem instruções adicionais."}`,
-              )
-            }
-            className="bg-orange-50 text-orange-600 p-4 rounded-2xl hover:scale-110 transition-all shadow-sm"
-          >
-            <Mic size={24} />
+        <div className="flex gap-2">
+          <button className="bg-orange-50 text-orange-600 p-3 rounded-xl hover:scale-110 transition-all">
+            <Mic size={20} />
           </button>
-
           <button
             onClick={() => router.push(`/gestao/${papelUrl}/manutencao`)}
-            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"
+            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-sm shadow-lg hover:bg-indigo-700 flex items-center gap-2"
           >
-            <Plus size={20} /> INCLUIR NOVO
+            <Plus size={18} /> NOVO
           </button>
         </div>
       </header>
 
-      {/* GRID DE DADOS */}
-      <div className="bg-white rounded-[3.5rem] border border-slate-100 overflow-hidden shadow-sm">
+      {/* GRID DE ALTA DENSIDADE */}
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-slate-50/50 border-b border-slate-100">
             <tr>
               {columns.map((col: any) => (
                 <th
                   key={col.key}
-                  className="p-8 text-[10px] font-black uppercase text-slate-400 tracking-widest"
+                  className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest"
                 >
                   {col.label}
                 </th>
               ))}
-              <th className="p-8 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">
+              <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400">
                 Ações
               </th>
             </tr>
@@ -126,50 +122,50 @@ export default function SismobListMaster({ config, papelUrl }: any) {
               <tr>
                 <td
                   colSpan={columns.length + 1}
-                  className="p-20 text-center animate-pulse font-bold text-slate-300"
+                  className="p-10 text-center animate-pulse text-slate-300 font-bold"
                 >
-                  SINCRONIZANDO COM A FÁBRICA...
+                  BUSCANDO...
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length + 1}
-                  className="p-20 text-center text-slate-300 font-bold uppercase"
+                  className="p-10 text-center text-slate-300 font-bold uppercase"
                 >
-                  Nenhum registro encontrado.
+                  Nada encontrado.
                 </td>
               </tr>
             ) : (
               data.map((item: any) => (
                 <tr
                   key={item.id}
-                  className="hover:bg-indigo-50/30 transition-all group"
+                  className="hover:bg-indigo-50/20 transition-all group"
                 >
                   {columns.map((col: any) => (
-                    <td key={col.key} className="p-8 font-bold text-slate-700">
+                    <td
+                      key={col.key}
+                      className="px-6 py-3 text-sm font-bold text-slate-600"
+                    >
                       {item[col.key] || "---"}
                     </td>
                   ))}
-                  <td className="p-8 text-right space-x-2">
-                    {/* Botão Editar */}
+                  <td className="px-6 py-3 text-right space-x-1">
                     <button
                       onClick={() =>
                         router.push(
                           `/gestao/${papelUrl}/manutencao?id=${item.id}`,
                         )
                       }
-                      className="p-3 bg-white border border-slate-100 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                      className="p-2 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
                     >
-                      <Edit3 size={18} />
+                      <Edit3 size={16} />
                     </button>
-
-                    {/* Botão Excluir (O que faltava) */}
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="p-3 bg-white border border-slate-100 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                      className="p-2 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>

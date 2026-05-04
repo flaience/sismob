@@ -32,6 +32,7 @@ export const papelPessoa = pgEnum("papel_pessoa", [
   "4",
   "5",
   "6",
+  "7",
 ]);
 // 1=Corretor/Admin, 2=Interessado/Lead, 3=Proprietário, 4=Inquilino, 5=Unidade, 6=Tenant/Dono
 export const tipoMovimentoFinanceiro = pgEnum("tipo_mov", ["c", "d"]); // c=Crédito, d=Débito
