@@ -17,17 +17,45 @@ export class PessoasService {
   // Procure o método findOne e substitua por este:
   // 1. BUSCA ÚNICA (Blindada)
   async findOne(id: string, tenantId: string) {
+    if (!id || id === 'undefined' || !tenantId || tenantId === 'undefined')
+      return null;
+
     try {
-      const table = schema.pessoas as any;
+      const tablePessoas = schema.pessoas as any;
+      const tableEnderecos = schema.enderecos as any;
+
+      // 1. BUSCA COM JOIN (Une Pessoa + Endereço em um único tiro)
       const results = await this.db
         .select()
-        .from(table)
-        .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
+        .from(tablePessoas)
+        .leftJoin(tableEnderecos, eq(tableEnderecos.pessoa_id, tablePessoas.id))
+        .where(
+          and(eq(tablePessoas.id, id), eq(tablePessoas.tenant_id, tenantId)),
+        )
         .limit(1);
 
-      return results.length > 0 ? results[0] : null;
+      if (results.length === 0) return null;
+
+      // 2. FORMATAÇÃO INDUSTRIAL: Transforma o resultado do Join em um objeto único
+      // O Drizzle retorna { pessoas: {...}, enderecos: {...} }
+      // Nós transformamos em { ...pessoas, endereco: {...} } para o Frontend ler fácil
+      const registro = results[0];
+      return {
+        ...registro.pessoas,
+        endereco: registro.enderecos || {
+          cep: '',
+          logradouro: '',
+          numero: '',
+          bairro: '',
+          cidade: '',
+          estado: '',
+        },
+      };
     } catch (error: any) {
-      console.error('❌ [SISMOB] Erro no findOne:', error.message);
+      console.error(
+        '❌ [SISMOB] Erro ao carregar perfil completo:',
+        error.message,
+      );
       return null;
     }
   }

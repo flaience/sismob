@@ -30,9 +30,11 @@ export default function SismobFormMaster({
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
-        .then((res) =>
-          setFormData(Array.isArray(res.data) ? res.data[0] : res.data),
-        );
+        .then((res) => {
+          // Garantia de objeto único
+          const data = Array.isArray(res.data) ? res.data[0] : res.data;
+          setFormData(data || {});
+        });
     }
 
     // AUTO-LOOKUP DE FILIAIS E OUTROS SELECTS
