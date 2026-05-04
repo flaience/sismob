@@ -35,43 +35,47 @@ export class PessoasService {
   async save(dto: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        const { id, endereco, ...dadosPessoa } = dto;
+        const { id, endereco, ...dados } = dto;
         const tablePessoas = schema.pessoas as any;
         const tableEnderecos = schema.enderecos as any;
 
+        // HIGIENIZAÇÃO INDUSTRIAL: Default para opcionais NOT NULL
         const payloadPessoa = {
-          ...dadosPessoa,
+          ...dados,
           tenant_id: tenantId,
+          documento: dados.documento || `LEAD-${Date.now()}`, // Default se opcional
+          tipo: dados.tipo || 'f',
           updated_at: new Date(),
         };
 
         let pessoaId = id;
 
-        // --- PARTE A: PESSOA ---
         if (id && id !== 'undefined') {
           await tx
             .update(tablePessoas)
             .set(payloadPessoa)
             .where(eq(tablePessoas.id, id));
         } else {
-          const [novaPessoa] = await tx
+          const [nova] = await tx
             .insert(tablePessoas)
             .values(payloadPessoa)
             .returning();
-          pessoaId = novaPessoa.id;
+          pessoaId = nova.id;
         }
 
-        // --- PARTE B: ENDEREÇO (Detail) ---
-        if (endereco && pessoaId) {
-          // Limpa endereço anterior (Garante integridade 1-para-1)
+        // GRAVAÇÃO DE ENDEREÇO (Opcional, com Defaults)
+        if (endereco && (endereco.cep || endereco.logradouro)) {
           await tx
             .delete(tableEnderecos)
             .where(eq(tableEnderecos.pessoa_id, pessoaId));
-
-          // Insere o novo
           await tx.insert(tableEnderecos).values({
             ...endereco,
-            pessoa_id: pessoaId, // FK vinculada ao registro acima
+            pessoa_id: pessoaId,
+            // Garante campos obrigatórios do banco se o endereço foi enviado
+            numero: endereco.numero || 'S/N',
+            bairro: endereco.bairro || 'N/A',
+            cidade: endereco.cidade || 'N/A',
+            estado: endereco.estado || '??',
           });
         }
 
