@@ -1,4 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Inject,
+} from '@nestjs/common';
 import * as schema from '@sismob/database';
 import { eq, and, ilike, or } from 'drizzle-orm';
 
@@ -39,12 +43,31 @@ export class PessoasService {
   async save(dto: any, tenantId: string) {
     const table = schema.pessoas as any;
     const { id, ...data } = dto;
-    const payload = { ...data, tenant_id: tenantId, updated_at: new Date() };
 
-    if (id && id !== 'undefined') {
-      return await this.db.update(table).set(payload).where(eq(table.id, id));
-    } else {
-      return await this.db.insert(table).values(payload).returning();
+    // LIMPEZA INDUSTRIAL: Garante que o ID da imobiliária vai para a coluna certa
+    const payload = {
+      ...data,
+      tenant_id: tenantId,
+      // Se não vier documento (ex: lead), enviamos '000' para não quebrar o NOT NULL do banco
+      documento: dto.documento || '00000000000',
+      updated_at: new Date(),
+    };
+
+    try {
+      if (id && id !== 'undefined') {
+        console.log(`🏭 [SISMOB] Atualizando Registro: ${id}`);
+        return await this.db.update(table).set(payload).where(eq(table.id, id));
+      } else {
+        console.log(
+          `🏭 [SISMOB] Criando Novo Registro para Tenant: ${tenantId}`,
+        );
+        return await this.db.insert(table).values(payload).returning();
+      }
+    } catch (error: any) {
+      console.error('❌ [DB ERROR]:', error.hint || error.message);
+      throw new InternalServerErrorException(
+        `Falha no Banco: ${error.message}`,
+      );
     }
   }
 
@@ -86,14 +109,21 @@ export class PessoasService {
     }
   }
   // 5. Busca por Papel
-  async findByRole(papel: string, imobId: string, search?: string) {
-    const table = schema.pessoas as any;
-    let conds = [eq(table.papel, papel), eq(table.tenant_id, imobId)];
-    if (search) conds.push(ilike(table.nome, `%${search}%`));
-    return await this.db
-      .select()
-      .from(table)
-      .where(and(...conds));
+  async findByRole(papel: string, tenantId: string, search?: string) {
+    try {
+      const table = schema.pessoas as any;
+      let conds = [eq(table.papel, papel), eq(table.tenant_id, tenantId)];
+
+      if (search) conds.push(ilike(table.nome, `%${search}%`));
+
+      return await this.db
+        .select()
+        .from(table)
+        .where(and(...conds));
+    } catch (error: any) {
+      console.error('❌ [SISMOB] Erro no findByRole:', error.message);
+      throw new InternalServerErrorException(error.message);
+    }
   }
 
   // 6. Remover
