@@ -1,20 +1,22 @@
 "use client";
-import { Suspense } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { use, Suspense } from "react";
 import SismobFormMaster from "@/components/SismobFormMaster";
 import { MAPA_SISMOB } from "../../mapa-modulos";
 
 export const dynamic = "force-dynamic";
 
-function ManutencaoDinamica() {
-  const { papel } = useParams();
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
+function ManutencaoContent({ params }: any) {
+  const resolvedParams: any = use(params);
+  const papel = resolvedParams.papel;
 
   const config = (MAPA_SISMOB as any)[papel as string];
 
   if (!config)
-    return <div className="p-20 text-center">Módulo não mapeado.</div>;
+    return (
+      <div className="p-20 text-center font-black">
+        CONFIGURAÇÃO NÃO LOCALIZADA.
+      </div>
+    );
 
   return (
     <SismobFormMaster
@@ -26,19 +28,16 @@ function ManutencaoDinamica() {
   );
 }
 
-export default function Page() {
+export default function ManutencaoPage({ params }: any) {
   return (
     <Suspense
       fallback={
-        <div
-          className="p-20 animate-pulse font-
-        black text-indigo-600 uppercase"
-        >
-          Iniciando Motor Industrial...
+        <div className="p-20 font-black text-indigo-600 animate-pulse uppercase">
+          Preparando Formulário...
         </div>
       }
     >
-      <ManutencaoDinamica />
+      <ManutencaoContent params={params} />
     </Suspense>
   );
 }
