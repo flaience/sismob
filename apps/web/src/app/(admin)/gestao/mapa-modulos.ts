@@ -1,108 +1,42 @@
-//src/app/(admin)/gestao/mapa-modulos.ts
-export const MAPA_SISMOB = {
-  bancos: {
-    title: "Bancos",
-    entity: "bancos",
-    fields: [
-      { name: "nome", label: "Nome", type: "text" },
-      { name: "codigo_compe", label: "Código", type: "text" },
-    ],
-  },
+export const MAPA_SISMOB: any = {
+  // --- CRM COMERCIAL ---
   leads: {
     title: "Interessados (Leads)",
     entity: "pessoas",
     papel: "2",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "E-mail", key: "email" },
+      { label: "WhatsApp", key: "telefone" },
+    ],
     sections: [
       {
         title: "Dados do Lead",
         fields: [
-          {
-            name: "nome",
-            label: "Nome / Apelido",
-            type: "text",
-            fullWidth: true,
-          },
+          { name: "nome", label: "Nome", type: "text", required: true },
           { name: "email", label: "E-mail", type: "text" },
           { name: "telefone", label: "WhatsApp", type: "text" },
         ],
       },
     ],
+    aiMetadata:
+      "Leads são contatos iniciais. O foco do Agente deve ser a primeira qualificação por voz.",
   },
-
-  // 2. CRM - PROPRIETÁRIOS (PRECISA DE DADOS COMPLETOS)
-  proprietarios: {
-    title: "Proprietários",
+  compradores: {
+    title: "Clientes Compradores",
     entity: "pessoas",
-    papel: "3",
+    papel: "7",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "Documento", key: "documento" },
+    ],
     sections: [
       {
-        title: "Dados Pessoais",
+        title: "Identificação",
         fields: [
           {
             name: "nome",
-            label: "Nome Completo / Razão",
-            type: "text",
-            fullWidth: true,
-          },
-          { name: "documento", label: "CPF / CNPJ", type: "text" },
-          { name: "email", label: "E-mail", type: "text" },
-          { name: "unidade_id", label: "Vincular à Unidade", type: "select" },
-        ],
-      },
-      {
-        title: "Endereço de Contrato",
-        fields: [
-          { name: "cep", label: "CEP", type: "text" },
-          {
-            name: "logradouro",
-            label: "Endereço",
-            type: "text",
-            fullWidth: true,
-          },
-          { name: "cidade", label: "Cidade", type: "text" },
-        ],
-      },
-    ],
-  },
-
-  imobiliarias: {
-    title: "Rede de Imobiliárias (Tenants)",
-    entity: "saas/onboarding", // Rota que o seu SaasController atende
-    columns: [
-      { label: "Nome", key: "nome_conta" },
-      { label: "Slug", key: "slug" },
-    ],
-    sections: [
-      {
-        title: "Dados da Empresa",
-        fields: [
-          {
-            name: "nomeEmpresa",
-            label: "Nome da Imobiliária",
-            type: "text",
-            required: true,
-          },
-          { name: "slug", label: "Slug / Link", type: "text", required: true },
-          {
-            name: "email_financeiro",
-            label: "E-mail Cobrança",
-            type: "text",
-            required: true,
-          },
-        ],
-      },
-      {
-        title: "Dono da Conta (Admin)",
-        fields: [
-          {
-            name: "nomeDono",
-            label: "Nome do Dono",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "email",
-            label: "E-mail de Login",
+            label: "Nome Completo",
             type: "text",
             required: true,
           },
@@ -110,240 +44,108 @@ export const MAPA_SISMOB = {
         ],
       },
     ],
-  },
-
-  onboarding: {
-    title: "Nova Imobiliária Cliente",
-    entity: "saas/onboarding",
-    sections: [
-      {
-        title: "Dados da Empresa (Faturamento)",
-        fields: [
-          {
-            name: "nomeEmpresa",
-            label: "Nome da Imobiliária",
-            type: "text",
-            required: true,
-            fullWidth: true,
-          },
-          {
-            name: "slug",
-            label: "Link de Acesso (Ex: silva-imoveis)",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "email_financeiro",
-            label: "E-mail para Cobrança",
-            type: "text",
-            required: true,
-          },
-        ],
-      },
-      {
-        title: "Dados do Proprietário (Admin)",
-        fields: [
-          {
-            name: "nomeDono",
-            label: "Nome do Responsável",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "email",
-            label: "E-mail de Login",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "documento",
-            label: "CPF do Dono",
-            type: "text",
-            required: true,
-          },
-        ],
-      },
-    ],
     aiMetadata:
-      "Este módulo cria o Tenant, a Matriz e o Usuário Mestre. É a porta de entrada do ecossistema Flaience.",
+      "Clientes quentes em fase de fechamento. Exigem preenchimento total para o motor de contratos.",
   },
-  // 3. IMÓVEIS (A JÓIA DA COROA)
-  imoveis: {
-    title: "Gestão de Imóveis",
-    entity: "imoveis",
+  proprietarios: {
+    title: "Proprietários",
+    entity: "pessoas",
+    papel: "3",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "WhatsApp", key: "telefone" },
+    ],
     sections: [
       {
-        title: "Anúncio e Valor",
+        title: "Dados Pessoais",
         fields: [
-          {
-            name: "titulo",
-            label: "Título do Imóvel",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "tipo",
-            label: "Tipo",
-            type: "select",
-            options: [
-              { label: "Casa", value: "casa" },
-              { label: "Apartamento", value: "apto" },
-            ],
-          },
-          { name: "preco_venda", label: "Valor de Venda", type: "number" },
-        ],
-      },
-      {
-        title: "Diferenciais e 360",
-        fields: [
-          {
-            name: "tour_360_url",
-            label: "Link Tour Virtual",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "video_url",
-            label: "Link Vídeo Drone/YouTube",
-            type: "text",
-            fullWidth: true,
-          },
-        ],
-      },
-      {
-        title: "Mídia Imersiva (Diferencial)",
-        fields: [
-          {
-            name: "video_url",
-            label: "Link do Vídeo (Drone/YouTube)",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "tour_360_url",
-            label: "Link do Tour Virtual (360)",
-            type: "text",
-            fullWidth: true,
-          },
-          { name: "lat", label: "Latitude para Mapa", type: "text" },
-          { name: "lng", label: "Longitude para Mapa", type: "text" },
+          { name: "nome", label: "Nome/Razão", type: "text", required: true },
+          { name: "documento", label: "CPF/CNPJ", type: "text" },
         ],
       },
     ],
   },
-  // Adicione dentro do export const MAPA_SISMOB = { ... }
-
-  // 4. CRM - INQUILINOS
   inquilinos: {
-    title: "Gestão de Inquilinos",
+    title: "Inquilinos",
     entity: "pessoas",
     papel: "4",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "WhatsApp", key: "telefone" },
+    ],
     sections: [
       {
-        title: "Identificação do Locatário",
-        fields: [
-          {
-            name: "nome",
-            label: "Nome do Inquilino",
-            type: "text",
-            fullWidth: true,
-          },
-          { name: "documento", label: "CPF / RG", type: "text" },
-          { name: "email", label: "E-mail de Contato", type: "text" },
-        ],
+        title: "Dados do Locatário",
+        fields: [{ name: "nome", label: "Nome", type: "text", required: true }],
       },
     ],
     aiMetadata:
-      "Inquilinos são vinculados a contratos de locação. Verifique se possuem pendências financeiras antes de renovar.",
+      "Inquilinos são vinculados a contratos de locação. Verifique pendências antes de renovar.",
   },
 
-  // 5. CRM - EQUIPE (O MOTOR INTERNO)
+  // --- OPERACIONAL ---
   equipe: {
     title: "Minha Equipe",
     entity: "pessoas",
     papel: "1",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "Cargo", key: "cargo" },
+    ],
     sections: [
       {
-        title: "Dados do Colaborador",
+        title: "Colaborador",
         fields: [
-          {
-            name: "nome",
-            label: "Nome do Funcionário",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "cargo",
-            label: "Cargo / Função",
-            type: "select",
-            options: [
-              { label: "Corretor", value: "corretor" },
-              { label: "Secretária", value: "secretaria" },
-              { label: "Financeiro", value: "financeiro" },
-            ],
-          },
-          { name: "email", label: "E-mail Profissional", type: "text" },
+          { name: "nome", label: "Nome", type: "text" },
+          { name: "cargo", label: "Cargo", type: "select" },
         ],
       },
     ],
-    aiMetadata:
-      "A equipe papel 1 tem acesso restrito por cargo. Corretores só vêem seus próprios imóveis.",
+  },
+  imoveis: {
+    title: "Estoque de Imóveis",
+    entity: "imoveis",
+    columns: [
+      { label: "Título", key: "titulo" },
+      { label: "Preço", key: "preco_venda" },
+    ],
+    sections: [
+      {
+        title: "Anúncio",
+        fields: [
+          { name: "titulo", label: "Título", type: "text", fullWidth: true },
+          { name: "preco_venda", label: "Preço", type: "number" },
+        ],
+      },
+      {
+        title: "Mídia Imersiva",
+        fields: [
+          { name: "tour_360_url", label: "Link Tour 360", type: "text" },
+        ],
+      },
+    ],
   },
 
-  // 6. FINANCEIRO - GRUPOS DE CAIXA (PLANO DE CONTAS)
+  // --- FINANCEIRO ---
   "grupos-caixa": {
-    title: "Plano de Contas (Grupos)",
+    title: "Plano de Contas",
     entity: "configuracoes/grupos-caixa",
+    columns: [
+      { label: "Descrição", key: "descricao" },
+      { label: "Tipo", key: "tipo" },
+    ],
     sections: [
       {
-        title: "Estrutura Contábil",
+        title: "Grupo Contábil",
         fields: [
-          {
-            name: "descricao",
-            label: "Nome do Grupo (Ex: Aluguéis, Taxas)",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "tipo",
-            label: "Natureza",
-            type: "select",
-            options: [
-              { label: "Crédito (Entrada)", value: "c" },
-              { label: "Débito (Saída)", value: "d" },
-            ],
-          },
-          { name: "codigo", label: "Código Contábil", type: "text" },
+          { name: "descricao", label: "Nome", type: "text" },
+          { name: "tipo", label: "C/D", type: "select" },
         ],
       },
     ],
     aiMetadata:
-      "Grupos de caixa organizam o fluxo de faturamento. Essencial para o relatório de DRE.",
+      "Grupos organizam o faturamento. O Agente MCP usa isso para gerar o DRE.",
   },
-
-  // 7. CONFIGURAÇÕES - UNIDADES
-  unidades: {
-    title: "Unidades / Filiais",
-    entity: "configuracoes/unidades",
-    sections: [
-      {
-        title: "Dados da Unidade",
-        fields: [
-          {
-            name: "nome",
-            label: "Nome da Filial",
-            type: "text",
-            fullWidth: true,
-          },
-          { name: "cnpj", label: "CNPJ da Unidade", type: "text" },
-          { name: "cidade", label: "Cidade de Atuação", type: "text" },
-        ],
-      },
-    ],
-  },
-  // --- CONTINUAÇÃO DO MAPA_SISMOB ---
-
-  // 8. FINANCEIRO - CONTAS BANCÁRIAS
   "contas-bancarias": {
     title: "Contas Bancárias",
     entity: "configuracoes/contas-bancarias",
@@ -353,162 +155,55 @@ export const MAPA_SISMOB = {
     ],
     sections: [
       {
-        title: "Dados da Conta",
-        fields: [
-          {
-            name: "apelido",
-            label: "Apelido da Conta (Ex: Itaú Aluguéis)",
-            type: "text",
-            fullWidth: true,
-          },
-          { name: "banco_id", label: "Banco", type: "select" }, // IA buscará na tabela global de bancos
-          { name: "agencia", label: "Agência", type: "text" },
-          { name: "conta", label: "Número da Conta", type: "text" },
-          { name: "digito", label: "Dígito", type: "text" },
-        ],
+        title: "Conta",
+        fields: [{ name: "apelido", label: "Apelido", type: "text" }],
       },
     ],
-    aiMetadata:
-      "Contas bancárias são vinculadas aos títulos para emissão de boletos e repasse a proprietários.",
   },
 
-  // 9. FINANCEIRO - TÍTULOS (A PAGAR / RECEBER)
-  titulos: {
-    title: "Gestão de Títulos (Financeiro)",
-    entity: "financeiro/titulos",
+  // --- CONFIGURAÇÕES ---
+  unidades: {
+    title: "Unidades / Filiais",
+    entity: "configuracoes/unidades",
     columns: [
-      { label: "Vencimento", key: "data_vencimento" },
-      { label: "Valor", key: "valor_total" },
-      { label: "Status", key: "situacao" },
+      { label: "Nome", key: "nome" },
+      { label: "Cidade", key: "cidade" },
     ],
     sections: [
       {
-        title: "Informações do Lançamento",
-        fields: [
-          {
-            name: "pessoa_id",
-            label: "Cliente / Fornecedor",
-            type: "select",
-            fullWidth: true,
-          },
-          { name: "valor_total", label: "Valor Total (R$)", type: "number" },
-          {
-            name: "data_vencimento",
-            label: "Data de Vencimento",
-            type: "date",
-          },
-          {
-            name: "tipo_mov",
-            label: "Tipo",
-            type: "select",
-            options: [
-              { label: "Receita (Entrada)", value: "c" },
-              { label: "Despesa (Saída)", value: "d" },
-            ],
-          },
-        ],
-      },
-      {
-        title: "Classificação Contábil",
-        fields: [
-          { name: "grupo_caixa_id", label: "Grupo de Caixa", type: "select" },
-          {
-            name: "conta_bancaria_id",
-            label: "Conta de Destino/Origem",
-            type: "select",
-          },
-        ],
+        title: "Dados Unidade",
+        fields: [{ name: "nome", label: "Nome da Filial", type: "text" }],
       },
     ],
-    aiMetadata:
-      "Títulos alimentam o fluxo de caixa. O Agente MCP pode cobrar clientes inadimplentes automaticamente.",
   },
-
-  // 10. AUDITORIA - LOGS DO SISTEMA (VISÃO SUPER-ADMIN)
-  logs: {
-    title: "Logs de Atividade",
-    entity: "ai/logs",
+  bancos: {
+    title: "Bancos",
+    entity: "configuracoes/bancos",
     columns: [
-      { label: "Data", key: "created_at" },
-      { label: "Usuário", key: "usuario_id" },
-      { label: "Ação", key: "operacao" },
+      { label: "Código", key: "codigo_compe" },
+      { label: "Nome", key: "nome" },
     ],
     sections: [
       {
-        title: "Rastro Digital",
+        title: "Instituição",
         fields: [
-          {
-            name: "descricao",
-            label: "Detalhes da Operação",
-            type: "text",
-            fullWidth: true,
-          },
+          { name: "nome", label: "Nome do Banco", type: "text" },
+          { name: "codigo_compe", label: "Código", type: "text" },
         ],
       },
     ],
   },
-  // 11. CONFIGURAÇÕES - ATRIBUTOS (COMODIDADES)
-  "atributos-itens": {
-    title: "Itens e Comodidades",
-    entity: "configuracoes/atributos",
-    columns: [{ label: "Nome do Item", key: "nome" }],
-    sections: [
-      {
-        title: "Cadastro de Item",
-        fields: [
-          {
-            name: "nome",
-            label: "Ex: Piscina Aquecida, Academia, Laje",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "categoria_id",
-            label: "Categoria (Lazer, Estrutura...)",
-            type: "select",
-          },
-        ],
-      },
-    ],
-    aiMetadata:
-      "Atributos são usados para filtros avançados no portal. Ensine o corretor a marcar todos os itens para melhorar o SEO do imóvel.",
-  },
-
-  // 12. OPERACIONAL - VISTORIAS
-  vistorias: {
-    title: "Vistorias de Imóveis",
-    entity: "operacional/vistorias",
+  imobiliarias: {
+    title: "Fábrica de Clientes",
+    entity: "saas/onboarding",
     columns: [
-      { label: "Imóvel", key: "imovel_id" },
-      { label: "Data", key: "data_vistoria" },
+      { label: "Empresa", key: "nome_conta" },
       { label: "Status", key: "status" },
     ],
     sections: [
       {
-        title: "Dados da Vistoria",
-        fields: [
-          {
-            name: "imovel_id",
-            label: "Selecionar Imóvel",
-            type: "select",
-            fullWidth: true,
-          },
-          {
-            name: "tipo",
-            label: "Entrada ou Saída?",
-            type: "select",
-            options: [
-              { label: "Entrada", value: "e" },
-              { label: "Saída", value: "s" },
-            ],
-          },
-          {
-            name: "observacoes",
-            label: "Notas da Vistoria",
-            type: "text",
-            fullWidth: true,
-          },
-        ],
+        title: "Onboarding",
+        fields: [{ name: "nomeEmpresa", label: "Imobiliária", type: "text" }],
       },
     ],
   },

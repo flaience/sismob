@@ -30,7 +30,10 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="p-20 animate-pulse font-black text-indigo-600 uppercase">
+        <div
+          className="p-20 animate-pulse font-
+        black text-indigo-600 uppercase"
+        >
           Iniciando Motor Industrial...
         </div>
       }
