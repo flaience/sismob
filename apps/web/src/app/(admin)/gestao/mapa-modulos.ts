@@ -207,4 +207,51 @@ export const MAPA_SISMOB: any = {
       },
     ],
   },
+  onboarding: {
+    title: "Nova Imobiliária",
+    entity: "saas/onboarding",
+    sections: [
+      {
+        title: "Faturamento",
+        fields: [
+          {
+            name: "nomeEmpresa",
+            label: "Nome da Empresa",
+            type: "text",
+            required: true,
+          },
+          { name: "slug", label: "Slug/Link", type: "text", required: true },
+          {
+            name: "email_financeiro",
+            label: "E-mail Cobrança",
+            type: "text",
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Responsável",
+        fields: [
+          {
+            name: "nomeDono",
+            label: "Nome do Dono",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "email",
+            label: "E-mail de Login",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "documento",
+            label: "CPF do Dono",
+            type: "text",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
 };

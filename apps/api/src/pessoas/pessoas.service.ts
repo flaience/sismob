@@ -44,30 +44,23 @@ export class PessoasService {
     const table = schema.pessoas as any;
     const { id, ...data } = dto;
 
-    // LIMPEZA INDUSTRIAL: Garante que o ID da imobiliária vai para a coluna certa
+    // MAPEAMENTO INDUSTRIAL: Garante que os nomes batam com o seu schema.ts
     const payload = {
       ...data,
-      tenant_id: tenantId,
-      // Se não vier documento (ex: lead), enviamos '000' para não quebrar o NOT NULL do banco
-      documento: dto.documento || '00000000000',
+      tenant_id: tenantId, // Usa o nome físico tenant_id
+      documento: dto.documento || '000.000.000-00',
       updated_at: new Date(),
     };
 
     try {
       if (id && id !== 'undefined') {
-        console.log(`🏭 [SISMOB] Atualizando Registro: ${id}`);
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        console.log(
-          `🏭 [SISMOB] Criando Novo Registro para Tenant: ${tenantId}`,
-        );
         return await this.db.insert(table).values(payload).returning();
       }
-    } catch (error: any) {
-      console.error('❌ [DB ERROR]:', error.hint || error.message);
-      throw new InternalServerErrorException(
-        `Falha no Banco: ${error.message}`,
-      );
+    } catch (e: any) {
+      console.error('❌ Erro de SQL:', e.message);
+      throw new InternalServerErrorException(e.message);
     }
   }
 
