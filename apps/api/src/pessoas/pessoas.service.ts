@@ -15,16 +15,8 @@ export class PessoasService {
   // apps/api/src/pessoas/pessoas.service.ts
 
   // Procure o método findOne e substitua por este:
+  // 1. BUSCA ÚNICA (Blindada)
   async findOne(id: string, tenantId: string) {
-    // 1. O TIRO DE MISERICÓRDIA NO ERRO:
-    // Se o ID ou o TenantId forem nulos ou a string "undefined", aborta com segurança.
-    if (!id || !tenantId || id === 'undefined' || tenantId === 'undefined') {
-      console.warn(
-        `⚠️ [SISMOB] Tentativa de busca com ID inválido: id=${id}, tenant=${tenantId}`,
-      );
-      return null;
-    }
-
     try {
       const table = schema.pessoas as any;
       const results = await this.db
@@ -35,51 +27,60 @@ export class PessoasService {
 
       return results.length > 0 ? results[0] : null;
     } catch (error: any) {
-      console.error('❌ [SISMOB] Erro no Service findOne:', error.message);
+      console.error('❌ [SISMOB] Erro no findOne:', error.message);
       return null;
     }
   }
   // 3. Salvar (Inclusão e Alteração) - RECEBE 2 ARGUMENTOS
   async save(dto: any, tenantId: string) {
-    // 1. O SEGREDO: Mapeamos o DTO para o Schema físico do Banco
-    // Garantimos que nenhum campo obrigatório vá nulo
-    const payload = {
-      tenant_id: tenantId,
-      unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
-      nome: dto.nome || 'Sem Nome',
-      email: dto.email || 'sem@email.com',
-      // Se for Lead (2) e não tiver documento, colocamos um padrão para o banco aceitar
-      documento: dto.documento || `LEAD-${Date.now()}`,
-      papel: String(dto.papel || '2'),
-      tipo: dto.tipo || 'f',
-      telefone: dto.telefone || null,
-      cargo: dto.cargo || null,
-      updated_at: new Date(),
-    };
+    return await this.db.transaction(async (tx: any) => {
+      try {
+        const { id, endereco, ...dadosPessoa } = dto;
+        const tablePessoas = schema.pessoas as any;
+        const tableEnderecos = schema.enderecos as any;
 
-    try {
-      const table = schema.pessoas as any;
+        const payloadPessoa = {
+          ...dadosPessoa,
+          tenant_id: tenantId,
+          updated_at: new Date(),
+        };
 
-      if (dto.id && dto.id !== 'undefined') {
-        console.log(`🏭 [SISMOB] Atualizando registro: ${dto.id}`);
-        return await this.db
-          .update(table)
-          .set(payload)
-          .where(eq(table.id, dto.id));
-      } else {
-        console.log(
-          `🏭 [SISMOB] Criando novo registro para imobiliária: ${tenantId}`,
-        );
-        const [novo] = await this.db.insert(table).values(payload).returning();
-        return novo;
+        let pessoaId = id;
+
+        // --- PARTE A: PESSOA ---
+        if (id && id !== 'undefined') {
+          await tx
+            .update(tablePessoas)
+            .set(payloadPessoa)
+            .where(eq(tablePessoas.id, id));
+        } else {
+          const [novaPessoa] = await tx
+            .insert(tablePessoas)
+            .values(payloadPessoa)
+            .returning();
+          pessoaId = novaPessoa.id;
+        }
+
+        // --- PARTE B: ENDEREÇO (Detail) ---
+        if (endereco && pessoaId) {
+          // Limpa endereço anterior (Garante integridade 1-para-1)
+          await tx
+            .delete(tableEnderecos)
+            .where(eq(tableEnderecos.pessoa_id, pessoaId));
+
+          // Insere o novo
+          await tx.insert(tableEnderecos).values({
+            ...endereco,
+            pessoa_id: pessoaId, // FK vinculada ao registro acima
+          });
+        }
+
+        return { id: pessoaId, success: true };
+      } catch (e: any) {
+        console.error('❌ [DB ERROR]:', e.message);
+        throw new InternalServerErrorException(e.message);
       }
-    } catch (error: any) {
-      // ESTE LOG VAI APARECER NO SEU PAINEL DO RAILWAY
-      console.error('❌ [ERRO DE BANCO]:', error.message);
-      throw new InternalServerErrorException(
-        `Erro no Postgres: ${error.message}`,
-      );
-    }
+    });
   }
 
   // 4. Identificação por Host
@@ -138,10 +139,10 @@ export class PessoasService {
   }
 
   // 6. Remover
-  async remove(id: string, imobId: string) {
+  async remove(id: string, tenantId: string) {
     const table = schema.pessoas as any;
     return await this.db
       .delete(table)
-      .where(and(eq(table.id, id), eq(table.tenant_id, imobId)));
+      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)));
   }
 }
