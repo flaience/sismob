@@ -1,6 +1,5 @@
 "use client";
-import { useAuth } from "@/context/AuthContext";
-import { useTenant } from "@/context/TenantContext";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 
 export default function AdminLayout({
@@ -8,20 +7,20 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading: authLoading } = useAuth();
-  const { loading: tenantLoading } = useTenant();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Se não montou no navegador, não renderiza para evitar erro de hidratação
+  if (!mounted) return <div className="min-h-screen bg-slate-50" />;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="flex-1 ml-[84px] p-4 md:p-10 h-screen overflow-y-auto">
-        {authLoading || tenantLoading ? (
-          <div className="p-20 text-center animate-pulse font-black text-indigo-600 uppercase">
-            Sincronizando Ecossistema...
-          </div>
-        ) : (
-          <div className="max-w-7xl mx-auto">{children}</div>
-        )}
+      <main className="flex-1 ml-[280px] p-4 md:p-10 transition-all">
+        {children}
       </main>
     </div>
   );

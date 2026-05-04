@@ -3,12 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   });
 
-  // Inicializa o cliente do Supabase de forma moderna (SSR)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -20,18 +17,14 @@ export async function middleware(request: NextRequest) {
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({ name, value, ...options });
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           });
           response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set({ name, value: "", ...options });
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           });
           response.cookies.set({ name, value: "", ...options });
         },
@@ -39,13 +32,17 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Verifica a sessão
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // PROTEÇÃO: Se tentar acessar /admin sem estar logado
-  if (request.nextUrl.pathname.startsWith("/admin") && !session) {
+  // MUDANÇA INDUSTRIAL: Protege /dashboard e /gestao
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith("/dashboard") ||
+    request.nextUrl.pathname.startsWith("/gestao") ||
+    request.nextUrl.pathname.startsWith("/configuracoes");
+
+  if (isProtectedRoute && !session) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -53,5 +50,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // O MATCHER DEVE COBRIR TUDO O QUE É PRIVADO
+  matcher: ["/dashboard/:path*", "/gestao/:path*", "/configuracoes/:path*"],
 };

@@ -1,3 +1,4 @@
+//src/app/(admin)/gestao/[papel]/page.tsx
 "use client";
 import { useParams } from "next/navigation";
 
