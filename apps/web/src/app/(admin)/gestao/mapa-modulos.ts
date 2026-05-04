@@ -83,6 +83,7 @@ export const MAPA_SISMOB: any = {
           { name: "unidade_id", label: "Filial", type: "select" },
         ],
       },
+
       SECAO_ENDERECO,
     ],
     aiMetadata:

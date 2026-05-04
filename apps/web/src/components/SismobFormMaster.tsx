@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
 import SismobButton from "./SismobButton";
@@ -19,11 +19,13 @@ export default function SismobFormMaster({
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>(initialData || {});
-  const [errors, setErrors] = useState<string[]>([]);
+  const [options, setOptions] = useState<any>({});
 
-  // 1. CARGA DE DADOS
   useEffect(() => {
-    if (idEdicao && tenant?.id) {
+    if (!tenant?.id) return;
+
+    // CARREGA DADOS DE EDIÇÃO
+    if (idEdicao) {
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
@@ -32,48 +34,29 @@ export default function SismobFormMaster({
           setFormData(Array.isArray(res.data) ? res.data[0] : res.data),
         );
     }
-  }, [idEdicao, tenant, endpoint]);
 
-  // 2. MOTOR DE CONSISTÊNCIA (VALIDAÇÃO)
-  const validate = () => {
-    const missing: string[] = [];
+    // AUTO-LOOKUP DE FILIAIS E OUTROS SELECTS
     sections.forEach((section: any) => {
-      section.fields.forEach((field: any) => {
-        const value = field.name.includes(".")
-          ? formData[field.name.split(".")[0]]?.[field.name.split(".")[1]]
-          : formData[field.name];
-
-        if (field.required && (!value || value === "")) {
-          missing.push(field.name);
+      section.fields.forEach(async (field: any) => {
+        if (field.type === "select" && !field.options) {
+          try {
+            // Se o campo for unidade_id, busca em /configuracoes/unidades
+            const slug =
+              field.name === "unidade_id"
+                ? "unidades"
+                : field.name.replace("_id", "s");
+            const res = await api.get(`/configuracoes/${slug}`, {
+              params: { imobiliariaId: tenant.id },
+            });
+            setOptions((prev: any) => ({ ...prev, [field.name]: res.data }));
+          } catch (e) {
+            console.warn(`Falha ao carregar ${field.name}`);
+          }
         }
       });
     });
-    setErrors(missing);
-    return missing.length === 0;
-  };
+  }, [tenant?.id, idEdicao]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) {
-      alert("⚠️ Existem campos obrigatórios não preenchidos!");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // O FRONTEND envia 'imobiliariaId' para o Backend
-      await api.post(endpoint, { ...formData, imobiliariaId: tenant?.id });
-      router.back();
-    } catch (err: any) {
-      alert(
-        `❌ Erro no Servidor: ${err.response?.data?.message || "Falha na gravação"}`,
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. HANDLER DE CAMPOS (Suporta endereco.logradouro)
   const updateField = (name: string, value: any) => {
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
@@ -86,12 +69,25 @@ export default function SismobFormMaster({
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.post(endpoint, { ...formData, imobiliariaId: tenant?.id });
+      router.back();
+    } catch (err: any) {
+      alert(`Erro: ${err.response?.data?.message || "Falha na gravação"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-10 space-y-10 animate-in fade-in duration-500">
       <header className="flex items-center gap-6 bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
         <button
           onClick={() => router.back()}
-          className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-200 transition-all"
+          className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-200 transition-all text-slate-600"
         >
           <ArrowLeft />
         </button>
@@ -110,23 +106,42 @@ export default function SismobFormMaster({
               {section.title}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {section.fields.map((field: any) => {
-                const isInvalid = errors.includes(field.name);
-                return (
-                  <div
-                    key={field.name}
-                    className={
-                      field.fullWidth ? "md:col-span-2 lg:col-span-3" : ""
-                    }
-                  >
-                    <label
-                      className={`text-[10px] font-black uppercase tracking-widest ml-6 mb-2 block ${isInvalid ? "text-red-500" : "text-slate-400"}`}
+              {section.fields.map((field: any) => (
+                <div
+                  key={field.name}
+                  className={
+                    field.fullWidth ? "md:col-span-2 lg:col-span-3" : ""
+                  }
+                >
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-6 mb-2 block">
+                    {field.label}
+                  </label>
+
+                  {field.type === "select" ? (
+                    <select
+                      className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold outline-none focus:ring-2 ring-indigo-600"
+                      value={
+                        field.name.includes(".")
+                          ? formData[field.name.split(".")[0]]?.[
+                              field.name.split(".")[1]
+                            ]
+                          : formData[field.name] || ""
+                      }
+                      onChange={(e) => updateField(field.name, e.target.value)}
                     >
-                      {field.label} {field.required && "*"}
-                    </label>
+                      <option value="">Selecione...</option>
+                      {(field.options || options[field.name] || []).map(
+                        (o: any) => (
+                          <option key={o.id || o.value} value={o.id || o.value}>
+                            {o.nome || o.label || o.descricao}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  ) : (
                     <input
                       type={field.type}
-                      className={`w-full p-5 rounded-3xl border-none font-bold outline-none transition-all ${isInvalid ? "bg-red-50 ring-2 ring-red-500" : "bg-slate-50 focus:ring-2 ring-indigo-600"}`}
+                      className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold outline-none focus:ring-2 ring-indigo-600"
                       value={
                         field.name.includes(".")
                           ? formData[field.name.split(".")[0]]?.[
@@ -136,9 +151,9 @@ export default function SismobFormMaster({
                       }
                       onChange={(e) => updateField(field.name, e.target.value)}
                     />
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         ))}

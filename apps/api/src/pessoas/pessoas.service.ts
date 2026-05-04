@@ -37,19 +37,49 @@ export class PessoasService {
       try {
         const { id, endereco, ...dados } = dto;
         const tablePessoas = schema.pessoas as any;
-        const tableEnderecos = schema.enderecos as any;
 
-        // HIGIENIZAÇÃO INDUSTRIAL: Default para opcionais NOT NULL
+        // 1. RESOLVE UNIDADE_ID (Evita erro de Foreign Key)
+        let unidadeIdFinal = dados.unidade_id ? Number(dados.unidade_id) : null;
+        if (!unidadeIdFinal) {
+          const matriz = await tx
+            .select()
+            .from(schema.unidades as any)
+            .where(
+              and(
+                eq(schema.unidades.tenant_id, tenantId),
+                eq(schema.unidades.is_matriz, true),
+              ),
+            )
+            .limit(1);
+          unidadeIdFinal = matriz[0]?.id || null;
+        }
+
+        if (!unidadeIdFinal)
+          throw new Error(
+            'Unidade Matriz não encontrada. Cadastre uma unidade primeiro.',
+          );
+
+        // 2. HIGIENIZAÇÃO DE ENUMS (Mata o erro de Enum "1")
+        // Garante que 'tipo' seja apenas 'f' ou 'j'. Se vier '1' ou vazio, assume 'f'.
+        const tipoLimpo =
+          dados.tipo === 'f' || dados.tipo === 'j' ? dados.tipo : 'f';
+        // Garante que 'papel' seja uma string válida do Enum (1 a 7)
+        const papelLimpo = String(dados.papel || '2');
+
         const payloadPessoa = {
-          ...dados,
           tenant_id: tenantId,
-          documento: dados.documento || `LEAD-${Date.now()}`, // Default se opcional
-          tipo: dados.tipo || 'f',
+          unidade_id: unidadeIdFinal,
+          nome: dados.nome,
+          email: dados.email,
+          documento: dados.documento || `DOC-${Date.now()}`,
+          papel: papelLimpo,
+          tipo: tipoLimpo,
+          telefone: dados.telefone || null,
+          cargo: dados.cargo || null,
           updated_at: new Date(),
         };
 
         let pessoaId = id;
-
         if (id && id !== 'undefined') {
           await tx
             .update(tablePessoas)
@@ -63,16 +93,15 @@ export class PessoasService {
           pessoaId = nova.id;
         }
 
-        // GRAVAÇÃO DE ENDEREÇO (Opcional, com Defaults)
+        // 3. ENDEREÇO (Detail)
         if (endereco && (endereco.cep || endereco.logradouro)) {
           await tx
-            .delete(tableEnderecos)
-            .where(eq(tableEnderecos.pessoa_id, pessoaId));
-          await tx.insert(tableEnderecos).values({
+            .delete(schema.enderecos as any)
+            .where(eq(schema.enderecos.pessoa_id, pessoaId));
+          await tx.insert(schema.enderecos as any).values({
             ...endereco,
             pessoa_id: pessoaId,
-            // Garante campos obrigatórios do banco se o endereço foi enviado
-            numero: endereco.numero || 'S/N',
+            numero: endereco.numero || 'SN',
             bairro: endereco.bairro || 'N/A',
             cidade: endereco.cidade || 'N/A',
             estado: endereco.estado || '??',
