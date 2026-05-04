@@ -41,26 +41,44 @@ export class PessoasService {
   }
   // 3. Salvar (Inclusão e Alteração) - RECEBE 2 ARGUMENTOS
   async save(dto: any, tenantId: string) {
-    const table = schema.pessoas as any;
-    const { id, ...data } = dto;
-
-    // MAPEAMENTO INDUSTRIAL: Garante que os nomes batam com o seu schema.ts
+    // 1. O SEGREDO: Mapeamos o DTO para o Schema físico do Banco
+    // Garantimos que nenhum campo obrigatório vá nulo
     const payload = {
-      ...data,
-      tenant_id: tenantId, // Usa o nome físico tenant_id
-      documento: dto.documento || '000.000.000-00',
+      tenant_id: tenantId,
+      unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
+      nome: dto.nome || 'Sem Nome',
+      email: dto.email || 'sem@email.com',
+      // Se for Lead (2) e não tiver documento, colocamos um padrão para o banco aceitar
+      documento: dto.documento || `LEAD-${Date.now()}`,
+      papel: String(dto.papel || '2'),
+      tipo: dto.tipo || 'f',
+      telefone: dto.telefone || null,
+      cargo: dto.cargo || null,
       updated_at: new Date(),
     };
 
     try {
-      if (id && id !== 'undefined') {
-        return await this.db.update(table).set(payload).where(eq(table.id, id));
+      const table = schema.pessoas as any;
+
+      if (dto.id && dto.id !== 'undefined') {
+        console.log(`🏭 [SISMOB] Atualizando registro: ${dto.id}`);
+        return await this.db
+          .update(table)
+          .set(payload)
+          .where(eq(table.id, dto.id));
       } else {
-        return await this.db.insert(table).values(payload).returning();
+        console.log(
+          `🏭 [SISMOB] Criando novo registro para imobiliária: ${tenantId}`,
+        );
+        const [novo] = await this.db.insert(table).values(payload).returning();
+        return novo;
       }
-    } catch (e: any) {
-      console.error('❌ Erro de SQL:', e.message);
-      throw new InternalServerErrorException(e.message);
+    } catch (error: any) {
+      // ESTE LOG VAI APARECER NO SEU PAINEL DO RAILWAY
+      console.error('❌ [ERRO DE BANCO]:', error.message);
+      throw new InternalServerErrorException(
+        `Erro no Postgres: ${error.message}`,
+      );
     }
   }
 
