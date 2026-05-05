@@ -224,6 +224,8 @@ export const MAPA_SISMOB: any = {
 
   // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
 
+  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
+
   imoveis: {
     title: "Estoque de Imóveis",
     entity: "imoveis",
