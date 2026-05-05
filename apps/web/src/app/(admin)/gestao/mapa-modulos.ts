@@ -221,30 +221,161 @@ export const MAPA_SISMOB: any = {
     aiMetadata:
       "A equipe tem acesso ao sistema. O cargo define quais botões e menus o colaborador poderá ver.",
   },
+
   imoveis: {
     title: "Estoque de Imóveis",
     entity: "imoveis",
+    // O SEGREDO PARA APARECER NO GRID:
     columns: [
       { label: "Título", key: "titulo" },
-      { label: "Preço", key: "preco_venda" },
+      { label: "Tipo", key: "tipo" },
+      { label: "Preço Venda", key: "preco_venda" },
+      { label: "Status", key: "status" },
     ],
     sections: [
       {
-        title: "Anúncio",
+        title: "Informações Básicas",
         fields: [
-          { name: "titulo", label: "Título", type: "text", fullWidth: true },
-          { name: "preco_venda", label: "Preço", type: "number" },
+          {
+            name: "titulo",
+            label: "Título do Anúncio",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          {
+            name: "descricao",
+            label: "Descrição Detalhada",
+            type: "text",
+            fullWidth: true,
+          },
+          {
+            name: "tipo",
+            label: "Tipo do Imóvel",
+            type: "select",
+            options: [
+              { label: "Casa", value: "casa" },
+              { label: "Apartamento", value: "apto" },
+              { label: "Terreno", value: "terreno" },
+              { label: "Chácara", value: "chacara" },
+            ],
+          },
+          {
+            name: "status",
+            label: "Status",
+            type: "select",
+            options: [
+              { label: "Disponível", value: "disponivel" },
+              { label: "Vendido", value: "vendido" },
+              { label: "Locado", value: "locado" },
+            ],
+          },
+          {
+            name: "proprietario_id",
+            label: "Proprietário",
+            type: "select",
+            required: true,
+          }, // Auto-lookup em pessoas papel 3
+          {
+            name: "unidade_id",
+            label: "Unidade / Filial",
+            type: "select",
+            required: true,
+          },
         ],
       },
       {
-        title: "Mídia Imersiva",
+        title: "Valores e Metragem",
         fields: [
-          { name: "tour_360_url", label: "Link Tour 360", type: "text" },
+          { name: "preco_venda", label: "Valor de Venda (R$)", type: "number" },
+          {
+            name: "preco_aluguel",
+            label: "Valor de Aluguel (R$)",
+            type: "number",
+          },
+          {
+            name: "area_privativa",
+            label: "Área Privativa (m²)",
+            type: "number",
+          },
+        ],
+      },
+      {
+        title: "Localização e Mídia",
+        fields: [
+          {
+            name: "endereco_original",
+            label: "Endereço Completo",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          {
+            name: "video_url",
+            label: "Link do Vídeo (YouTube/Drone)",
+            type: "text",
+            fullWidth: true,
+          },
+          { name: "lat", label: "Latitude (Maps)", type: "text" },
+          { name: "lng", label: "Longitude (Maps)", type: "text" },
+        ],
+      },
+    ],
+    aiMetadata:
+      "Imóveis com Tour 360 e endereço completo convertem 40% mais. O Agente deve sugerir a inclusão de fotos caso faltem.",
+  },
+
+  // --- ATRIBUTOS (O QUE ESTAVA "EM CONSTRUÇÃO") ---
+  // Ajustado o nome para bater com o link da Sidebar: /gestao/atributos-itens
+  "atributos-itens": {
+    title: "Itens e Comodidades",
+    entity: "configuracoes/atributos",
+    columns: [{ label: "Nome do Item", key: "nome" }],
+    sections: [
+      {
+        title: "Geral",
+        fields: [
+          {
+            name: "nome",
+            label: "Ex: Piscina, Churrasqueira, Laje",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
         ],
       },
     ],
   },
 
+  // --- BANCOS (CORREÇÃO DE COLUNAS) ---
+  bancos: {
+    title: "Cadastro de Bancos",
+    entity: "configuracoes/bancos",
+    columns: [
+      { label: "Cód. FEBRABAN", key: "codigo_compe" },
+      { label: "Nome da Instituição", key: "nome" },
+    ],
+    sections: [
+      {
+        title: "Dados Bancários",
+        fields: [
+          {
+            name: "codigo_compe",
+            label: "Código do Banco",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "nome",
+            label: "Nome do Banco",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+        ],
+      },
+    ],
+  },
   // --- FINANCEIRO ---
   "grupos-caixa": {
     title: "Plano de Contas",
@@ -295,23 +426,7 @@ export const MAPA_SISMOB: any = {
       },
     ],
   },
-  bancos: {
-    title: "Bancos",
-    entity: "configuracoes/bancos",
-    columns: [
-      { label: "Código", key: "codigo_compe" },
-      { label: "Nome", key: "nome" },
-    ],
-    sections: [
-      {
-        title: "Instituição",
-        fields: [
-          { name: "nome", label: "Nome do Banco", type: "text" },
-          { name: "codigo_compe", label: "Código", type: "text" },
-        ],
-      },
-    ],
-  },
+
   imobiliarias: {
     title: "Fábrica de Clientes",
     entity: "saas/onboarding",

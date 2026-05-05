@@ -21,22 +21,39 @@ export class ImoveisService {
   // 1. LISTAGEM COMPLETA
   async findAll(tenantId: string) {
     try {
-      const queryApi = this.db.query as any;
-      return await queryApi.imoveis.findMany({
-        where: eq((schema.imoveis as any).tenant_id, tenantId),
-        with: {
-          midias: true,
-          instrucoesChegada: true,
-          atributos: { with: { atributo: true } },
-        },
-        orderBy: [desc((schema.imoveis as any).id)],
-      });
-    } catch (e) {
+      console.log(`📡 [SISMOB] Buscando imóveis para o Tenant: ${tenantId}`);
+
+      const table = schema.imoveis as any;
+
+      // 1. BUSCA INDUSTRIAL: Usamos o select direto para garantir que o Grid receba os dados
+      // mesmo que as relações (fotos/atributos) ainda não estejam preenchidas.
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.tenant_id, tenantId))
+        .orderBy(desc(table.id));
+
+      console.log(
+        `✅ [SISMOB] Sucesso: ${results.length} imóveis encontrados.`,
+      );
+      return results;
+    } catch (e: any) {
       console.error('❌ Erro no findAll Imoveis:', e.message);
       return [];
     }
   }
 
+  async save(dto: any, tenantId: string) {
+    const table = schema.imoveis as any;
+    const { id, created_at, ...dados } = dto;
+    const payload = { ...dados, tenant_id: tenantId };
+
+    if (id) {
+      return await this.db.update(table).set(payload).where(eq(table.id, id));
+    } else {
+      return await this.db.insert(table).values(payload).returning();
+    }
+  }
   // 2. BUSCA UM ÚNICO
   async findOne(id: number, tenantId: string) {
     const queryApi = this.db.query as any;

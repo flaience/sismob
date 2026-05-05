@@ -63,17 +63,18 @@ export class PessoasService {
   async save(dto: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        const { id, endereco, ...dados } = dto;
+        // 1. LIMPEZA INDUSTRIAL (O TIRO DE MISERICÓRDIA NO ERRO)
+        // Extraímos id, endereco e as datas para que elas NÃO fiquem dentro de 'dadosRestantes'
+        const { id, endereco, created_at, updated_at, ...dadosRestantes } = dto;
 
-        // 1. MAPEAMENTO DE TABELAS (CASTING DE ESCUDO)
-        // Isso mata os erros de 'No overload matches' em todo o método
         const tablePessoas = schema.pessoas as any;
         const tableEnderecos = schema.enderecos as any;
         const tableUnidades = schema.unidades as any;
 
-        // 2. RESOLVE UNIDADE_ID (Garante a Foreign Key)
-        let unidadeIdFinal = dados.unidade_id ? Number(dados.unidade_id) : null;
-
+        // 2. RESOLVE UNIDADE_ID
+        let unidadeIdFinal = dadosRestantes.unidade_id
+          ? Number(dadosRestantes.unidade_id)
+          : null;
         if (!unidadeIdFinal) {
           const matriz = await tx
             .select()
@@ -88,27 +89,28 @@ export class PessoasService {
           unidadeIdFinal = matriz[0]?.id || null;
         }
 
-        if (!unidadeIdFinal) throw new Error('Unidade Matriz não encontrada.');
-
-        // 3. HIGIENIZAÇÃO DE DADOS
+        // 3. MONTAGEM DO PAYLOAD LIMPO
         const payloadPessoa = {
-          ...dados,
+          ...dadosRestantes, // <--- Aqui só tem campos de texto/número, sem datas do banco
           tenant_id: tenantId,
           unidade_id: unidadeIdFinal,
-          documento: dados.documento || `LEAD-${Date.now()}`,
-          tipo: dados.tipo === 'f' || dados.tipo === 'j' ? dados.tipo : 'f',
-          updated_at: new Date(),
+          tipo:
+            dadosRestantes.tipo === 'f' || dadosRestantes.tipo === 'j'
+              ? dadosRestantes.tipo
+              : 'f',
+          updated_at: new Date(), // Geramos uma nova data real aqui
         };
 
         let pessoaId = id;
 
-        // 4. SALVA OU ATUALIZA PESSOA (Master)
         if (id && id !== 'undefined') {
+          // UPDATE
           await tx
             .update(tablePessoas)
             .set(payloadPessoa)
             .where(eq(tablePessoas.id, id));
         } else {
+          // INSERT
           const [nova] = await tx
             .insert(tablePessoas)
             .values(payloadPessoa)
@@ -116,15 +118,11 @@ export class PessoasService {
           pessoaId = nova.id;
         }
 
-        // 5. SALVA OU ATUALIZA ENDEREÇO (Detail)
-        // O erro de "schema.enderecos.pessoa_id" morre aqui!
+        // 4. ENDEREÇO
         if (endereco && (endereco.cep || endereco.logradouro)) {
-          // Limpa rastro anterior
           await tx
             .delete(tableEnderecos)
             .where(eq(tableEnderecos.pessoa_id, pessoaId));
-
-          // Insere novo rastro vinculado à pessoaId
           await tx.insert(tableEnderecos).values({
             ...endereco,
             pessoa_id: pessoaId,
@@ -137,7 +135,7 @@ export class PessoasService {
 
         return { id: pessoaId, success: true };
       } catch (e: any) {
-        console.error('❌ [DB FATAL ERROR]:', e.message);
+        console.error('❌ [SISMOB] Erro ao persistir:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
