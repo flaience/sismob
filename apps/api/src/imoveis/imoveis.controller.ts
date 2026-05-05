@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Request,
+  Delete,
   Inject,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -42,5 +43,12 @@ export class ImoveisController {
   async save(@Body() data: any, @UploadedFiles() files: any) {
     // Pegamos o tenantId (imobiliária) enviado pelo form
     return this.imoveisService.upsert(data, files, data.imobiliariaId);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
+    // Para pessoas: id é UUID (string). Para imoveis: id é SERIAL (Number).
+    const parsedId = isNaN(Number(id)) ? id : Number(id);
+    return this.imoveisService.remove(parsedId as any, tid);
   }
 }

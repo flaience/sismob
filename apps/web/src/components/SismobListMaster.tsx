@@ -44,12 +44,13 @@ export default function SismobListMaster({ config, papelUrl }: any) {
   const handleDelete = async (id: string) => {
     if (!confirm("⚠️ Confirmar exclusão?")) return;
     try {
-      await api.delete(`/${endpoint}/${id}`, {
+      // Usamos config.entity (ex: "pessoas" ou "imoveis")
+      await api.delete(`/${config.entity}/${id}`, {
         params: { imobiliariaId: tenant?.id },
       });
       loadData();
-    } catch (error) {
-      alert("Erro ao excluir.");
+    } catch (e) {
+      alert("Erro ao excluir. Verifique se o registro possui vínculos.");
     }
   };
 

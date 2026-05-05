@@ -81,10 +81,9 @@ export class PessoasController {
 
   // Remover
   @Delete(':id')
-  async remove(
-    @Param('id') id: string,
-    @Query('imobiliariaId') imobId: string,
-  ) {
-    return this.pessoasService.remove(id, imobId);
+  async remove(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
+    // Para pessoas: id é UUID (string). Para imoveis: id é SERIAL (Number).
+    const parsedId = isNaN(Number(id)) ? id : Number(id);
+    return this.pessoasService.remove(parsedId as any, tid);
   }
 }
