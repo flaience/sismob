@@ -449,6 +449,60 @@ export const MAPA_SISMOB: any = {
     aiMetadata:
       "Grupos organizam o faturamento. O Agente MCP usa isso para gerar o DRE.",
   },
+  "livro-caixa": {
+    title: "Movimentação de Caixa (Livro Razão)",
+    entity: "financeiro/caixa/manual",
+    columns: [
+      { label: "Data", key: "created_at" },
+      { label: "Histórico", key: "historico" },
+      { label: "Valor", key: "valor" },
+      { label: "Saldo Atual", key: "saldo_atual" },
+      { label: "Operador", key: "usuario_id" }, // Mostra o UUID ou nome do rastro
+    ],
+    sections: [
+      {
+        title: "Lançamento Avulso (Entrada/Saída Direta)",
+        fields: [
+          {
+            name: "historico",
+            label: "Descrição do Lançamento",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          {
+            name: "valor",
+            label: "Valor da Operação (R$)",
+            type: "number",
+            required: true,
+          },
+          {
+            name: "tipo",
+            label: "Operação",
+            type: "select",
+            required: true,
+            options: [
+              { label: "Entrada (+)", value: "c" },
+              { label: "Saída (-)", value: "d" },
+            ],
+          },
+          {
+            name: "grupo_caixa_id",
+            label: "Grupo de Caixa",
+            type: "select",
+            required: true,
+          },
+          {
+            name: "conta_bancaria_id",
+            label: "Conta / Banco (Vazio = Dinheiro)",
+            type: "select",
+          },
+        ],
+      },
+    ],
+    aiMetadata:
+      "O livro caixa registra o fluxo real. Cada lançamento recalcula o saldo da conta informada. O campo Operador garante a auditoria.",
+  },
   "contas-bancarias": {
     title: "Contas Bancárias",
     entity: "configuracoes/contas-bancarias",

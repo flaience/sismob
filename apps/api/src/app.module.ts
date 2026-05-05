@@ -8,6 +8,7 @@ import { ImoveisModule } from './imoveis/imoveis.module';
 import { FilesModule } from './files/files.module';
 import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
 import { SaasModule } from './saas/saas.module';
+import { FinanceiroModule } from './financeiro/financeiro.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SaasModule } from './saas/saas.module';
     SaasModule,
     FilesModule,
     ConfiguracoesModule,
+    FinanceiroModule,
   ],
   controllers: [AppController], // <--- REGISTRADO AQUI PARA O 'PULSO' FUNCIONAR
 })

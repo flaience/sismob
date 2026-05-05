@@ -243,36 +243,40 @@ export const bancos = pgTable("bancos", {
   nome: varchar("nome", { length: 100 }).notNull(),
 });
 
+// ==========================================
+// 6. FINANCEIRO E CAIXA (SISTEMA SIMPLIFICADO)
+// ==========================================
+
 export const titulos = pgTable("titulos", {
   id: serial("id").primaryKey(),
   tenant_id: uuid("tenant_id")
     .references(() => tenants.id)
     .notNull(),
   pessoa_id: uuid("pessoa_id").references(() => pessoas.id),
+
+  // Banco onde o dinheiro entra/sai (Se NULL, é Dinheiro vivo)
   conta_bancaria_id: integer("conta_bancaria_id").references(
     () => contasBancarias.id,
   ),
+  usuario_id: uuid("usuario_id").references(() => pessoas.id),
   valor_nominal: decimal("valor_nominal", {
     precision: 12,
     scale: 2,
   }).notNull(),
-  tipomov: tipoMovimentoFinanceiro("tipo").notNull(),
+  tipomov: tipoMovimentoFinanceiro("tipo").notNull(), // 'c' entrada, 'd' saída
+
   juros: decimal("juros", { precision: 12, scale: 2 }).default("0"),
   valor_total: decimal("valor_total", { precision: 12, scale: 2 }).notNull(),
-  saldo: decimal("saldo", { precision: 12, scale: 2 }).notNull(),
+
+  // Datas de Controle
   data_emissao: timestamp("data_emissao").defaultNow(),
   data_vencimento: timestamp("data_vencimento").notNull(),
-  situacao: situacaoTitulo("situacao").default("aberto"),
-});
+  data_pagamento: timestamp("data_pagamento"), // Preenchido no momento da baixa
 
-export const pagamentos = pgTable("pagamentos", {
-  id: serial("id").primaryKey(),
-  titulo_id: integer("titulo_id").references(() => titulos.id, {
-    onDelete: "cascade",
-  }),
-  grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id),
-  valor_pago: decimal("valor_pago", { precision: 12, scale: 2 }).notNull(),
-  data_pagamento: timestamp("data_pagamento").defaultNow(),
+  // Forma: dinheiro, pix, cartao, deposito, ted
+  forma_pagamento: varchar("forma_pagamento", { length: 50 }),
+
+  situacao: situacaoTitulo("situacao").default("aberto"), // aberto, fechado
 });
 
 export const caixa = pgTable("caixa", {
@@ -281,9 +285,19 @@ export const caixa = pgTable("caixa", {
     .references(() => tenants.id)
     .notNull(),
   grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id),
-  pagamento_id: integer("pagamento_id").references(() => pagamentos.id),
+  titulo_id: integer("titulo_id").references(() => titulos.id, {
+    onDelete: "cascade",
+  }),
+  conta_bancaria_id: integer("conta_bancaria_id").references(
+    () => contasBancarias.id,
+  ),
+  usuario_id: uuid("usuario_id").references(() => pessoas.id),
   tipo: tipoMovimentoFinanceiro("tipo").notNull(),
   valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+
+  // O NOVO CAMPO: Histórico Industrial
+  historico: text("historico"),
+
   saldo_anterior: decimal("saldo_anterior", { precision: 12, scale: 2 }),
   saldo_atual: decimal("saldo_atual", { precision: 12, scale: 2 }),
   created_at: timestamp("created_at").defaultNow(),
@@ -413,9 +427,12 @@ export const negociacoesRelations = relations(negociacoes, ({ one, many }) => ({
   }),
 }));
 
-// RELAÇÕES FINANCEIRAS
-export const titulosRelations = relations(titulos, ({ one, many }) => ({
-  pagamentos: many(pagamentos),
+// ==========================================
+// 10. RELAÇÕES (FINANCEIRO SIMPLIFICADO)
+// ==========================================
+
+// RELAÇÕES DO TÍTULO
+export const titulosRelations = relations(titulos, ({ one }) => ({
   tenant: one(tenants, {
     fields: [titulos.tenant_id],
     references: [tenants.id],
@@ -424,15 +441,33 @@ export const titulosRelations = relations(titulos, ({ one, many }) => ({
     fields: [titulos.pessoa_id],
     references: [pessoas.id],
   }),
+  contaBancaria: one(contasBancarias, {
+    fields: [titulos.conta_bancaria_id],
+    references: [contasBancarias.id],
+  }),
+  // Conecta o título ao lançamento que ele gerou no caixa
+  lancamentoCaixa: one(caixa, {
+    fields: [titulos.id],
+    references: [caixa.titulo_id],
+  }),
 }));
 
-export const pagamentosRelations = relations(pagamentos, ({ one }) => ({
+// RELAÇÕES DO CAIXA (LIVRO RAZÃO)
+export const caixaRelations = relations(caixa, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [caixa.tenant_id],
+    references: [tenants.id],
+  }),
   titulo: one(titulos, {
-    fields: [pagamentos.titulo_id],
+    fields: [caixa.titulo_id],
     references: [titulos.id],
   }),
-  caixa: one(caixa, {
-    fields: [pagamentos.id],
-    references: [caixa.pagamento_id],
+  grupo: one(grupoCaixa, {
+    fields: [caixa.grupo_caixa_id],
+    references: [grupoCaixa.id],
+  }),
+  contaBancaria: one(contasBancarias, {
+    fields: [caixa.conta_bancaria_id],
+    references: [contasBancarias.id],
   }),
 }));
