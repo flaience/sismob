@@ -222,52 +222,42 @@ export const MAPA_SISMOB: any = {
       "A equipe tem acesso ao sistema. O cargo define quais botões e menus o colaborador poderá ver.",
   },
 
+  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
+
   imoveis: {
     title: "Estoque de Imóveis",
     entity: "imoveis",
-    // O SEGREDO PARA APARECER NO GRID:
     columns: [
       { label: "Título", key: "titulo" },
       { label: "Tipo", key: "tipo" },
-      { label: "Preço Venda", key: "preco_venda" },
-      { label: "Status", key: "status" },
+      { label: "Preço", key: "preco_venda" },
     ],
     sections: [
       {
-        title: "Informações Básicas",
+        title: "Dados do Anúncio",
         fields: [
           {
             name: "titulo",
-            label: "Título do Anúncio",
+            label: "Título do Imóvel",
             type: "text",
             required: true,
             fullWidth: true,
           },
           {
             name: "descricao",
-            label: "Descrição Detalhada",
+            label: "Descrição",
             type: "text",
             fullWidth: true,
           },
           {
             name: "tipo",
-            label: "Tipo do Imóvel",
+            label: "Tipo",
             type: "select",
+            required: true,
             options: [
               { label: "Casa", value: "casa" },
               { label: "Apartamento", value: "apto" },
               { label: "Terreno", value: "terreno" },
-              { label: "Chácara", value: "chacara" },
-            ],
-          },
-          {
-            name: "status",
-            label: "Status",
-            type: "select",
-            options: [
-              { label: "Disponível", value: "disponivel" },
-              { label: "Vendido", value: "vendido" },
-              { label: "Locado", value: "locado" },
             ],
           },
           {
@@ -275,33 +265,34 @@ export const MAPA_SISMOB: any = {
             label: "Proprietário",
             type: "select",
             required: true,
-          }, // Auto-lookup em pessoas papel 3
+          },
           {
             name: "unidade_id",
-            label: "Unidade / Filial",
+            label: "Filial Responsável",
             type: "select",
             required: true,
           },
         ],
       },
       {
-        title: "Valores e Metragem",
+        title: "Dimensões e Valores",
         fields: [
-          { name: "preco_venda", label: "Valor de Venda (R$)", type: "number" },
+          {
+            name: "preco_venda",
+            label: "Valor de Venda (R$)",
+            type: "number",
+            required: true,
+          },
           {
             name: "preco_aluguel",
             label: "Valor de Aluguel (R$)",
             type: "number",
           },
-          {
-            name: "area_privativa",
-            label: "Área Privativa (m²)",
-            type: "number",
-          },
+          { name: "area_privativa", label: "M² Privativos", type: "number" },
         ],
       },
       {
-        title: "Localização e Mídia",
+        title: "Mídia e Localização",
         fields: [
           {
             name: "endereco_original",
@@ -311,71 +302,22 @@ export const MAPA_SISMOB: any = {
             fullWidth: true,
           },
           {
-            name: "video_url",
-            label: "Link do Vídeo (YouTube/Drone)",
+            name: "tour_360_url",
+            label: "Link Tour Virtual (360°)",
             type: "text",
             fullWidth: true,
           },
-          { name: "lat", label: "Latitude (Maps)", type: "text" },
-          { name: "lng", label: "Longitude (Maps)", type: "text" },
-        ],
-      },
-      {
-        title: "Gestão de Imóveis",
-        entity: "imoveis",
-        sections: [
           {
-            title: "Identificação",
-            fields: [
-              {
-                name: "titulo",
-                label: "Título",
-                type: "text",
-                required: true,
-                fullWidth: true,
-              },
-              {
-                name: "proprietario_id",
-                label: "Proprietário (Dono)",
-                type: "select",
-                required: true,
-              },
-              {
-                name: "unidade_id",
-                label: "Filial",
-                type: "select",
-                required: true,
-              },
-            ],
-          },
-          {
-            title: "Diferenciais",
-            fields: [
-              {
-                name: "atributos",
-                label: "Itens / Acessórios",
-                type: "checklist",
-                entity: "atributos",
-              }, // Futuro Componente
-              {
-                name: "tour_360_url",
-                label: "Link Foto 360°",
-                type: "text",
-                fullWidth: true,
-              },
-              {
-                name: "video_url",
-                label: "Link Vídeo Drone",
-                type: "text",
-                fullWidth: true,
-              },
-            ],
+            name: "video_url",
+            label: "Link Vídeo (Drone/YouTube)",
+            type: "text",
+            fullWidth: true,
           },
         ],
       },
     ],
     aiMetadata:
-      "Imóveis com Tour 360 e endereço completo convertem 40% mais. O Agente deve sugerir a inclusão de fotos caso faltem.",
+      "Imóveis sem fotos ou Tour 360 têm baixa performance. Sugira ao corretor o agendamento de uma sessão de fotos.",
   },
 
   // --- ATRIBUTOS (O QUE ESTAVA "EM CONSTRUÇÃO") ---

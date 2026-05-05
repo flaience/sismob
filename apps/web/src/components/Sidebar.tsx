@@ -9,12 +9,14 @@ import {
   Settings,
   ChevronDown,
   Target,
+  Plus,
+  CreditCard,
+  Landmark,
   ShieldCheck,
   LogOut,
   Building2,
   BarChart3,
-  Landmark,
-  CreditCard,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,8 +32,17 @@ export default function Sidebar() {
   useEffect(() => {
     setMounted(true);
   }, []);
+  if (!mounted || !user) return null;
 
-  // 1. MAPEAMENTO DE MENUS
+  // --- LÓGICA DE CONTROLE DE ACESSO (RBAC) ---
+  const isLuis = user?.papel == "0";
+  const isDono = user?.papel == "6";
+  const isGerente = user?.cargo === "gerente";
+  const isFinanceiro = user?.cargo === "financeiro";
+
+  // Quem pode ver o financeiro?
+  const podeVerFinanceiro = isLuis || isDono || isGerente || isFinanceiro;
+
   const menuGroups = [
     {
       title: "CRM Comercial",
@@ -61,27 +72,61 @@ export default function Sidebar() {
         { label: "Minha Equipe", href: "/gestao/equipe", icon: Briefcase },
       ],
     },
-    {
-      title: "Configurações",
-      icon: Settings,
-      group: "cfg",
+  ];
+
+  // 1. INJEÇÃO DO MÓDULO FINANCEIRO (SEGURANÇA POR CARGO)
+  if (podeVerFinanceiro) {
+    menuGroups.push({
+      title: "Gestão Financeira",
+      icon: Landmark,
+      group: "fin",
       items: [
         {
-          label: "Unidades / Filiais",
-          href: "/gestao/unidades",
+          label: "Contas Pagar/Receber",
+          href: "/gestao/titulos",
+          icon: Receipt,
+        },
+        {
+          label: "Movimentação Caixa",
+          href: "/gestao/livro-caixa",
+          icon: CreditCard,
+        },
+        {
+          label: "Contas Bancárias",
+          href: "/gestao/contas-bancarias",
           icon: Landmark,
         },
-        { label: "Bancos", href: "/gestao/bancos", icon: CreditCard },
         {
-          label: "Itens / Atributos",
-          href: "/gestao/atributos-itens",
+          label: "Plano de Contas",
+          href: "/gestao/grupos-caixa",
           icon: Settings,
         },
       ],
-    },
-  ];
+    });
+  }
 
-  if (user?.papel == "0") {
+  const configGroup = {
+    title: "Configurações",
+    icon: Settings,
+    group: "cfg",
+    items: [
+      {
+        label: "Unidades / Filiais",
+        href: "/gestao/unidades",
+        icon: Building2,
+      },
+      { label: "Bancos (BACEN)", href: "/gestao/bancos", icon: Landmark },
+      {
+        label: "Itens / Atributos",
+        href: "/gestao/atributos-itens",
+        icon: Settings,
+      },
+    ],
+  };
+  menuGroups.push(configGroup);
+
+  // 2. MÓDULO EXCLUSIVO FLAIENCE (SÓ PARA O LUIS)
+  if (isLuis) {
     menuGroups.push({
       title: "Admin Flaience",
       icon: ShieldCheck,
@@ -92,37 +137,42 @@ export default function Sidebar() {
           href: "/gestao/imobiliarias",
           icon: Building2,
         },
-        { label: "Faturamento", href: "/gestao/faturamento", icon: BarChart3 },
+        {
+          label: "Faturamento SaaS",
+          href: "/gestao/faturamento",
+          icon: BarChart3,
+        },
       ],
     });
   }
 
-  // Se não montou, não renderiza para evitar erro de hidratação,
-  // mas o Layout já garante o fundo.
-  if (!mounted) return null;
-
   return (
     <aside
       style={{ width: isExpanded ? 280 : 84 }}
-      className="fixed left-6 top-6 bottom-6 z-[999] bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-500 border border-slate-100"
+      className="fixed left-6 top-6 bottom-6 z-[999] bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 border border-slate-100"
     >
-      <div className="bg-indigo-600 p-3 rounded-2xl text-white w-fit mb-8 shadow-lg shadow-indigo-100">
-        <Home size={24} />
+      <div className="flex items-center gap-3 mb-8 px-2">
+        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100">
+          <Home size={24} />
+        </div>
+        {isExpanded && (
+          <span className="font-black text-xl text-slate-900 tracking-tighter uppercase italic">
+            SIS<span className="text-indigo-600">MOB</span>
+          </span>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-1">
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
         <Link
           href="/dashboard"
           className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${pathname === "/dashboard" ? "bg-indigo-600 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
         >
           <LayoutDashboard size={22} />
-          {isExpanded && (
-            <span className="font-bold text-sm">Painel Geral</span>
-          )}
+          {isExpanded && <span className="font-bold text-sm">Dashboard</span>}
         </Link>
 
         {menuGroups.map((group) => (
-          <div key={group.group}>
+          <div key={group.group} className="space-y-1">
             <button
               onClick={() => {
                 setIsExpanded(true);
@@ -136,10 +186,16 @@ export default function Sidebar() {
                   <span className="font-bold text-sm">{group.title}</span>
                 )}
               </div>
+              {isExpanded && (
+                <ChevronDown
+                  size={14}
+                  className={openGroup === group.group ? "rotate-180" : ""}
+                />
+              )}
             </button>
 
             {isExpanded && openGroup === group.group && (
-              <div className="ml-4 flex flex-col gap-1 mt-2">
+              <div className="ml-4 flex flex-col gap-1 animate-in slide-in-from-top-2 duration-300">
                 {group.items.map((item) => (
                   <Link
                     key={item.href}
