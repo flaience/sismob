@@ -38,21 +38,54 @@ export default function SismobFormMaster({
     }
 
     // AUTO-LOOKUP DE FILIAIS E OUTROS SELECTS
+    // AUTO-LOOKUP INDUSTRIAL: Busca opções para todos os selects do formulário
     sections.forEach((section: any) => {
       section.fields.forEach(async (field: any) => {
         if (field.type === "select" && !field.options) {
           try {
-            // Se o campo for unidade_id, busca em /configuracoes/unidades
-            const slug =
-              field.name === "unidade_id"
-                ? "unidades"
-                : field.name.replace("_id", "s");
-            const res = await api.get(`/configuracoes/${slug}`, {
-              params: { imobiliariaId: tenant.id },
+            let endpointLookup = "";
+
+            // 1. REGRA PARA UNIDADES
+            if (field.name === "unidade_id") {
+              endpointLookup = "/configuracoes/unidades";
+            }
+            // 2. REGRA PARA PROPRIETÁRIOS (PAPEL 3)
+            else if (field.name === "proprietario_id") {
+              endpointLookup = "/pessoas"; // Buscamos na rota de pessoas
+            }
+            // 3. REGRA PARA CATEGORIAS DE ATRIBUTOS
+            else if (field.name === "categoria_id") {
+              endpointLookup = "/configuracoes/atributos";
+            }
+            // 4. REGRA GENÉRICA (ex: banco_id -> /configuracoes/bancos)
+            else {
+              endpointLookup = `/configuracoes/${field.name.replace("_id", "s")}`;
+            }
+
+            console.log(
+              `📡 [SISMOB] Carregando lookup para ${field.name}: ${endpointLookup}`,
+            );
+
+            const res = await api.get(endpointLookup, {
+              params: {
+                imobiliariaId: tenant.id,
+                // Se for proprietário, força o filtro de papel 3 na API
+                ...(field.name === "proprietario_id" ? { papel: "3" } : {}),
+              },
             });
-            setOptions((prev: any) => ({ ...prev, [field.name]: res.data }));
+
+            // Garantia de formato de array para o .map do select
+            const dados = Array.isArray(res.data)
+              ? res.data
+              : res.data
+                ? [res.data]
+                : [];
+
+            setOptions((prev: any) => ({ ...prev, [field.name]: dados }));
           } catch (e) {
-            console.warn(`Falha ao carregar ${field.name}`);
+            console.warn(
+              `⚠️ [SISMOB] Falha ao carregar opções para o campo: ${field.name}`,
+            );
           }
         }
       });

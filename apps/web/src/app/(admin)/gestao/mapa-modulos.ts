@@ -320,6 +320,59 @@ export const MAPA_SISMOB: any = {
           { name: "lng", label: "Longitude (Maps)", type: "text" },
         ],
       },
+      {
+        title: "Gestão de Imóveis",
+        entity: "imoveis",
+        sections: [
+          {
+            title: "Identificação",
+            fields: [
+              {
+                name: "titulo",
+                label: "Título",
+                type: "text",
+                required: true,
+                fullWidth: true,
+              },
+              {
+                name: "proprietario_id",
+                label: "Proprietário (Dono)",
+                type: "select",
+                required: true,
+              },
+              {
+                name: "unidade_id",
+                label: "Filial",
+                type: "select",
+                required: true,
+              },
+            ],
+          },
+          {
+            title: "Diferenciais",
+            fields: [
+              {
+                name: "atributos",
+                label: "Itens / Acessórios",
+                type: "checklist",
+                entity: "atributos",
+              }, // Futuro Componente
+              {
+                name: "tour_360_url",
+                label: "Link Foto 360°",
+                type: "text",
+                fullWidth: true,
+              },
+              {
+                name: "video_url",
+                label: "Link Vídeo Drone",
+                type: "text",
+                fullWidth: true,
+              },
+            ],
+          },
+        ],
+      },
     ],
     aiMetadata:
       "Imóveis com Tour 360 e endereço completo convertem 40% mais. O Agente deve sugerir a inclusão de fotos caso faltem.",
