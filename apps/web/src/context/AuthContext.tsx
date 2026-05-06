@@ -3,67 +3,73 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { type Session } from "@supabase/supabase-js";
 import api from "@/lib/api";
-import { useTenant } from "./TenantContext"; // <--- IMPORTANTE
+import { useTenant } from "./TenantContext";
 
 const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { tenant } = useTenant(); // Pegamos a imobiliária identificada
+  const { tenant } = useTenant();
 
   const fetchProfile = async (session: Session | null) => {
-    // 1. O SEGREDO: Se tem sessão mas ainda não identificou a imobiliária, ESPERA.
-    if (!session?.user?.id || !tenant?.id) {
-      console.log("⏳ [SISMOB] Aguardando dados para sincronizar perfil...");
+    // 1. FAILSAFE: Se não tem sessão, para de carregar imediatamente
+    if (!session?.user) {
+      setUser(null);
+      setLoading(false);
       return;
     }
+
+    // 2. AGUARDAR TENANT: Se tem sessão mas não tem imobiliária, espera o próximo ciclo
+    if (!tenant?.id) {
+      console.log("⏳ [AUTH] Aguardando identificação da imobiliária...");
+      return;
+    }
+
     try {
-      if (session?.user && tenant?.id) {
-        console.log(
-          `🔍 [AUTH] Buscando perfil de ${session.user.email} na imobiliária ${tenant.nome_conta}`,
-        );
+      console.log(
+        `🔍 [AUTH] Sincronizando ${session.user.email} em ${tenant.nome_conta}`,
+      );
 
-        const res = await api.get(`/pessoas/${session.user.id}`, {
+      const res = await api
+        .get(`/pessoas/${session.user.id}`, {
           params: { imobiliariaId: tenant.id },
-        });
+        })
+        .catch(() => ({ data: null }));
 
-        // O seu backend já retorna objeto, mas o casting aqui é por segurança industrial
-        const userData = Array.isArray(res.data) ? res.data[0] : res.data;
+      const dbData = Array.isArray(res.data) ? res.data[0] : res.data;
 
-        if (userData) {
-          console.log(
-            "✅ [AUTH] Luis identificado como Papel:",
-            userData.papel,
-          );
-          setUser({ ...session.user, ...userData });
-        } else {
-          setUser(session.user);
-        }
+      if (dbData) {
+        setUser({ ...session.user, ...dbData });
       } else {
-        setUser(null);
+        console.warn(
+          "⚠️ [AUTH] Perfil não localizado no banco. Usando dados básicos.",
+        );
+        setUser(session.user);
       }
     } catch (error) {
-      console.error("❌ [AUTH] Erro na sincronização");
+      console.error("❌ [AUTH] Erro na sincronização de perfil.");
+      setUser(session.user);
     } finally {
+      // 3. GARANTIA DE DESTRAVAMENTO
       setLoading(false);
     }
   };
 
-  // RE-SINCRONIZA toda vez que a imobiliária ou a sessão mudar
   useEffect(() => {
+    // Sincroniza sempre que a sessão ou a imobiliária mudar
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => fetchProfile(session));
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_evt, session) =>
-      fetchProfile(session),
-    );
+    } = supabase.auth.onAuthStateChange((_evt, session) => {
+      fetchProfile(session);
+    });
 
     return () => subscription.unsubscribe();
-  }, [tenant?.id]); // <--- A MÁGICA: O perfil é buscado assim que o Tenant chega
+  }, [tenant?.id]); // <--- RE-EXECUTA QUANDO O TENANT CHEGAR
 
   return (
     <AuthContext.Provider
