@@ -9,9 +9,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // SEGREDO: Se a API não responder em 5s, libera o sistema de qualquer jeito
+    // 1. BOTÃO DE PÂNICO: Destrava o site em 5 segundos não importa o que aconteça
     const timer = setTimeout(() => {
-      if (loading) setLoading(false);
+      if (loading) {
+        console.warn("⚠️ [SISMOB] API demorou demais. Destravando...");
+        setLoading(false);
+      }
     }, 5000);
 
     async function identificar() {
@@ -26,7 +29,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         const data = Array.isArray(res.data) ? res.data[0] : res.data;
         if (data) setTenant(data);
       } catch (e) {
-        console.error("Falha na identificação");
+        console.error("❌ Falha na identificação");
       } finally {
         setLoading(false);
         clearTimeout(timer);
@@ -42,7 +45,5 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useTenant = () => {
-  const context = useContext(TenantContext);
-  return context || { tenant: null, loading: false };
-};
+export const useTenant = () =>
+  useContext(TenantContext) || { tenant: null, loading: false };
