@@ -20,7 +20,11 @@ export default function LoginPage() {
       alert("Falha no acesso: " + error.message);
       setLoading(false);
     } else {
-      window.location.href = "/dashboard";
+      console.log("✅ [SISMOB] Login Sucesso!");
+      // Pequena pausa para os cookies assentarem
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 100);
     }
   };
 
