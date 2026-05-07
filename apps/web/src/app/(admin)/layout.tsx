@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -9,37 +9,37 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // REDIRECIONAMENTO SEGURO
   useEffect(() => {
-    // Só redireciona se o carregamento terminou E não tem usuário
-    if (!loading && mounted && !user) {
-      console.log("🚫 [SISMOB] Acesso negado, voltando para login");
-      router.push("/login");
+    if (mounted && !loading && !user) {
+      console.log("🚫 [SISMOB] Sessão não encontrada. Indo para login...");
+      router.replace("/login");
     }
-  }, [user, loading, mounted, router]);
+  }, [mounted, loading, user, router]);
 
   if (!mounted || loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-white font-black text-indigo-600 animate-pulse uppercase italic">
-        Sincronizando Ecossistema...
+      <div className="h-screen w-full flex items-center justify-center bg-white font-black text-indigo-600 animate-pulse">
+        SISMOB • SINCRONIZANDO...
       </div>
     );
   }
 
-  // Se não tem usuário, não renderiza nada enquanto o useEffect faz o push
+  // Se não tem usuário, não renderiza nada para evitar flash de conteúdo
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden">
       <Sidebar />
-      <main className="flex-1 ml-[84px] md:ml-[280px] p-4 md:p-10 h-screen overflow-y-auto">
+      <main className="flex-1 ml-[84px] md:ml-[280px] p-4 md:p-10 transition-all overflow-y-auto h-screen">
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
     </div>

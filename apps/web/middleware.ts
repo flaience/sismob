@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Apenas atualiza a sessão, sem redirecionar
+  // APENAS ATUALIZA, NÃO REDIRECIONA (O Redirecionamento agora é no Layout)
   await supabase.auth.getSession();
 
   return response;
