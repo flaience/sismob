@@ -32,24 +32,12 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // MUDANÇA INDUSTRIAL: Protege /dashboard e /gestao
-  const isProtectedRoute =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/gestao") ||
-    request.nextUrl.pathname.startsWith("/configuracoes");
-
-  if (isProtectedRoute && !session) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
+  await supabase.auth.getSession();
   return response;
 }
 
 export const config = {
-  // O MATCHER DEVE COBRIR TUDO O QUE É PRIVADO
-  matcher: ["/dashboard/:path*", "/gestao/:path*", "/configuracoes/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
