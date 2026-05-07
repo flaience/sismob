@@ -1,3 +1,4 @@
+//src/components/Sidebar.tsx
 "use client";
 import { useState, useEffect } from "react";
 import {
@@ -35,12 +36,11 @@ export default function Sidebar() {
   if (!mounted || !user) return null;
 
   // --- LÓGICA DE CONTROLE DE ACESSO (RBAC) ---
-  const isLuis = user?.papel == "0";
+  const isLuis = user?.papel == "0" || user?.email === "luis@flaience.com";
   const isDono = user?.papel == "6";
   const isGerente = user?.cargo === "gerente";
   const isFinanceiro = user?.cargo === "financeiro";
 
-  // Quem pode ver o financeiro?
   const podeVerFinanceiro = isLuis || isDono || isGerente || isFinanceiro;
 
   const menuGroups = [

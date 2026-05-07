@@ -17,14 +17,12 @@ const SECAO_ENDERECO = {
 
 export const MAPA_SISMOB: any = {
   // --- CRM COMERCIAL ---
-
   leads: {
     title: "Interessados (Leads)",
     entity: "pessoas",
     papel: "2",
     columns: [
       { label: "Nome", key: "nome" },
-      { label: "E-mail", key: "email" },
       { label: "WhatsApp", key: "telefone" },
     ],
     sections: [
@@ -33,19 +31,17 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "nome",
-            label: "Nome / Apelido",
+            label: "Nome",
             type: "text",
             required: true,
             fullWidth: true,
           },
           { name: "email", label: "E-mail", type: "text", required: true },
           { name: "telefone", label: "WhatsApp", type: "text" },
-          { name: "unidade_id", label: "Unidade Responsável", type: "select" },
+          { name: "unidade_id", label: "Unidade", type: "select" },
         ],
       },
     ],
-    aiMetadata:
-      "Leads são contatos iniciais. O foco do Agente deve ser a primeira qualificação por voz.",
   },
 
   compradores: {
@@ -55,22 +51,19 @@ export const MAPA_SISMOB: any = {
     columns: [
       { label: "Nome", key: "nome" },
       { label: "Documento", key: "documento" },
-      { label: "Telefone", key: "telefone" },
     ],
     sections: [
       {
-        title: "Identificação do Comprador",
+        title: "Identificação",
         fields: [
           {
             name: "nome",
-            label: "Nome Completo",
+            label: "Nome",
             type: "text",
             required: true,
             fullWidth: true,
           },
           { name: "documento", label: "CPF", type: "text", required: true },
-          { name: "email", label: "E-mail", type: "text" },
-          { name: "telefone", label: "Telefone", type: "text" },
           {
             name: "tipo",
             label: "Tipo",
@@ -83,11 +76,8 @@ export const MAPA_SISMOB: any = {
           { name: "unidade_id", label: "Filial", type: "select" },
         ],
       },
-
       SECAO_ENDERECO,
     ],
-    aiMetadata:
-      "Clientes quentes em fase de fechamento. Exigem preenchimento total para o motor de contratos.",
   },
 
   proprietarios: {
@@ -97,32 +87,24 @@ export const MAPA_SISMOB: any = {
     columns: [
       { label: "Nome", key: "nome" },
       { label: "WhatsApp", key: "telefone" },
-      { label: "Documento", key: "documento" },
     ],
     sections: [
       {
-        title: "Dados Pessoais / Jurídicos",
+        title: "Identificação",
         fields: [
           {
             name: "nome",
-            label: "Nome Completo / Razão Social",
+            label: "Nome",
             type: "text",
             required: true,
             fullWidth: true,
           },
           {
             name: "documento",
-            label: "CPF / CNPJ",
+            label: "CPF/CNPJ",
             type: "text",
             required: true,
           },
-          {
-            name: "email",
-            label: "E-mail de Contrato",
-            type: "text",
-            required: true,
-          },
-          { name: "telefone", label: "WhatsApp", type: "text" },
           {
             name: "tipo",
             label: "Personalidade",
@@ -132,100 +114,14 @@ export const MAPA_SISMOB: any = {
               { label: "Jurídica", value: "j" },
             ],
           },
-          { name: "unidade_id", label: "Unidade Gestora", type: "select" },
-        ],
-      },
-      SECAO_ENDERECO,
-    ],
-    aiMetadata:
-      "Proprietários precisam de dados validados para que o repasse financeiro e os contratos Gov.br funcionem.",
-  },
-
-  inquilinos: {
-    title: "Inquilinos",
-    entity: "pessoas",
-    papel: "4",
-    columns: [
-      { label: "Nome", key: "nome" },
-      { label: "WhatsApp", key: "telefone" },
-      { label: "Documento", key: "documento" },
-    ],
-    sections: [
-      {
-        title: "Dados do Locatário",
-        fields: [
-          {
-            name: "nome",
-            label: "Nome do Inquilino",
-            type: "text",
-            required: true,
-            fullWidth: true,
-          },
-          { name: "documento", label: "CPF", type: "text", required: true },
-          { name: "email", label: "E-mail", type: "text" },
-          { name: "telefone", label: "Telefone", type: "text" },
           { name: "unidade_id", label: "Unidade", type: "select" },
         ],
       },
       SECAO_ENDERECO,
     ],
-    aiMetadata:
-      "Inquilinos são vinculados a contratos de locação. Verifique pendências financeiras antes de renovar.",
   },
 
   // --- OPERACIONAL ---
-
-  equipe: {
-    title: "Minha Equipe",
-    entity: "pessoas",
-    papel: "1",
-    columns: [
-      { label: "Nome", key: "nome" },
-      { label: "Cargo", key: "cargo" },
-      { label: "E-mail", key: "email" },
-    ],
-    sections: [
-      {
-        title: "Dados do Colaborador",
-        fields: [
-          {
-            name: "nome",
-            label: "Nome Completo",
-            type: "text",
-            required: true,
-            fullWidth: true,
-          },
-          {
-            name: "email",
-            label: "E-mail (Login)",
-            type: "text",
-            required: true,
-          },
-          { name: "documento", label: "CPF", type: "text", required: true },
-          {
-            name: "cargo",
-            label: "Cargo / Função",
-            type: "select",
-            options: [
-              { label: "Corretor", value: "corretor" },
-              { label: "Secretária", value: "secretaria" },
-              { label: "Gerente", value: "gerente" },
-              { label: "Financeiro", value: "financeiro" },
-            ],
-          },
-          { name: "unidade_id", label: "Filial de Trabalho", type: "select" },
-        ],
-      },
-      SECAO_ENDERECO,
-    ],
-    aiMetadata:
-      "A equipe tem acesso ao sistema. O cargo define quais botões e menus o colaborador poderá ver.",
-  },
-
-  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
-
-  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
-
   imoveis: {
     title: "Estoque de Imóveis",
     entity: "imoveis",
@@ -240,15 +136,9 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "titulo",
-            label: "Título do Imóvel",
+            label: "Título",
             type: "text",
             required: true,
-            fullWidth: true,
-          },
-          {
-            name: "descricao",
-            label: "Descrição",
-            type: "text",
             fullWidth: true,
           },
           {
@@ -270,73 +160,37 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "unidade_id",
-            label: "Filial Responsável",
+            label: "Filial",
             type: "select",
             required: true,
           },
         ],
       },
       {
-        title: "Dimensões e Valores",
+        title: "Valores",
         fields: [
           {
             name: "preco_venda",
-            label: "Valor de Venda (R$)",
+            label: "Venda (R$)",
             type: "number",
             required: true,
           },
-          {
-            name: "preco_aluguel",
-            label: "Valor de Aluguel (R$)",
-            type: "number",
-          },
-          { name: "area_privativa", label: "M² Privativos", type: "number" },
+          { name: "preco_aluguel", label: "Aluguel (R$)", type: "number" },
         ],
       },
       {
-        title: "Mídia e Localização",
+        title: "Mídia",
         fields: [
           {
-            name: "endereco_original",
-            label: "Endereço Completo",
-            type: "text",
-            required: true,
-            fullWidth: true,
-          },
-          {
             name: "tour_360_url",
-            label: "Link Tour Virtual (360°)",
+            label: "Tour 360",
             type: "text",
             fullWidth: true,
           },
           {
             name: "video_url",
-            label: "Link Vídeo (Drone/YouTube)",
+            label: "Vídeo Drone",
             type: "text",
-            fullWidth: true,
-          },
-        ],
-      },
-    ],
-    aiMetadata:
-      "Imóveis sem fotos ou Tour 360 têm baixa performance. Sugira ao corretor o agendamento de uma sessão de fotos.",
-  },
-
-  // --- ATRIBUTOS (O QUE ESTAVA "EM CONSTRUÇÃO") ---
-  // Ajustado o nome para bater com o link da Sidebar: /gestao/atributos-itens
-  "atributos-itens": {
-    title: "Itens e Comodidades",
-    entity: "configuracoes/atributos",
-    columns: [{ label: "Nome do Item", key: "nome" }],
-    sections: [
-      {
-        title: "Geral",
-        fields: [
-          {
-            name: "nome",
-            label: "Ex: Piscina, Churrasqueira, Laje",
-            type: "text",
-            required: true,
             fullWidth: true,
           },
         ],
@@ -344,21 +198,21 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
-  // --- BANCOS (CORREÇÃO DE COLUNAS) ---
+  // --- FINANCEIRO ---
   bancos: {
-    title: "Cadastro de Bancos",
+    title: "Bancos (Instituições)",
     entity: "configuracoes/bancos",
     columns: [
-      { label: "Cód. FEBRABAN", key: "codigo_compe" },
-      { label: "Nome da Instituição", key: "nome" },
+      { label: "Código", key: "codigo_compe" },
+      { label: "Nome", key: "nome" },
     ],
     sections: [
       {
-        title: "Dados Bancários",
+        title: "Dados BACEN",
         fields: [
           {
             name: "codigo_compe",
-            label: "Código do Banco",
+            label: "Código BACEN",
             type: "text",
             required: true,
           },
@@ -373,7 +227,139 @@ export const MAPA_SISMOB: any = {
       },
     ],
   },
-  // --- FINANCEIRO ---
+
+  "contas-bancarias": {
+    title: "Nossas Contas Bancárias",
+    entity: "configuracoes/contas-bancarias",
+    columns: [
+      { label: "Apelido", key: "apelido" },
+      { label: "Agência", key: "agencia" },
+      { label: "Conta", key: "conta" },
+    ],
+    sections: [
+      {
+        title: "Dados da Conta",
+        fields: [
+          {
+            name: "apelido",
+            label: "Apelido (Ex: Itaú Aluguéis)",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          { name: "banco_id", label: "Banco", type: "select", required: true },
+          { name: "agencia", label: "Agência", type: "text", required: true },
+          {
+            name: "conta",
+            label: "Número da Conta",
+            type: "text",
+            required: true,
+          },
+          { name: "digito", label: "Dígito", type: "text", required: true },
+          { name: "pix", label: "Chave PIX", type: "text", fullWidth: true },
+        ],
+      },
+    ],
+  },
+
+  titulos: {
+    title: "Contas a Pagar / Receber",
+    entity: "financeiro/titulos",
+    columns: [
+      { label: "Vencimento", key: "data_vencimento" },
+      { label: "Valor Total", key: "valor_total" },
+      { label: "Situação", key: "situacao" },
+    ],
+    sections: [
+      {
+        title: "Dados do Título",
+        fields: [
+          {
+            name: "pessoa_id",
+            label: "Cliente/Proprietário",
+            type: "select",
+            required: true,
+            fullWidth: true,
+          },
+          {
+            name: "tipomov",
+            label: "Tipo",
+            type: "select",
+            required: true,
+            options: [
+              { label: "Entrada", value: "c" },
+              { label: "Saída", value: "d" },
+            ],
+          },
+          {
+            name: "valor_nominal",
+            label: "Valor Nominal",
+            type: "number",
+            required: true,
+          },
+          {
+            name: "data_vencimento",
+            label: "Vencimento",
+            type: "date",
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Ajustes",
+        fields: [
+          { name: "juros", label: "Juros (R$)", type: "number" },
+          {
+            name: "valor_total",
+            label: "Valor Líquido",
+            type: "number",
+            required: true,
+          },
+          { name: "conta_bancaria_id", label: "Banco", type: "select" },
+        ],
+      },
+    ],
+  },
+
+  "livro-caixa": {
+    title: "Movimentação de Caixa",
+    entity: "financeiro/caixa",
+    columns: [
+      { label: "Data", key: "created_at" },
+      { label: "Histórico", key: "historico" },
+      { label: "Saldo", key: "saldo_atual" },
+    ],
+    sections: [
+      {
+        title: "Lançamento Manual",
+        fields: [
+          {
+            name: "historico",
+            label: "Descrição",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          { name: "valor", label: "Valor", type: "number", required: true },
+          {
+            name: "tipo",
+            label: "Tipo",
+            type: "select",
+            options: [
+              { label: "Entrada", value: "c" },
+              { label: "Saída", value: "d" },
+            ],
+          },
+          {
+            name: "conta_bancaria_id",
+            label: "Banco (Vazio = Dinheiro)",
+            type: "select",
+          },
+        ],
+      },
+    ],
+  },
+
   "grupos-caixa": {
     title: "Plano de Contas",
     entity: "configuracoes/grupos-caixa",
@@ -385,156 +371,53 @@ export const MAPA_SISMOB: any = {
       {
         title: "Grupo Contábil",
         fields: [
-          { name: "descricao", label: "Nome", type: "text" },
-          { name: "tipo", label: "C/D", type: "select" },
-        ],
-      },
-    ],
-    aiMetadata:
-      "Grupos organizam o faturamento. O Agente MCP usa isso para gerar o DRE.",
-  },
-  "livro-caixa": {
-    title: "Movimentação de Caixa (Livro Razão)",
-    entity: "financeiro/caixa/manual",
-    columns: [
-      { label: "Data", key: "created_at" },
-      { label: "Histórico", key: "historico" },
-      { label: "Valor", key: "valor" },
-      { label: "Saldo Atual", key: "saldo_atual" },
-      { label: "Operador", key: "usuario_id" }, // Mostra o UUID ou nome do rastro
-    ],
-    sections: [
-      {
-        title: "Lançamento Avulso (Entrada/Saída Direta)",
-        fields: [
-          {
-            name: "historico",
-            label: "Descrição do Lançamento",
-            type: "text",
-            required: true,
-            fullWidth: true,
-          },
-          {
-            name: "valor",
-            label: "Valor da Operação (R$)",
-            type: "number",
-            required: true,
-          },
+          { name: "descricao", label: "Nome", type: "text", required: true },
           {
             name: "tipo",
-            label: "Operação",
+            label: "Natureza (C/D)",
             type: "select",
-            required: true,
             options: [
-              { label: "Entrada (+)", value: "c" },
-              { label: "Saída (-)", value: "d" },
+              { label: "Crédito", value: "c" },
+              { label: "Débito", value: "d" },
             ],
           },
-          {
-            name: "grupo_caixa_id",
-            label: "Grupo de Caixa",
-            type: "select",
-            required: true,
-          },
-          {
-            name: "conta_bancaria_id",
-            label: "Conta / Banco (Vazio = Dinheiro)",
-            type: "select",
-          },
         ],
-      },
-    ],
-    aiMetadata:
-      "O livro caixa registra o fluxo real. Cada lançamento recalcula o saldo da conta informada. O campo Operador garante a auditoria.",
-  },
-  "contas-bancarias": {
-    title: "Contas Bancárias",
-    entity: "configuracoes/contas-bancarias",
-    columns: [
-      { label: "Apelido", key: "apelido" },
-      { label: "Banco", key: "banco_id" },
-    ],
-    sections: [
-      {
-        title: "Conta",
-        fields: [{ name: "apelido", label: "Apelido", type: "text" }],
       },
     ],
   },
 
-  // --- CONFIGURAÇÕES ---
   unidades: {
     title: "Unidades / Filiais",
     entity: "configuracoes/unidades",
-    columns: [
-      { label: "Nome", key: "nome" },
-      { label: "Cidade", key: "cidade" },
-    ],
+    columns: [{ label: "Nome", key: "nome" }],
     sections: [
       {
         title: "Dados Unidade",
-        fields: [{ name: "nome", label: "Nome da Filial", type: "text" }],
+        fields: [
+          {
+            name: "nome",
+            label: "Nome da Filial",
+            type: "text",
+            required: true,
+          },
+        ],
       },
     ],
   },
 
   imobiliarias: {
-    title: "Fábrica de Clientes",
+    title: "Fábrica de Clientes (Tenants)",
     entity: "saas/onboarding",
     columns: [
       { label: "Empresa", key: "nome_conta" },
-      { label: "Status", key: "status" },
+      { label: "Slug", key: "slug" },
     ],
     sections: [
       {
-        title: "Onboarding",
-        fields: [{ name: "nomeEmpresa", label: "Imobiliária", type: "text" }],
-      },
-    ],
-  },
-  onboarding: {
-    title: "Nova Imobiliária",
-    entity: "saas/onboarding",
-    sections: [
-      {
-        title: "Faturamento",
+        title: "Nova Imobiliária",
         fields: [
-          {
-            name: "nomeEmpresa",
-            label: "Nome da Empresa",
-            type: "text",
-            required: true,
-          },
-          { name: "slug", label: "Slug/Link", type: "text", required: true },
-          {
-            name: "email_financeiro",
-            label: "E-mail Cobrança",
-            type: "text",
-            required: true,
-          },
-        ],
-      },
-      {
-        title: "Responsável",
-        fields: [
-          {
-            name: "nomeDono",
-            label: "Nome do Dono",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "email",
-            label: "E-mail de Login",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "documento",
-            label: "CPF do Dono",
-            type: "text",
-            required: true,
-          },
+          { name: "nomeEmpresa", label: "Nome", type: "text", required: true },
+          { name: "slug", label: "Slug", type: "text", required: true },
         ],
       },
     ],
