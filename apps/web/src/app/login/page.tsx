@@ -22,9 +22,7 @@ export default function LoginPage() {
     } else {
       console.log("✅ [SISMOB] Login Sucesso!");
       // Pequena pausa para os cookies assentarem
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 100);
+      window.location.href = "/dashboard";
     }
   };
 
