@@ -123,34 +123,23 @@ export const MAPA_SISMOB: any = {
 
   // --- OPERACIONAL ---
   imoveis: {
-    title: "Estoque de Imóveis",
+    title: "Gestão de Imóveis",
     entity: "imoveis",
     columns: [
       { label: "Título", key: "titulo" },
-      { label: "Tipo", key: "tipo" },
       { label: "Preço", key: "preco_venda" },
+      { label: "Status", key: "status" },
     ],
     sections: [
       {
-        title: "Dados do Anúncio",
+        title: "Anúncio",
         fields: [
           {
             name: "titulo",
-            label: "Título",
+            label: "Título do Anúncio",
             type: "text",
             required: true,
             fullWidth: true,
-          },
-          {
-            name: "tipo",
-            label: "Tipo",
-            type: "select",
-            required: true,
-            options: [
-              { label: "Casa", value: "casa" },
-              { label: "Apartamento", value: "apto" },
-              { label: "Terreno", value: "terreno" },
-            ],
           },
           {
             name: "proprietario_id",
@@ -160,65 +149,57 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "unidade_id",
-            label: "Filial",
+            label: "Filial Responsável",
             type: "select",
             required: true,
           },
         ],
       },
       {
-        title: "Valores",
+        title: "Endereço do Imóvel",
         fields: [
           {
-            name: "preco_venda",
-            label: "Venda (R$)",
-            type: "number",
+            name: "endereco_original",
+            label: "Endereço Completo (Rua, Nº, Bairro, Cidade)",
+            type: "text",
             required: true,
+            fullWidth: true,
           },
-          { name: "preco_aluguel", label: "Aluguel (R$)", type: "number" },
         ],
       },
       {
-        title: "Mídia",
+        title: "Acessórios e Lazer (Atributos)",
         fields: [
+          // Campo novo: checklist automático de atributos do banco
           {
-            name: "tour_360_url",
-            label: "Tour 360",
-            type: "text",
-            fullWidth: true,
+            name: "atributos",
+            label: "Marque o que o imóvel possui",
+            type: "checklist",
+            entity: "atributos",
           },
-          {
-            name: "video_url",
-            label: "Vídeo Drone",
-            type: "text",
-            fullWidth: true,
-          },
+        ],
+      },
+      {
+        title: "Mídia e Fotos",
+        fields: [
+          // Campo novo: Gerenciador de Galeria com flag 360
+          { name: "midias", label: "Fotos e Vídeos", type: "gallery" },
         ],
       },
     ],
   },
 
-  // --- FINANCEIRO ---
-  bancos: {
-    title: "Bancos (Instituições)",
-    entity: "configuracoes/bancos",
-    columns: [
-      { label: "Código", key: "codigo_compe" },
-      { label: "Nome", key: "nome" },
-    ],
+  atributos: {
+    title: "Itens e Comodidades",
+    entity: "configuracoes/atributos",
+    columns: [{ label: "Item", key: "nome" }],
     sections: [
       {
-        title: "Dados BACEN",
+        title: "Cadastro de Acessório",
         fields: [
           {
-            name: "codigo_compe",
-            label: "Código BACEN",
-            type: "text",
-            required: true,
-          },
-          {
             name: "nome",
-            label: "Nome do Banco",
+            label: "Ex: Piscina, Laje, Churrasqueira",
             type: "text",
             required: true,
             fullWidth: true,
@@ -227,12 +208,12 @@ export const MAPA_SISMOB: any = {
       },
     ],
   },
-
+  // --- FINANCEIRO ---
   "contas-bancarias": {
-    title: "Nossas Contas Bancárias",
+    title: "Minhas Contas Bancárias",
     entity: "configuracoes/contas-bancarias",
     columns: [
-      { label: "Apelido", key: "apelido" },
+      { label: "Banco", key: "banco_nome" },
       { label: "Agência", key: "agencia" },
       { label: "Conta", key: "conta" },
     ],
@@ -241,13 +222,12 @@ export const MAPA_SISMOB: any = {
         title: "Dados da Conta",
         fields: [
           {
-            name: "apelido",
-            label: "Apelido (Ex: Itaú Aluguéis)",
+            name: "banco_nome",
+            label: "Nome do Banco (Ex: Itaú)",
             type: "text",
             required: true,
-            fullWidth: true,
           },
-          { name: "banco_id", label: "Banco", type: "select", required: true },
+          { name: "codigo_bacen", label: "Cód. BACEN", type: "text" },
           { name: "agencia", label: "Agência", type: "text", required: true },
           {
             name: "conta",

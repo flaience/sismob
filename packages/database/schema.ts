@@ -227,22 +227,16 @@ export const contasBancarias = pgTable("contas_bancarias", {
   tenant_id: uuid("tenant_id")
     .references(() => tenants.id, { onDelete: "cascade" })
     .notNull(),
-  banco_id: integer("banco_id")
-    .references(() => bancos.id)
-    .notNull(),
-  apelido: varchar("apelido", { length: 50 }).notNull(),
+
+  // Fundimos os dados do Banco aqui dentro
+  banco_nome: varchar("banco_nome", { length: 100 }).notNull(), // Ex: Itaú, BB
+  codigo_bacen: varchar("codigo_bacen", { length: 10 }), // Ex: 341, 001
+
   agencia: varchar("agencia", { length: 20 }).notNull(),
   conta: varchar("conta", { length: 30 }).notNull(),
   digito: varchar("digito", { length: 10 }).notNull(),
   pix: varchar("pix", { length: 255 }),
 });
-
-export const bancos = pgTable("bancos", {
-  id: serial("id").primaryKey(),
-  codigo_compe: varchar("codigo_compe", { length: 10 }).unique().notNull(),
-  nome: varchar("nome", { length: 100 }).notNull(),
-});
-
 // ==========================================
 // 6. FINANCEIRO E CAIXA (SISTEMA SIMPLIFICADO)
 // ==========================================
