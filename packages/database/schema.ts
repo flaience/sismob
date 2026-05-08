@@ -131,30 +131,46 @@ export const enderecos = pgTable("enderecos", {
 // ==========================================
 // 4. IMÓVEIS E MÍDIAS
 // ==========================================
-export const imoveis = pgTable(
-  "imoveis",
+export const imoveis = pgTable("imoveis", {
+  id: serial("id").primaryKey(),
+  tenant_id: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
+  unidade_id: integer("unidade_id").references(() => unidades.id),
+  titulo: varchar("titulo", { length: 255 }).notNull(),
+  descricao: text("descricao"),
+  tipo: varchar("tipo", { length: 50 }).notNull(),
+
+  // ENDEREÇO ESTRUTURADO (Separado como nas Pessoas)
+  cep: varchar("cep", { length: 10 }),
+  logradouro: varchar("logradouro", { length: 255 }),
+  numero: varchar("numero", { length: 20 }),
+  bairro: varchar("bairro", { length: 100 }),
+  cidade: varchar("cidade", { length: 100 }),
+  estado: varchar("estado", { length: 2 }),
+
+  preco_venda: decimal("preco_venda", { precision: 12, scale: 2 }),
+  preco_aluguel: decimal("preco_aluguel", { precision: 12, scale: 2 }),
+  area_privativa: decimal("area_privativa", { precision: 10, scale: 2 }),
+  video_url: text("video_url"),
+  proprietario_id: uuid("proprietario_id").references(() => pessoas.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const imoveisAtributos = pgTable(
+  "imoveis_atributos",
   {
-    id: serial("id").primaryKey(),
-    tenant_id: uuid("tenant_id")
-      .references(() => tenants.id, { onDelete: "cascade" })
-      .notNull(),
-    unidade_id: integer("unidade_id").references(() => unidades.id),
-    titulo: varchar("titulo", { length: 255 }).notNull(),
-    descricao: text("descricao"),
-    tipo: varchar("tipo", { length: 50 }).notNull(),
-    status: varchar("status", { length: 50 }).default("disponivel"),
-    preco_venda: decimal("preco_venda", { precision: 12, scale: 2 }),
-    preco_aluguel: decimal("preco_aluguel", { precision: 12, scale: 2 }),
-    area_privativa: decimal("area_privativa", { precision: 10, scale: 2 }),
-    endereco_original: text("endereco_original").notNull(),
-    video_url: text("video_url"),
-    lat: decimal("lat", { precision: 10, scale: 8 }),
-    lng: decimal("lng", { precision: 11, scale: 8 }),
-    proprietario_id: uuid("proprietario_id").references(() => pessoas.id),
-    created_at: timestamp("created_at").defaultNow(),
+    imovel_id: integer("imovel_id").references(() => imoveis.id, {
+      onDelete: "cascade",
+    }),
+    atributo_id: integer("atributo_id").references(() => atributos.id, {
+      onDelete: "cascade",
+    }),
+    // O SEGREDO: Aqui salvamos a quantidade (ex: 3 quartos)
+    valor: varchar("valor", { length: 50 }),
   },
-  (table) => ({
-    tenantImovelIdx: index("idx_imoveis_tenant").on(table.tenant_id),
+  (t) => ({
+    pk: primaryKey({ columns: [t.imovel_id, t.atributo_id] }),
   }),
 );
 
@@ -197,21 +213,6 @@ export const atributos = pgTable("atributos", {
   ),
   nome: varchar("nome", { length: 100 }).notNull(),
 });
-
-export const imoveisAtributos = pgTable(
-  "imoveis_atributos",
-  {
-    imovel_id: integer("imovel_id").references(() => imoveis.id, {
-      onDelete: "cascade",
-    }),
-    atributo_id: integer("atributo_id").references(() => atributos.id, {
-      onDelete: "cascade",
-    }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.imovel_id, t.atributo_id] }),
-  }),
-);
 
 // ==========================================
 // 6. FINANCEIRO E CAIXA (SISTEMA CONTÁBIL)

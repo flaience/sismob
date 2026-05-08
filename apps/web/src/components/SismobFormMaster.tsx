@@ -193,96 +193,216 @@ export default function SismobFormMaster({
                   field.type === "image";
 
                 return (
-                  <div
-                    key={field.name}
-                    className={isFullWidth ? "md:col-span-2 lg:col-span-3" : ""}
-                  >
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-6 mb-3 block">
-                      {field.label}{" "}
-                      {field.required && (
-                        <span className="text-red-500">*</span>
-                      )}
-                    </label>
-
-                    {/* 1. ATALHO DE IMAGEM / GALERIA (O que você pediu) */}
-                    {field.type === "image" || field.type === "gallery" ? (
-                      <SismobUpload
-                        label={field.label}
-                        value={formData[field.name]}
-                        multiple={field.type === "gallery"}
-                        onChange={(val: any) => updateField(field.name, val)}
-                      />
-                    ) : /* 2. LÓGICA DE CHECKLIST (ATRIBUTOS DINÂMICOS) */
-                    field.type === "checklist" ? (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
-                        {(options[field.name] || []).map((opt: any) => (
-                          <label
-                            key={opt.id}
-                            className="flex items-center gap-3 cursor-pointer group"
-                          >
-                            <input
-                              type="checkbox"
-                              className="w-6 h-6 rounded-xl border-none ring-1 ring-slate-300 checked:bg-indigo-600 transition-all cursor-pointer"
-                              checked={
-                                Array.isArray(formData[field.name]) &&
-                                formData[field.name].includes(opt.id)
-                              }
-                              onChange={(e) => {
-                                const current = formData[field.name] || [];
-                                const newValue = e.target.checked
-                                  ? [...current, opt.id]
-                                  : current.filter((x: any) => x !== opt.id);
-                                updateField(field.name, newValue);
-                              }}
-                            />
-                            <span className="text-sm font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">
-                              {opt.nome}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : /* 3. LÓGICA DE SELEÇÃO (AUTO-LOOKUPS) */
-                    field.type === "select" ? (
-                      <div className="relative">
-                        <select
-                          className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-600"
-                          value={value}
-                          onChange={(e) =>
-                            updateField(field.name, e.target.value)
-                          }
+                  <div className="max-w-5xl mx-auto p-4 md:p-10 space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                    {/* 1. CABEÇALHO DA FÁBRICA */}
+                    <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                      <div className="flex items-center gap-6">
+                        <button
+                          type="button"
+                          onClick={() => router.back()}
+                          className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-200 transition-all text-slate-600"
                         >
-                          <option value="">Selecione...</option>
-                          {(field.options || options[field.name] || []).map(
-                            (o: any) => (
-                              <option
-                                key={o.id || o.value}
-                                value={o.id || o.value}
-                              >
-                                {o.nome ||
-                                  o.label ||
-                                  o.descricao ||
-                                  o.banco_nome ||
-                                  o.nome_fantasia}
-                              </option>
-                            ),
-                          )}
-                        </select>
-                        <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                          <ChevronDown size={20} />
+                          <ArrowLeft size={24} />
+                        </button>
+                        <div>
+                          <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase">
+                            {idEdicao ? "Editar" : "Novo"} {title}
+                          </h1>
+                          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                            Operação Industrial •{" "}
+                            {tenant?.nome_conta || "Sismob"}
+                          </p>
                         </div>
                       </div>
-                    ) : (
-                      /* 4. INPUT PADRÃO (TEXTO, NÚMERO, DATA) */
-                      <input
-                        type={field.type}
-                        placeholder={field.label}
-                        className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none focus:ring-2 focus:ring-indigo-600 placeholder:text-slate-300"
-                        value={value}
-                        onChange={(e) =>
-                          updateField(field.name, e.target.value)
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          alert(
+                            `🤖 AGENTE SISMOB (MCP): \n\n${aiHelp || "Otimizando para conversão..."}`,
+                          )
                         }
-                      />
-                    )}
+                        className="hidden md:flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
+                      >
+                        <Sparkles size={16} /> IA READY
+                      </button>
+                    </header>
+
+                    {/* 2. FORMULÁRIO DINÂMICO */}
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                      {sections.map((section: any, sIdx: number) => (
+                        <div
+                          key={sIdx}
+                          className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 space-y-10"
+                        >
+                          <h2 className="text-xl font-black text-slate-800 border-l-4 border-indigo-600 pl-6 uppercase tracking-tighter">
+                            {section.title}
+                          </h2>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {section.fields.map((field: any) => {
+                              // Lógica para valores aninhados (ex: endereco.logradouro) ou simples (ex: titulo)
+                              const nameParts = field.name.split(".");
+                              const value = field.name.includes(".")
+                                ? formData[nameParts[0]]?.[nameParts[1]] || ""
+                                : formData[field.name] || "";
+
+                              const isWide =
+                                field.fullWidth ||
+                                field.type === "attribute-grid" ||
+                                field.type === "gallery" ||
+                                field.type === "image";
+
+                              return (
+                                <div
+                                  key={field.name}
+                                  className={
+                                    isWide ? "md:col-span-2 lg:col-span-3" : ""
+                                  }
+                                >
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-6 mb-3 block">
+                                    {field.label}{" "}
+                                    {field.required && (
+                                      <span className="text-red-500">*</span>
+                                    )}
+                                  </label>
+
+                                  {/* A. ATRIBUTOS COM QUANTIDADE (O que você pediu) */}
+                                  {field.type === "attribute-grid" ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
+                                      {(options["atributos"] || []).map(
+                                        (attr: any) => {
+                                          const currentAttr = Array.isArray(
+                                            formData.atributos,
+                                          )
+                                            ? formData.atributos.find(
+                                                (a: any) => a.id === attr.id,
+                                              )
+                                            : null;
+
+                                          return (
+                                            <div
+                                              key={attr.id}
+                                              className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm group hover:ring-2 ring-indigo-100 transition-all"
+                                            >
+                                              <span className="flex-1 text-sm font-bold text-slate-600">
+                                                {attr.nome}
+                                              </span>
+                                              <input
+                                                type="text"
+                                                placeholder="Qtd"
+                                                className="w-16 p-2 bg-slate-50 rounded-xl text-center font-black text-indigo-600 border-none outline-none focus:ring-2 ring-indigo-500"
+                                                value={currentAttr?.valor || ""}
+                                                onChange={(e) => {
+                                                  const current = Array.isArray(
+                                                    formData.atributos,
+                                                  )
+                                                    ? formData.atributos
+                                                    : [];
+                                                  const otherAttrs =
+                                                    current.filter(
+                                                      (a: any) =>
+                                                        a.id !== attr.id,
+                                                    );
+                                                  const newValue =
+                                                    e.target.value === ""
+                                                      ? otherAttrs
+                                                      : [
+                                                          ...otherAttrs,
+                                                          {
+                                                            id: attr.id,
+                                                            valor:
+                                                              e.target.value,
+                                                          },
+                                                        ];
+                                                  updateField(
+                                                    "atributos",
+                                                    newValue,
+                                                  );
+                                                }}
+                                              />
+                                            </div>
+                                          );
+                                        },
+                                      )}
+                                    </div>
+                                  ) : /* B. UPLOAD DE MÍDIA (Logo ou Galeria) */
+                                  field.type === "image" ||
+                                    field.type === "gallery" ? (
+                                    <SismobUpload
+                                      label={field.label}
+                                      value={formData[field.name]}
+                                      multiple={field.type === "gallery"}
+                                      onChange={(val: any) =>
+                                        updateField(field.name, val)
+                                      }
+                                    />
+                                  ) : /* C. SELEÇÃO (Auto-Lookups) */
+                                  field.type === "select" ? (
+                                    <div className="relative">
+                                      <select
+                                        className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-600"
+                                        value={value}
+                                        onChange={(e) =>
+                                          updateField(
+                                            field.name,
+                                            e.target.value,
+                                          )
+                                        }
+                                      >
+                                        <option value="">Selecione...</option>
+                                        {(
+                                          field.options ||
+                                          options[field.name] ||
+                                          []
+                                        ).map((o: any) => (
+                                          <option
+                                            key={o.id || o.value}
+                                            value={o.id || o.value}
+                                          >
+                                            {o.nome ||
+                                              o.label ||
+                                              o.descricao ||
+                                              o.nome_fantasia ||
+                                              o.banco_nome}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <ChevronDown size={20} />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    /* D. CAMPOS DE TEXTO / DATA / NÚMERO */
+                                    <input
+                                      type={field.type}
+                                      placeholder={field.label}
+                                      className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none focus:ring-2 focus:ring-indigo-600 placeholder:text-slate-200"
+                                      value={value}
+                                      onChange={(e) =>
+                                        updateField(field.name, e.target.value)
+                                      }
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* 3. RODAPÉ INDUSTRIAL */}
+                      <div className="flex flex-col items-center gap-4 pt-10">
+                        <div className="w-full max-w-md">
+                          <SismobButton loading={loading}>
+                            SALVAR REGISTRO COMPLETO
+                          </SismobButton>
+                        </div>
+                        <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em]">
+                          Sismob High-End Real Estate Engine
+                        </p>
+                      </div>
+                    </form>
                   </div>
                 );
               })}

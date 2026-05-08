@@ -150,32 +150,17 @@ export const MAPA_SISMOB: any = {
 
   // --- OPERACIONAL ---
   imoveis: {
-    title: "Gestão de Imóveis",
+    title: "Estoque de Imóveis",
     entity: "imoveis",
     columns: [
       { label: "Título", key: "titulo" },
-      { label: "Preço", key: "preco_venda" },
+      { label: "Bairro/Cidade", key: "bairro" }, // Agora estruturado
+      { label: "Valor Venda", key: "preco_venda" },
       { label: "Status", key: "status" },
     ],
     sections: [
       {
-        title: "Galeria de Mídias",
-        fields: [
-          {
-            name: "midias",
-            label: "Fotos do Imóvel (Marque as 360° e a Capa no atalho)",
-            type: "gallery",
-          },
-          {
-            name: "video_url",
-            label: "Link Externo de Vídeo (YouTube)",
-            type: "text",
-            fullWidth: true,
-          },
-        ],
-      },
-      {
-        title: "Anúncio",
+        title: "Apresentação e Anúncio",
         fields: [
           {
             name: "titulo",
@@ -185,51 +170,107 @@ export const MAPA_SISMOB: any = {
             fullWidth: true,
           },
           {
+            name: "descricao",
+            label: "Descrição Detalhada (IA Consome)",
+            type: "text",
+            fullWidth: true,
+          },
+          {
+            name: "tipo",
+            label: "Tipo",
+            type: "select",
+            required: true,
+            options: [
+              { label: "Casa", value: "casa" },
+              { label: "Apartamento", value: "apto" },
+              { label: "Terreno", value: "terreno" },
+              { label: "Cobertura", value: "cobertura" },
+            ],
+          },
+          {
+            name: "status",
+            label: "Situação",
+            type: "select",
+            options: [
+              { label: "Disponível", value: "disponivel" },
+              { label: "Vendido", value: "vendido" },
+              { label: "Locado", value: "locado" },
+            ],
+          },
+          {
             name: "proprietario_id",
-            label: "Proprietário",
+            label: "Proprietário (Dono)",
             type: "select",
             required: true,
           },
           {
             name: "unidade_id",
-            label: "Filial Responsável",
+            label: "Unidade Responsável",
             type: "select",
             required: true,
           },
         ],
       },
       {
-        title: "Endereço do Imóvel",
+        title: "Localização Estruturada",
         fields: [
+          { name: "cep", label: "CEP", type: "text" },
           {
-            name: "endereco_original",
-            label: "Endereço Completo (Rua, Nº, Bairro, Cidade)",
+            name: "logradouro",
+            label: "Rua/Avenida",
             type: "text",
-            required: true,
+            fullWidth: true,
+          },
+          { name: "numero", label: "Nº", type: "text" },
+          { name: "bairro", label: "Bairro", type: "text" },
+          { name: "cidade", label: "Cidade", type: "text" },
+          { name: "estado", label: "UF", type: "text" },
+        ],
+      },
+      {
+        title: "Valores e Dimensões",
+        fields: [
+          { name: "preco_venda", label: "Valor de Venda (R$)", type: "number" },
+          {
+            name: "preco_aluguel",
+            label: "Valor Locação (R$)",
+            type: "number",
+          },
+          { name: "area_privativa", label: "M² Privativos", type: "number" },
+        ],
+      },
+      {
+        title: "Atributos e Comodidades (Quantitativo)",
+        fields: [
+          // NOVO TIPO: Desenha a lista de atributos com campo de quantidade ao lado
+          {
+            name: "atributos",
+            label: "Configurar Acessórios",
+            type: "attribute-grid",
+          },
+        ],
+      },
+      {
+        title: "Galeria de Mídias Profissional",
+        fields: [
+          // Componente unificado: Upload múltiplo, marcação de capa e 360 integrada
+          {
+            name: "midias",
+            label:
+              "Fotos (Arraste para ordenar | Marque a Capa e 360° no atalho)",
+            type: "gallery",
+          },
+          {
+            name: "video_url",
+            label: "Link de Vídeo Externo (YouTube/Drone)",
+            type: "text",
             fullWidth: true,
           },
         ],
       },
-      {
-        title: "Acessórios e Lazer (Atributos)",
-        fields: [
-          // Campo novo: checklist automático de atributos do banco
-          {
-            name: "atributos",
-            label: "Marque o que o imóvel possui",
-            type: "checklist",
-            entity: "atributos",
-          },
-        ],
-      },
-      {
-        title: "Mídia e Fotos",
-        fields: [
-          // Campo novo: Gerenciador de Galeria com flag 360
-          { name: "midias", label: "Fotos e Vídeos", type: "gallery" },
-        ],
-      },
     ],
+    aiMetadata:
+      "Imóveis com endereço estruturado e atributos quantificados (ex: 3 quartos) permitem que a IA faça buscas cirúrgicas para o interessado.",
   },
 
   atributos: {
