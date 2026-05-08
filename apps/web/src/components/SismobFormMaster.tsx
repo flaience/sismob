@@ -25,14 +25,13 @@ export default function SismobFormMaster({
   useEffect(() => {
     if (!tenant?.id) return;
 
-    // CARREGA DADOS DE EDIÇÃO
+    // 1. CARGA DE DADOS PARA EDIÇÃO (Se houver ID na URL)
     if (idEdicao) {
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
         .then((res) => {
-          // Garantia de objeto único
           const data = Array.isArray(res.data) ? res.data[0] : res.data;
           setFormData(data || {});
         });
@@ -42,40 +41,53 @@ export default function SismobFormMaster({
     // AUTO-LOOKUP INDUSTRIAL: Busca opções para todos os selects do formulário
     sections.forEach((section: any) => {
       section.fields.forEach(async (field: any) => {
-        if (field.type === "select" && !field.options) {
+        // Só buscamos se for select/checklist e NÃO tiver opções fixas no mapa
+        if (
+          (field.type === "select" || field.type === "checklist") &&
+          !field.options
+        ) {
           try {
             let endpointLookup = "";
 
-            // 1. REGRA PARA UNIDADES
+            // --- REGRAS DE ROTEAMENTO DE LOOKUP ---
+
+            // Unidades / Filiais
             if (field.name === "unidade_id") {
               endpointLookup = "/configuracoes/unidades";
             }
-            // 2. REGRA PARA PROPRIETÁRIOS (PAPEL 3)
+            // Proprietários (Papel 3)
             else if (field.name === "proprietario_id") {
-              endpointLookup = "/pessoas"; // Buscamos na rota de pessoas
+              endpointLookup = "/pessoas";
             }
-            // 3. REGRA PARA CATEGORIAS DE ATRIBUTOS
-            else if (field.name === "categoria_id") {
+            // Atributos / Itens (Checklist do Imóvel)
+            else if (
+              field.name === "atributos" ||
+              field.name === "categoria_id"
+            ) {
               endpointLookup = "/configuracoes/atributos";
             }
-            // 4. REGRA GENÉRICA (ex: banco_id -> /configuracoes/bancos)
+            // Regra Genérica (Ex: banco_id -> /configuracoes/bancos)
             else {
-              endpointLookup = `/configuracoes/${field.name.replace("_id", "s")}`;
+              // Se o campo tiver uma 'entity' definida no mapa, usa ela, senão tenta adivinhar o plural
+              const entitySlug =
+                field.entity ||
+                field.name.replace("_id", "s").replace("_", "-");
+              endpointLookup = `/configuracoes/${entitySlug}`;
             }
 
             console.log(
-              `📡 [SISMOB] Carregando lookup para ${field.name}: ${endpointLookup}`,
+              `📡 [SISMOB] Carregando lookup para ${field.name} em: ${endpointLookup}`,
             );
 
             const res = await api.get(endpointLookup, {
               params: {
                 imobiliariaId: tenant.id,
-                // Se for proprietário, força o filtro de papel 3 na API
+                // Filtro especial se for busca de pessoas
                 ...(field.name === "proprietario_id" ? { papel: "3" } : {}),
               },
             });
 
-            // Garantia de formato de array para o .map do select
+            // Garantia de formato de array
             const dados = Array.isArray(res.data)
               ? res.data
               : res.data
@@ -91,7 +103,7 @@ export default function SismobFormMaster({
         }
       });
     });
-  }, [tenant?.id, idEdicao]);
+  }, [tenant?.id, idEdicao, sections, endpoint]);
 
   const updateField = (name: string, value: any) => {
     if (name.includes(".")) {
