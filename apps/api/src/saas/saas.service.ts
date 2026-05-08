@@ -4,29 +4,29 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class SaasService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   /**
-   * ONBOARDING INDUSTRIAL v2.0
+   * 1. ONBOARDING INDUSTRIAL v2.0
    * Cria: Tenant + Unidade Matriz + Pessoa Admin + Endereço
    */
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
         console.log(
-          '🏭 [SISMOB] Iniciando Esteira de Onboarding para:',
+          '🏭 [SISMOB] Iniciando Onboarding para:',
           dto.nome_fantasia || dto.nomeEmpresa,
         );
 
-        // 1. GRAVAÇÃO DO TENANT (A EMPRESA)
+        // A. GRAVAÇÃO DO TENANT
         const [tenant] = await tx
           .insert(schema.tenants as any)
           .values({
-            nome_conta: dto.nomeEmpresa, // Razão Social
+            nome_conta: dto.nomeEmpresa,
             nome_fantasia: dto.nome_fantasia || dto.nomeEmpresa,
             url_logo: dto.url_logo || null,
             slug: dto.slug,
@@ -37,7 +37,7 @@ export class SaasService {
           })
           .returning();
 
-        // 2. GERAÇÃO DA MATRIZ AUTOMÁTICA
+        // B. GERAÇÃO DA MATRIZ AUTOMÁTICA
         const [unidade] = await tx
           .insert(schema.unidades as any)
           .values({
@@ -47,7 +47,7 @@ export class SaasService {
           })
           .returning();
 
-        // 3. CRIAÇÃO DO PROPRIETÁRIO (ADMIN DO SISTEMA)
+        // C. CRIAÇÃO DO PROPRIETÁRIO (ADMIN DO SISTEMA)
         const [pessoa] = await tx
           .insert(schema.pessoas as any)
           .values({
@@ -63,8 +63,7 @@ export class SaasService {
           })
           .returning();
 
-        // 4. GRAVAÇÃO DO ENDEREÇO DA IMOBILIÁRIA
-        // Vinculamos o endereço à pessoa admin para rastreabilidade de contrato
+        // D. GRAVAÇÃO DO ENDEREÇO
         if (dto.endereco) {
           await tx.insert(schema.enderecos as any).values({
             pessoa_id: pessoa.id,
@@ -77,10 +76,6 @@ export class SaasService {
           });
         }
 
-        console.log(
-          '✅ [SISMOB] Onboarding concluído com sucesso para ID:',
-          tenant.id,
-        );
         return { success: true, tenantId: tenant.id };
       } catch (e: any) {
         console.error('❌ [ONBOARDING ERROR]:', e.message);
@@ -91,9 +86,37 @@ export class SaasService {
     });
   }
 
-  // Listagem para o Luis Super-Admin
+  /**
+   * 2. COCKPIT FINANCEIRO FLAIENCE
+   * Usado pelo Luis (Super-Admin) para ver a saúde do SaaS
+   */
+  async getFinanceiroFlaience() {
+    try {
+      const table = schema.tenants as any;
+      const stats = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(table)
+        .where(eq(table.status, 'ativo'));
+
+      return {
+        imobiliariasAtivas: Number(stats[0].count),
+        faturamentoEstimado: Number(stats[0].count) * 299, // Regra de negócio: R$ 299/mês
+        timestamp: new Date(),
+      };
+    } catch (e) {
+      return { imobiliariasAtivas: 0, faturamentoEstimado: 0 };
+    }
+  }
+
+  /**
+   * 3. LISTAGEM DE CLIENTES
+   */
   async listarTenants() {
-    const table = schema.tenants as any;
-    return await this.db.select().from(table);
+    try {
+      const table = schema.tenants as any;
+      return await this.db.select().from(table);
+    } catch (e) {
+      return [];
+    }
   }
 }
