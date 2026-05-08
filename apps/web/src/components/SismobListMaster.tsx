@@ -72,9 +72,9 @@ export default function SismobListMaster({ config, papelUrl }: any) {
             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none">
               {config?.title}
             </h1>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+            {/* <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
               Fábrica de Dados Sismob
-            </p>
+            </p> */}
           </div>
 
           {/* BARRA DE BUSCA INDUSTRIAL */}

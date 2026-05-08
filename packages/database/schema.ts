@@ -72,6 +72,9 @@ export const tenants = pgTable("tenants", {
   updated_at: timestamp("updated_at").defaultNow(),
   version_schema: varchar("version_schema", { length: 10 }).default("1.0.0"), // <--- CONTROLE
   last_migration: timestamp("last_migration").defaultNow(),
+  nome_fantasia: varchar("nome_fantasia", { length: 255 }),
+  telefone: varchar("telefone", { length: 20 }),
+  url_logo: text("url_logo"),
 });
 
 export const unidades = pgTable("unidades", {

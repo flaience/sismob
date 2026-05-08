@@ -1,4 +1,3 @@
-//src/components/Sidebar.tsx
 "use client";
 import { useState, useEffect } from "react";
 import {
@@ -22,26 +21,30 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+// 1. IMPORTAÇÃO DO CONTEXTO DA IMOBILIÁRIA
+import { useTenant } from "@/context/TenantContext";
 
 export default function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
   const pathname = usePathname();
+
   const { user, signOut } = useAuth();
+  // 2. DECLARAÇÃO DO OBJETO TENANT (Resolve o erro Find Name)
+  const { tenant } = useTenant();
 
   useEffect(() => {
     setMounted(true);
   }, []);
   if (!mounted || !user) return null;
 
-  // --- LÓGICA DE CONTROLE DE ACESSO (RBAC) ---
   const isLuis = user?.papel == "0" || user?.email === "luis@flaience.com";
-  const isDono = user?.papel == "6";
-  const isGerente = user?.cargo === "gerente";
-  const isFinanceiro = user?.cargo === "financeiro";
-
-  const podeVerFinanceiro = isLuis || isDono || isGerente || isFinanceiro;
+  const podeVerFinanceiro =
+    isLuis ||
+    user?.papel == "6" ||
+    user?.cargo === "gerente" ||
+    user?.cargo === "financeiro";
 
   const menuGroups = [
     {
@@ -74,7 +77,6 @@ export default function Sidebar() {
     },
   ];
 
-  // 1. INJEÇÃO DO MÓDULO FINANCEIRO (SEGURANÇA POR CARGO)
   if (podeVerFinanceiro) {
     menuGroups.push({
       title: "Gestão Financeira",
@@ -115,7 +117,6 @@ export default function Sidebar() {
         href: "/gestao/unidades",
         icon: Building2,
       },
-      { label: "Bancos (BACEN)", href: "/gestao/bancos", icon: Landmark },
       {
         label: "Itens / Atributos",
         href: "/gestao/atributos-itens",
@@ -125,7 +126,6 @@ export default function Sidebar() {
   };
   menuGroups.push(configGroup);
 
-  // 2. MÓDULO EXCLUSIVO FLAIENCE (SÓ PARA O LUIS)
   if (isLuis) {
     menuGroups.push({
       title: "Admin Flaience",
@@ -151,13 +151,25 @@ export default function Sidebar() {
       style={{ width: isExpanded ? 280 : 84 }}
       className="fixed left-6 top-6 bottom-6 z-[999] bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-300 border border-slate-100"
     >
+      {/* 3. LOGO E NOME DINÂMICO (Grife Sismob) */}
       <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100">
-          <Home size={24} />
+        <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg min-w-[48px] h-12 flex items-center justify-center">
+          {tenant?.url_logo ? (
+            <img
+              src={tenant.url_logo}
+              className="w-full h-full object-contain"
+              alt="Logo"
+            />
+          ) : (
+            <Home size={24} />
+          )}
         </div>
         {isExpanded && (
-          <span className="font-black text-xl text-slate-900 tracking-tighter uppercase italic">
-            SIS<span className="text-indigo-600">MOB</span>
+          <span className="font-black text-xl text-slate-900 tracking-tighter uppercase italic truncate">
+            {tenant?.nome_fantasia || "SIS"}
+            <span className="text-indigo-600">
+              {tenant?.nome_fantasia ? "" : "MOB"}
+            </span>
           </span>
         )}
       </div>

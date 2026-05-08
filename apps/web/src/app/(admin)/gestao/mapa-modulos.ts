@@ -121,6 +121,33 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
+  inquilinos: {
+    title: "Gestão de Inquilinos",
+    entity: "pessoas",
+    papel: "4",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "WhatsApp", key: "telefone" },
+    ],
+    sections: [
+      {
+        title: "Dados Básicos",
+        fields: [
+          {
+            name: "nome",
+            label: "Nome Completo",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          { name: "documento", label: "CPF", type: "text", required: true },
+          { name: "email", label: "E-mail", type: "text" },
+        ],
+      },
+      SECAO_ENDERECO, // O Reuso que já criamos
+    ],
+  },
+
   // --- OPERACIONAL ---
   imoveis: {
     title: "Gestão de Imóveis",
@@ -200,6 +227,25 @@ export const MAPA_SISMOB: any = {
           {
             name: "nome",
             label: "Ex: Piscina, Laje, Churrasqueira",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+        ],
+      },
+    ],
+  },
+  "atributos-itens": {
+    title: "Itens e Comodidades",
+    entity: "configuracoes/atributos",
+    columns: [{ label: "Descrição do Item", key: "nome" }],
+    sections: [
+      {
+        title: "Cadastro de Acessório",
+        fields: [
+          {
+            name: "nome",
+            label: "Ex: Piscina, Churrasqueira",
             type: "text",
             required: true,
             fullWidth: true,
@@ -386,18 +432,52 @@ export const MAPA_SISMOB: any = {
   },
 
   imobiliarias: {
-    title: "Fábrica de Clientes (Tenants)",
+    title: "Minhas Imobiliárias",
     entity: "saas/onboarding",
     columns: [
-      { label: "Empresa", key: "nome_conta" },
+      { label: "Fantasia", key: "nome_fantasia" },
       { label: "Slug", key: "slug" },
     ],
     sections: [
       {
-        title: "Nova Imobiliária",
+        title: "Identidade Visual e Marca",
         fields: [
-          { name: "nomeEmpresa", label: "Nome", type: "text", required: true },
-          { name: "slug", label: "Slug", type: "text", required: true },
+          {
+            name: "nome_fantasia",
+            label: "Nome Fantasia (Aparece no Topo)",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "url_logo",
+            label: "URL da Logomarca (PNG/SVG)",
+            type: "text",
+            fullWidth: true,
+          },
+          {
+            name: "nome_conta",
+            label: "Razão Social",
+            type: "text",
+            fullWidth: true,
+          },
+        ],
+      },
+      {
+        title: "Contato e Acesso",
+        fields: [
+          {
+            name: "slug",
+            label: "Slug (Link único do site)",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "email_financeiro",
+            label: "E-mail de Cobrança",
+            type: "text",
+            required: true,
+          },
+          { name: "telefone", label: "Telefone de Suporte", type: "text" },
         ],
       },
     ],
