@@ -159,6 +159,22 @@ export const MAPA_SISMOB: any = {
     ],
     sections: [
       {
+        title: "Galeria de Mídias",
+        fields: [
+          {
+            name: "midias",
+            label: "Fotos do Imóvel (Marque as 360° e a Capa no atalho)",
+            type: "gallery",
+          },
+          {
+            name: "video_url",
+            label: "Link Externo de Vídeo (YouTube)",
+            type: "text",
+            fullWidth: true,
+          },
+        ],
+      },
+      {
         title: "Anúncio",
         fields: [
           {
@@ -431,12 +447,15 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
+  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
+
   imobiliarias: {
     title: "Minhas Imobiliárias",
     entity: "saas/onboarding",
     columns: [
       { label: "Fantasia", key: "nome_fantasia" },
       { label: "Slug", key: "slug" },
+      { label: "Cidade", key: "endereco.cidade" }, // Agora podemos mostrar a cidade no grid
     ],
     sections: [
       {
@@ -448,16 +467,18 @@ export const MAPA_SISMOB: any = {
             type: "text",
             required: true,
           },
+          // MUDANÇA: Agora usa o atalho de carregar imagem
           {
             name: "url_logo",
-            label: "URL da Logomarca (PNG/SVG)",
-            type: "text",
+            label: "Logomarca da Imobiliária",
+            type: "image",
             fullWidth: true,
           },
           {
             name: "nome_conta",
             label: "Razão Social",
             type: "text",
+            required: true,
             fullWidth: true,
           },
         ],
@@ -480,6 +501,8 @@ export const MAPA_SISMOB: any = {
           { name: "telefone", label: "Telefone de Suporte", type: "text" },
         ],
       },
+      // INCLUSÃO: Agora a imobiliária também recebe endereço completo
+      SECAO_ENDERECO,
     ],
   },
 };

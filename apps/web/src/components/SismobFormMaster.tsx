@@ -5,6 +5,7 @@ import { Sparkles, ChevronDown, ArrowLeft } from "lucide-react";
 import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
 import SismobButton from "./SismobButton";
+import SismobUpload from "./SismobUpload";
 
 export default function SismobFormMaster({
   title,
@@ -131,11 +132,12 @@ export default function SismobFormMaster({
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="max-w-5xl mx-auto p-4 md:p-10 space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       {/* HEADER DA FÁBRICA */}
       <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex items-center gap-6">
           <button
+            type="button"
             onClick={() => router.back()}
             className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-200 transition-all text-slate-600"
           >
@@ -156,7 +158,7 @@ export default function SismobFormMaster({
           type="button"
           onClick={() =>
             alert(
-              `🤖 AGENTE SISMOB (RAG): \n\n${aiHelp || "Otimizando preenchimento para conversão..."}`,
+              `🤖 AGENTE SISMOB (MCP): \n\n${aiHelp || "Otimizando preenchimento para conversão..."}`,
             )
           }
           className="hidden md:flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
@@ -177,19 +179,23 @@ export default function SismobFormMaster({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {section.fields.map((field: any) => {
+                // Lógica para capturar valores aninhados (ex: endereco.cep)
                 const nameParts = field.name.split(".");
                 const value = field.name.includes(".")
                   ? formData[nameParts[0]]?.[nameParts[1]] || ""
                   : formData[field.name] || "";
 
+                // Define se o campo ocupa a linha toda (galerias e checklists sempre ocupam)
+                const isFullWidth =
+                  field.fullWidth ||
+                  field.type === "checklist" ||
+                  field.type === "gallery" ||
+                  field.type === "image";
+
                 return (
                   <div
                     key={field.name}
-                    className={
-                      field.fullWidth || field.type === "checklist"
-                        ? "md:col-span-2 lg:col-span-3"
-                        : ""
-                    }
+                    className={isFullWidth ? "md:col-span-2 lg:col-span-3" : ""}
                   >
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-6 mb-3 block">
                       {field.label}{" "}
@@ -198,8 +204,16 @@ export default function SismobFormMaster({
                       )}
                     </label>
 
-                    {/* LÓGICA DE CHECKLIST (ATRIBUTOS DINÂMICOS) */}
-                    {field.type === "checklist" ? (
+                    {/* 1. ATALHO DE IMAGEM / GALERIA (O que você pediu) */}
+                    {field.type === "image" || field.type === "gallery" ? (
+                      <SismobUpload
+                        label={field.label}
+                        value={formData[field.name]}
+                        multiple={field.type === "gallery"}
+                        onChange={(val: any) => updateField(field.name, val)}
+                      />
+                    ) : /* 2. LÓGICA DE CHECKLIST (ATRIBUTOS DINÂMICOS) */
+                    field.type === "checklist" ? (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
                         {(options[field.name] || []).map((opt: any) => (
                           <label
@@ -226,14 +240,9 @@ export default function SismobFormMaster({
                             </span>
                           </label>
                         ))}
-                        {(!options[field.name] ||
-                          options[field.name].length === 0) && (
-                          <p className="col-span-full text-xs font-bold text-slate-400 italic text-center">
-                            Nenhum item cadastrado em "{field.label}".
-                          </p>
-                        )}
                       </div>
-                    ) : field.type === "select" ? (
+                    ) : /* 3. LÓGICA DE SELEÇÃO (AUTO-LOOKUPS) */
+                    field.type === "select" ? (
                       <div className="relative">
                         <select
                           className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-600"
@@ -252,7 +261,8 @@ export default function SismobFormMaster({
                                 {o.nome ||
                                   o.label ||
                                   o.descricao ||
-                                  o.banco_nome}
+                                  o.banco_nome ||
+                                  o.nome_fantasia}
                               </option>
                             ),
                           )}
@@ -262,6 +272,7 @@ export default function SismobFormMaster({
                         </div>
                       </div>
                     ) : (
+                      /* 4. INPUT PADRÃO (TEXTO, NÚMERO, DATA) */
                       <input
                         type={field.type}
                         placeholder={field.label}
@@ -279,7 +290,7 @@ export default function SismobFormMaster({
           </div>
         ))}
 
-        {/* RODAPÉ COM BOTÃO DE IMPACTO */}
+        {/* RODAPÉ COM BOTÃO INDUSTRIAL */}
         <div className="flex flex-col items-center gap-4 pt-10">
           <div className="w-full max-w-md">
             <SismobButton loading={loading}>
