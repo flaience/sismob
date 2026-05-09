@@ -40,14 +40,21 @@ export class GenericConfigService {
     try {
       const table = (schema as any)[tableName];
       const { id, ...data } = dto;
-      const payload = { ...data, tenant_id: tenantId };
+
+      // HIGIENIZAÇÃO: Garante que se houver quantidade, ela seja um número
+      const payload = {
+        ...data,
+        tenant_id: tenantId,
+        // Converte quantidade para número se o campo existir
+        ...(data.quantidade ? { quantidade: Number(data.quantidade) } : {}),
+      };
 
       if (id && id !== 'undefined') {
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
         return await this.db.insert(table).values(payload).returning();
       }
-    } catch (e) {
+    } catch (e: any) {
       throw new InternalServerErrorException(
         `Erro ao salvar em ${tableName}: ${e.message}`,
       );

@@ -96,17 +96,25 @@ export default function SismobFormMaster({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const missing: string[] = [];
-    sections.forEach((s: any) =>
-      s.fields.forEach((f: any) => {
-        if (f.required && !formData[f.name]) missing.push(f.name);
-      }),
-    );
 
-    if (missing.length > 0) {
-      setErrors(missing);
+    // 1. MOTOR DE CONSISTÊNCIA
+    const missingFields: string[] = [];
+    sections.forEach((section: any) => {
+      section.fields.forEach((field: any) => {
+        if (field.required && !formData[field.name]) {
+          missingFields.push(field.name);
+        }
+      });
+    });
+
+    if (missingFields.length > 0) {
+      setErrors(missingFields); // Pintará os campos de vermelho
+      // Foca no primeiro campo com erro
+      const firstErrorField = document.getElementsByName(missingFields[0])[0];
+      firstErrorField?.focus();
+
       alert(
-        "⚠️ Por favor, preencha os campos obrigatórios marcados em vermelho.",
+        "⚠️ Atenção: Preencha todos os campos obrigatórios marcados em vermelho.",
       );
       return;
     }
@@ -115,8 +123,11 @@ export default function SismobFormMaster({
     try {
       await api.post(endpoint, { ...formData, imobiliariaId: tenant?.id });
       router.back();
-    } catch (err) {
-      alert("❌ Falha na gravação. Verifique o console.");
+    } catch (err: any) {
+      console.error(err);
+      alert(
+        `❌ Erro no Servidor: ${err.response?.data?.message || "Erro desconhecido"}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -167,29 +178,40 @@ export default function SismobFormMaster({
                   </label>
 
                   {field.type === "checklist" ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                    <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-8 rounded-[3.5rem] border border-slate-100">
                       {(options[field.name] || []).map((opt: any) => (
                         <label
                           key={opt.id}
-                          className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm cursor-pointer hover:ring-2 ring-brand transition-all"
+                          className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm cursor-pointer hover:ring-2 ring-indigo-600 transition-all group"
                         >
                           <input
                             type="checkbox"
-                            className="w-5 h-5 rounded border-none ring-1 ring-slate-300 checked:bg-brand"
-                            checked={formData[field.name]?.includes(opt.id)}
+                            className="w-6 h-6 rounded-xl border-none ring-1 ring-slate-200 checked:bg-indigo-600 cursor-pointer"
+                            checked={
+                              Array.isArray(formData[field.name]) &&
+                              formData[field.name].includes(opt.id)
+                            }
                             onChange={(e) => {
-                              const cur = formData[field.name] || [];
-                              updateField(
-                                field.name,
-                                e.target.checked
-                                  ? [...cur, opt.id]
-                                  : cur.filter((x: any) => x !== opt.id),
-                              );
+                              const current = Array.isArray(
+                                formData[field.name],
+                              )
+                                ? formData[field.name]
+                                : [];
+                              const newValue = e.target.checked
+                                ? [...current, opt.id]
+                                : current.filter((id: any) => id !== opt.id);
+                              updateField(field.name, newValue);
                             }}
                           />
-                          <span className="text-xs font-black text-slate-600 uppercase">
-                            {opt.quantidade} {opt.nome}
-                          </span>
+                          <div className="flex flex-col leading-tight">
+                            {/* EXIBIÇÃO DA QUANTIDADE + NOME (O SEU CARDÁPIO) */}
+                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">
+                              {opt.quantidade}x
+                            </span>
+                            <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-900 uppercase">
+                              {opt.nome}
+                            </span>
+                          </div>
                         </label>
                       ))}
                     </div>

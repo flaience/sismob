@@ -45,29 +45,37 @@ export class ImoveisService {
   async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        // Removemos campos do sistema que o DTO pode trazer da edição
         const { id, atributos, created_at, updated_at, ...dadosImovel } = dto;
         const table = schema.imoveis as any;
         const tableAtributos = schema.imoveisAtributos as any;
 
+        // SANITIZAÇÃO INDUSTRIAL: Garante que os campos de endereço cheguem ao banco
         const payload = {
           ...dadosImovel,
           tenant_id: tenantId,
+          // Garante que campos numéricos não vão como string vazia
+          unidade_id: dadosImovel.unidade_id
+            ? Number(dadosImovel.unidade_id)
+            : null,
+          preco_venda: dadosImovel.preco_venda
+            ? dadosImovel.preco_venda.toString()
+            : null,
+          area_privativa: dadosImovel.area_privativa
+            ? dadosImovel.area_privativa.toString()
+            : null,
           updated_at: new Date(),
         };
 
         let imovelId = id;
 
         if (id && id !== 'undefined') {
-          // ATUALIZAÇÃO
           await tx.update(table).set(payload).where(eq(table.id, id));
         } else {
-          // INSERÇÃO
           const [novo] = await tx.insert(table).values(payload).returning();
           imovelId = novo.id;
         }
 
-        // 4. VÍNCULO DE ATRIBUTOS (Many-to-Many)
+        // VÍNCULO DE ATRIBUTOS (O "Cardápio" que você marcou)
         if (atributos && Array.isArray(atributos)) {
           await tx
             .delete(tableAtributos)
@@ -80,13 +88,10 @@ export class ImoveisService {
             await tx.insert(tableAtributos).values(inserts);
         }
 
-        // TODO: Aqui entra o FilesService para processar o array 'files'
-        // e gravar na tabela 'midias' do imóvel.
-
         return { id: imovelId, success: true };
       } catch (e: any) {
-        console.error('❌ [DB ERROR] Falha no upsert de imóvel:', e.message);
-        throw new InternalServerErrorException(e.message);
+        console.error('❌ [DB FATAL]:', e.message);
+        throw new InternalServerErrorException(`Falha no banco: ${e.message}`);
       }
     });
   }
