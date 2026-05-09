@@ -94,24 +94,27 @@ export default function SismobFormMaster({
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-10">
+      <form onSubmit={handleSubmit} className="space-y-12">
         {sections.map((section: any, sIdx: number) => (
           <div
             key={sIdx}
-            className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-sm border border-slate-100"
+            className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-500"
           >
             <h2 className="text-xl font-black text-slate-800 border-l-4 border-indigo-600 pl-6 mb-10 uppercase tracking-tighter">
               {section.title}
             </h2>
 
-            {/* O SEGREDO: O container do Grid é flexível */}
-            <div className="flex flex-wrap gap-x-6 gap-y-8">
+            {/* CONTAINER FLEXÍVEL: Impede a sobreposição de campos */}
+            <div className="flex flex-wrap gap-x-6 gap-y-10">
               {section.fields.map((field: any) => {
-                const isFullWidth =
+                // Lógica de largura: campos de mídia e listas ocupam a linha toda
+                const isWide =
                   field.fullWidth ||
                   field.type === "gallery" ||
                   field.type === "image" ||
-                  field.type === "attribute-grid";
+                  field.type === "checklist";
+
+                // Lógica de valor para campos aninhados (ex: endereco.logradouro)
                 const val = field.name.includes(".")
                   ? formData[field.name.split(".")[0]]?.[
                       field.name.split(".")[1]
@@ -121,13 +124,16 @@ export default function SismobFormMaster({
                 return (
                   <div
                     key={field.name}
-                    className={`${isFullWidth ? "w-full" : "flex-1 min-w-[280px]"}`}
+                    className={`${isWide ? "w-full" : "flex-1 min-w-[280px]"}`}
                   >
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-6 mb-2 block">
-                      {field.label}
+                      {field.label}{" "}
+                      {field.required && (
+                        <span className="text-red-500">*</span>
+                      )}
                     </label>
 
-                    {/* RENDERIZAÇÃO POR TIPO */}
+                    {/* 1. ATALHOS DE MÍDIA (Logo / Galeria de Fotos) */}
                     {field.type === "image" || field.type === "gallery" ? (
                       <SismobUpload
                         label={field.label}
@@ -135,48 +141,55 @@ export default function SismobFormMaster({
                         multiple={field.type === "gallery"}
                         onChange={(v: any) => updateField(field.name, v)}
                       />
-                    ) : field.type === "attribute-grid" ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-6 rounded-[2.5rem]">
-                        {(options["atributos"] || []).map((attr: any) => (
-                          <div
-                            key={attr.id}
-                            className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm"
+                    ) : /* 2. CARDÁPIO DE ATRIBUTOS (O que você pediu: Checkbox com Qtd) */
+                    field.type === "checklist" ? (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
+                        {(options[field.name] || []).map((opt: any) => (
+                          <label
+                            key={opt.id}
+                            className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm cursor-pointer hover:ring-2 ring-indigo-600 transition-all group"
                           >
-                            <span className="flex-1 text-sm font-bold text-slate-600">
-                              {attr.nome}
-                            </span>
                             <input
-                              type="text"
-                              placeholder="0"
-                              className="w-12 p-2 bg-slate-50 rounded-xl text-center font-black text-indigo-600 border-none outline-none"
-                              value={
-                                formData.atributos?.find(
-                                  (a: any) => a.id === attr.id,
-                                )?.valor || ""
+                              type="checkbox"
+                              className="w-6 h-6 rounded-lg border-none ring-1 ring-slate-200 checked:bg-indigo-600 transition-all cursor-pointer"
+                              checked={
+                                Array.isArray(formData[field.name]) &&
+                                formData[field.name].includes(opt.id)
                               }
                               onChange={(e) => {
-                                const cur = formData.atributos || [];
-                                const other = cur.filter(
-                                  (a: any) => a.id !== attr.id,
-                                );
-                                updateField(
-                                  "atributos",
-                                  e.target.value === ""
-                                    ? other
-                                    : [
-                                        ...other,
-                                        { id: attr.id, valor: e.target.value },
-                                      ],
-                                );
+                                const current = Array.isArray(
+                                  formData[field.name],
+                                )
+                                  ? formData[field.name]
+                                  : [];
+                                const newValue = e.target.checked
+                                  ? [...current, opt.id]
+                                  : current.filter((id: any) => id !== opt.id);
+                                updateField(field.name, newValue);
                               }}
                             />
-                          </div>
+                            <div className="flex flex-col leading-tight">
+                              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">
+                                {opt.quantidade}x
+                              </span>
+                              <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-900 uppercase">
+                                {opt.nome}
+                              </span>
+                            </div>
+                          </label>
                         ))}
+                        {(!options[field.name] ||
+                          options[field.name].length === 0) && (
+                          <p className="col-span-full text-center py-4 text-xs font-bold text-slate-400 italic">
+                            Nenhum item cadastrado em {field.label}.
+                          </p>
+                        )}
                       </div>
-                    ) : field.type === "select" ? (
+                    ) : /* 3. SELEÇÃO (Lookups) */
+                    field.type === "select" ? (
                       <div className="relative">
                         <select
-                          className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 outline-none appearance-none focus:ring-2 ring-indigo-600"
+                          className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 outline-none appearance-none focus:ring-2 ring-indigo-600 transition-all cursor-pointer"
                           value={val || ""}
                           onChange={(e) =>
                             updateField(field.name, e.target.value)
@@ -192,21 +205,23 @@ export default function SismobFormMaster({
                                 {o.nome ||
                                   o.label ||
                                   o.banco_nome ||
-                                  o.nome_fantasia}
+                                  o.nome_fantasia ||
+                                  o.descricao}
                               </option>
                             ),
                           )}
                         </select>
                         <ChevronDown
-                          className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400"
+                          className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                           size={20}
                         />
                       </div>
                     ) : (
+                      /* 4. INPUTS PADRÃO (Texto, Número, Data) */
                       <input
                         type={field.type}
                         placeholder={field.label}
-                        className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 outline-none focus:ring-2 ring-indigo-600"
+                        className="w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 outline-none focus:ring-2 ring-indigo-600 transition-all placeholder:text-slate-200"
                         value={val || ""}
                         onChange={(e) =>
                           updateField(field.name, e.target.value)
@@ -219,8 +234,14 @@ export default function SismobFormMaster({
             </div>
           </div>
         ))}
+
+        {/* BOTÃO DE SALVAMENTO INDUSTRIAL */}
         <div className="flex justify-center pt-10">
-          <SismobButton loading={loading}>SALVAR REGISTRO</SismobButton>
+          <div className="w-full max-w-md">
+            <SismobButton loading={loading}>
+              SALVAR REGISTRO COMPLETO
+            </SismobButton>
+          </div>
         </div>
       </form>
     </div>

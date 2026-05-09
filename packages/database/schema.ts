@@ -156,7 +156,27 @@ export const imoveis = pgTable("imoveis", {
   proprietario_id: uuid("proprietario_id").references(() => pessoas.id),
   created_at: timestamp("created_at").defaultNow(),
 });
+// ==========================================
+// 5. ATRIBUTOS DINÂMICOS (ACESSÓRIOS)
+// ==========================================
+export const categoriasAtributos = pgTable("categorias_atributos", {
+  id: serial("id").primaryKey(),
+  tenant_id: uuid("tenant_id").references(() => tenants.id),
+  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Dormitórios", "Lazer"
+});
 
+// 2. O CARDÁPIO DE ITENS (O que você sugeriu)
+export const atributos = pgTable("atributos", {
+  id: serial("id").primaryKey(),
+  tenant_id: uuid("tenant_id").references(() => tenants.id),
+  categoria_id: integer("categoria_id").references(
+    () => categoriasAtributos.id,
+  ),
+  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Quarto"
+  quantidade: integer("quantidade").default(1), // Ex: 3
+});
+
+// 3. A PONTE (Vínculo Imóvel <-> Atributo)
 export const imoveisAtributos = pgTable(
   "imoveis_atributos",
   {
@@ -166,8 +186,6 @@ export const imoveisAtributos = pgTable(
     atributo_id: integer("atributo_id").references(() => atributos.id, {
       onDelete: "cascade",
     }),
-    // O SEGREDO: Aqui salvamos a quantidade (ex: 3 quartos)
-    valor: varchar("valor", { length: 50 }),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.imovel_id, t.atributo_id] }),
@@ -194,24 +212,6 @@ export const instrucoesChegada = pgTable("instrucoes_chegada", {
   titulo: varchar("titulo", { length: 100 }).notNull(),
   descricao: text("descricao"),
   foto_url: text("foto_url"),
-});
-
-// ==========================================
-// 5. ATRIBUTOS DINÂMICOS (ACESSÓRIOS)
-// ==========================================
-export const categoriasAtributos = pgTable("categorias_atributos", {
-  id: serial("id").primaryKey(),
-  tenant_id: uuid("tenant_id").references(() => tenants.id),
-  nome: varchar("nome", { length: 100 }).notNull(),
-});
-
-export const atributos = pgTable("atributos", {
-  id: serial("id").primaryKey(),
-  categoria_id: integer("categoria_id").references(
-    () => categoriasAtributos.id,
-    { onDelete: "cascade" },
-  ),
-  nome: varchar("nome", { length: 100 }).notNull(),
 });
 
 // ==========================================
