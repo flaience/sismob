@@ -16,6 +16,35 @@ const SECAO_ENDERECO = {
 };
 
 export const MAPA_SISMOB: any = {
+  // 1. EQUIPE (Corrigindo o 404)
+  equipe: {
+    title: "Minha Equipe",
+    entity: "pessoas",
+    papel: "1",
+    columns: [
+      { label: "Nome", key: "nome" },
+      { label: "Cargo", key: "cargo" },
+    ],
+    sections: [
+      {
+        title: "Dados do Colaborador",
+        fields: [
+          { name: "nome", label: "Nome", type: "text", required: true },
+          { name: "email", label: "E-mail", type: "text", required: true },
+          {
+            name: "cargo",
+            label: "Cargo",
+            type: "select",
+            options: [
+              { label: "Corretor", value: "corretor" },
+              { label: "Gerente", value: "gerente" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+
   // --- CRM COMERCIAL ---
   leads: {
     title: "Interessados (Leads)",
@@ -154,7 +183,8 @@ export const MAPA_SISMOB: any = {
     entity: "imoveis",
     columns: [
       { label: "Título", key: "titulo" },
-      { label: "Bairro/Cidade", key: "bairro" }, // Agora estruturado
+      { label: "Bairro", key: "bairro" },
+      { label: "Cidade", key: "cidade" },
       { label: "Valor Venda", key: "preco_venda" },
       { label: "Status", key: "status" },
     ],
@@ -171,7 +201,7 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "descricao",
-            label: "Descrição Detalhada (IA Consome)",
+            label: "Descrição Detalhada para IA",
             type: "text",
             fullWidth: true,
           },
@@ -189,7 +219,7 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "status",
-            label: "Situação",
+            label: "Situação Atual",
             type: "select",
             options: [
               { label: "Disponível", value: "disponivel" },
@@ -240,29 +270,28 @@ export const MAPA_SISMOB: any = {
         ],
       },
       {
-        title: "Atributos e Comodidades (Quantitativo)",
+        title: "Acessórios e Comodidades (Cardápio)",
         fields: [
-          // NOVO TIPO: Desenha a lista de atributos com campo de quantidade ao lado
+          // O SEGREDO: Agora é um checklist que busca do 'cardápio' de atributos
           {
             name: "atributos",
-            label: "Configurar Acessórios",
-            type: "attribute-grid",
+            label: "Selecione o que o imóvel possui",
+            type: "checklist",
+            entity: "atributos",
           },
         ],
       },
       {
         title: "Galeria de Mídias Profissional",
         fields: [
-          // Componente unificado: Upload múltiplo, marcação de capa e 360 integrada
           {
             name: "midias",
-            label:
-              "Fotos (Arraste para ordenar | Marque a Capa e 360° no atalho)",
+            label: "Fotos (Capa e 360° são marcadas no atalho)",
             type: "gallery",
           },
           {
             name: "video_url",
-            label: "Link de Vídeo Externo (YouTube/Drone)",
+            label: "Link do Vídeo Externo (YouTube/Drone)",
             type: "text",
             fullWidth: true,
           },
@@ -270,23 +299,31 @@ export const MAPA_SISMOB: any = {
       },
     ],
     aiMetadata:
-      "Imóveis com endereço estruturado e atributos quantificados (ex: 3 quartos) permitem que a IA faça buscas cirúrgicas para o interessado.",
+      "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos. O campo 'atributos' deve ser usado para destacar o valor do imóvel.",
   },
 
   atributos: {
     title: "Itens e Comodidades",
     entity: "configuracoes/atributos",
-    columns: [{ label: "Item", key: "nome" }],
+    columns: [
+      { label: "Item", key: "nome" },
+      { label: "Qtd", key: "quantidade" },
+    ],
     sections: [
       {
-        title: "Cadastro de Acessório",
+        title: "Configuração do Item",
         fields: [
           {
             name: "nome",
-            label: "Ex: Piscina, Laje, Churrasqueira",
+            label: "Descrição (Ex: Quarto, Suíte)",
             type: "text",
             required: true,
-            fullWidth: true,
+          },
+          {
+            name: "quantidade",
+            label: "Quantidade Padrão",
+            type: "number",
+            required: true,
           },
         ],
       },
