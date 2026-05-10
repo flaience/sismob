@@ -4,6 +4,7 @@ import SismobListMaster from "@/components/SismobListMaster";
 import { MAPA_SISMOB } from "../mapa-modulos";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function GenericGridPage({ params }: any) {
   // 1. Resolvemos os parâmetros da URL

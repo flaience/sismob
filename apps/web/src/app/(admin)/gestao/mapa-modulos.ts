@@ -332,17 +332,27 @@ export const MAPA_SISMOB: any = {
   "atributos-itens": {
     title: "Itens e Comodidades",
     entity: "configuracoes/atributos",
-    columns: [{ label: "Descrição do Item", key: "nome" }],
+    columns: [
+      { label: "Item", key: "nome" },
+      { label: "Qtd Padrão", key: "quantidade" },
+    ],
     sections: [
       {
-        title: "Cadastro de Acessório",
+        title: "Configuração do Item",
         fields: [
           {
             name: "nome",
-            label: "Ex: Piscina, Churrasqueira",
+            label: "Descrição (Ex: Quarto, Suíte, Vaga)",
             type: "text",
             required: true,
             fullWidth: true,
+          },
+          // AQUI ESTÁ O CAMPO QUE VOCÊ NÃO ESTAVA VENDO:
+          {
+            name: "quantidade",
+            label: "Quantidade Padrão (Ex: 1, 2, 3)",
+            type: "number",
+            required: true,
           },
         ],
       },

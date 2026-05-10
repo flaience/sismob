@@ -1,17 +1,30 @@
-import { Controller, Post, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFiles,
+  Body,
+  Logger,
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
 
-@Controller('files') // Prefixo: /files
+@Controller('files') // <--- GARANTA QUE O PREFIXO É 'files'
 export class FilesController {
+  private readonly logger = new Logger(FilesController.name);
+
   constructor(private readonly filesService: FilesService) {}
 
-  @Post('upload') // Rota final: /files/upload
-  @UseInterceptors(FilesInterceptor('files'))
+  @Post('upload') // <--- ROTA FINAL: /files/upload
+  @UseInterceptors(FilesInterceptor('files')) // O frontend envia no campo 'files'
   async upload(@UploadedFiles() files: any[]) {
-    // Retorna o array de URLs das fotos enviadas
-    return await this.filesService.uploadMultiple(files);
-  }
+    this.logger.log(`📸 Recebendo ${files?.length || 0} arquivos para upload.`);
 
-  
+    if (!files || files.length === 0) {
+      return [];
+    }
+
+    // Retorna as URLs do Supabase Storage
+    return await this.filesService.uploadMultiple(files, 'imoveis');
+  }
 }
