@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller'; // <--- ADICIONADO PARA DEBUG
+import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { PessoasModule } from './pessoas/pessoas.module';
 import { ImoveisModule } from './imoveis/imoveis.module';
-import { FilesModule } from './files/files.module';
+import { FilesModule } from './files/files.module'; // <--- VERIFIQUE O CAMINHO
 import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
-import { SaasModule } from './saas/saas.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
+import { SaasModule } from './saas/saas.module';
 
 @Module({
   imports: [
@@ -17,10 +17,10 @@ import { FinanceiroModule } from './financeiro/financeiro.module';
     AuthModule,
     PessoasModule,
     ImoveisModule,
-    FilesModule, // Única menção
+    FilesModule, // <--- REGISTRADO
     ConfiguracoesModule,
     FinanceiroModule,
-    SaasModule, // Única menção
+    SaasModule,
   ],
   controllers: [AppController],
 })

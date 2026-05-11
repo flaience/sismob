@@ -15,14 +15,15 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   // ADICIONE ESTA ROTA DE TESTE:
-  @Get('check')
+  @Get('ping')
   ping() {
-    return { status: 'Motor de Mídia Online' };
+    return { status: 'Motor de Mídia Sismob Online' };
   }
 
   @Post('upload')
   @UseInterceptors(FilesInterceptor('files'))
   async upload(@UploadedFiles() files: any[]) {
+    if (!files || files.length === 0) return [];
     return await this.filesService.uploadMultiple(files, 'imoveis');
   }
 }
