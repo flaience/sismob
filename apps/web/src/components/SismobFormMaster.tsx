@@ -26,12 +26,67 @@ export default function SismobFormMaster({
   const searchParams = useSearchParams();
   const { tenant } = useTenant();
   const idEdicao = searchParams.get("id");
-
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<any>(initialData || {});
+
+  // 1. INICIALIZAÇÃO BLINDADA: Resolve o problema do CEP inativo
+  // Iniciamos o formData com o initialData (papel) e a estrutura de endereço pronta
+  const [formData, setFormData] = useState<any>({
+    ...initialData,
+    endereco: {
+      cep: "",
+      logradouro: "",
+      numero: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+    },
+  });
+
   const [options, setOptions] = useState<any>({});
   const [errors, setErrors] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // 2. SINCRONIA DE IDENTIDADE:
+  // Garante que se você mudar de "Leads" para "Proprietários", o formulário
+  // receba o novo 'papel' imediatamente sem precisar recarregar.
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev: any) => ({
+        ...prev,
+        ...initialData,
+        // Preserva o endereço se o usuário já começou a digitar
+        endereco: prev.endereco || {
+          cep: "",
+          logradouro: "",
+          numero: "",
+          bairro: "",
+          cidade: "",
+          estado: "",
+        },
+      }));
+    }
+  }, [initialData]);
+
+  // 3. ATUALIZADOR INDUSTRIAL DE CAMPOS (Suporta 'endereco.cep')
+  const updateField = (name: string, val: any) => {
+    // 1. Mantém a sua lógica de limpar o erro visual
+    setErrors((prev) => prev.filter((f) => f !== name));
+
+    // 2. LÓGICA DE CAMADA (Suporte a endereco.cep, endereco.logradouro, etc.)
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setFormData((prev: any) => ({
+        ...prev,
+        [parent]: {
+          ...(prev[parent] || {}), // Preserva o que já foi digitado no endereço
+          [child]: val, // Atualiza apenas o campo específico (ex: cep)
+        },
+      }));
+    } else {
+      // 3. LÓGICA SIMPLES (Para campos como 'nome', 'email', 'papel')
+      setFormData((prev: any) => ({ ...prev, [name]: val }));
+    }
+  };
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -116,11 +171,6 @@ export default function SismobFormMaster({
     } finally {
       setLoading(false);
     }
-  };
-
-  const updateField = (name: string, val: any) => {
-    setErrors((prev) => prev.filter((f) => f !== name));
-    setFormData((prev: any) => ({ ...prev, [name]: val }));
   };
 
   return (
