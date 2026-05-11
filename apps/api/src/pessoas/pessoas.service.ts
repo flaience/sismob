@@ -63,15 +63,15 @@ export class PessoasService {
   async save(dto: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        // 1. LIMPEZA INDUSTRIAL (O TIRO DE MISERICÓRDIA NO ERRO)
-        // Extraímos id, endereco e as datas para que elas NÃO fiquem dentro de 'dadosRestantes'
+        // 1. LIMPEZA E EXTRAÇÃO
+        // Extraímos os campos que o banco gera sozinho ou que trataremos manualmente
         const { id, endereco, created_at, updated_at, ...dadosRestantes } = dto;
 
         const tablePessoas = schema.pessoas as any;
         const tableEnderecos = schema.enderecos as any;
         const tableUnidades = schema.unidades as any;
 
-        // 2. RESOLVE UNIDADE_ID
+        // 2. RESOLVE UNIDADE_ID (Garante que nunca seja null para não quebrar a FK)
         let unidadeIdFinal = dadosRestantes.unidade_id
           ? Number(dadosRestantes.unidade_id)
           : null;
@@ -89,28 +89,37 @@ export class PessoasService {
           unidadeIdFinal = matriz[0]?.id || null;
         }
 
-        // 3. MONTAGEM DO PAYLOAD LIMPO
+        // 3. MONTAGEM DO PAYLOAD BLINDADO
         const payloadPessoa = {
-          ...dadosRestantes, // <--- Aqui só tem campos de texto/número, sem datas do banco
+          ...dadosRestantes,
           tenant_id: tenantId,
           unidade_id: unidadeIdFinal,
+
+          // SOLUÇÃO DO ERRO: Se documento for vazio (comum em Leads), gera um ID temporário
+          // Isso evita o erro: null value in column "documento" violates not-null constraint
+          documento: dadosRestantes.documento || `LEAD-${Date.now()}`,
+
+          // Garante que o papel seja uma string válida do Enum
+          papel: String(dadosRestantes.papel || '2'),
+
           tipo:
             dadosRestantes.tipo === 'f' || dadosRestantes.tipo === 'j'
               ? dadosRestantes.tipo
               : 'f',
-          updated_at: new Date(), // Geramos uma nova data real aqui
+          updated_at: new Date(),
         };
 
         let pessoaId = id;
 
+        // 4. PERSISTÊNCIA NO BANCO
         if (id && id !== 'undefined') {
-          // UPDATE
+          console.log(`🏭 [SISMOB] Atualizando Registro: ${id}`);
           await tx
             .update(tablePessoas)
             .set(payloadPessoa)
             .where(eq(tablePessoas.id, id));
         } else {
-          // INSERT
+          console.log(`🏭 [SISMOB] Criando Novo Registro em ${tenantId}`);
           const [nova] = await tx
             .insert(tablePessoas)
             .values(payloadPessoa)
@@ -118,11 +127,14 @@ export class PessoasService {
           pessoaId = nova.id;
         }
 
-        // 4. ENDEREÇO
+        // 5. GRAVAÇÃO DO ENDEREÇO (Detail)
         if (endereco && (endereco.cep || endereco.logradouro)) {
+          // Limpa rastro anterior
           await tx
             .delete(tableEnderecos)
             .where(eq(tableEnderecos.pessoa_id, pessoaId));
+
+          // Insere novo endereço com valores default para campos obrigatórios do banco
           await tx.insert(tableEnderecos).values({
             ...endereco,
             pessoa_id: pessoaId,
@@ -135,8 +147,10 @@ export class PessoasService {
 
         return { id: pessoaId, success: true };
       } catch (e: any) {
-        console.error('❌ [SISMOB] Erro ao persistir:', e.message);
-        throw new InternalServerErrorException(e.message);
+        console.error('❌ [DB FATAL]:', e.message);
+        throw new InternalServerErrorException(
+          `Falha industrial no banco: ${e.message}`,
+        );
       }
     });
   }
