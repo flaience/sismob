@@ -52,7 +52,7 @@ export const MAPA_SISMOB: any = {
     papel: "2",
     columns: [
       { label: "Nome", key: "nome" },
-      { label: "WhatsApp", key: "telefone" },
+      { label: "WhatsApp", key: "telefone" }, // <--- RESTAURADO NO GRID
     ],
     sections: [
       {
@@ -60,14 +60,19 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "nome",
-            label: "Nome",
+            label: "Nome / Apelido",
             type: "text",
             required: true,
             fullWidth: true,
           },
-          { name: "email", label: "E-mail", type: "text", required: true },
-          { name: "telefone", label: "WhatsApp", type: "text" },
-          { name: "unidade_id", label: "Unidade", type: "select" },
+          {
+            name: "email",
+            label: "E-mail Corporativo",
+            type: "text",
+            required: true,
+          },
+          { name: "telefone", label: "WhatsApp", type: "text", required: true }, // <--- OBRIGATÓRIO NO FORM
+          { name: "unidade_id", label: "Unidade Responsável", type: "select" },
         ],
       },
     ],
@@ -79,30 +84,27 @@ export const MAPA_SISMOB: any = {
     papel: "7",
     columns: [
       { label: "Nome", key: "nome" },
-      { label: "Documento", key: "documento" },
+      { label: "WhatsApp", key: "telefone" }, // <--- RESTAURADO NO GRID
     ],
     sections: [
       {
-        title: "Identificação",
+        title: "Dados do Comprador",
         fields: [
           {
             name: "nome",
-            label: "Nome",
+            label: "Nome Completo",
             type: "text",
             required: true,
             fullWidth: true,
           },
           { name: "documento", label: "CPF", type: "text", required: true },
           {
-            name: "tipo",
-            label: "Tipo",
-            type: "select",
-            options: [
-              { label: "Física", value: "f" },
-              { label: "Jurídica", value: "j" },
-            ],
+            name: "email",
+            label: "E-mail de Contato",
+            type: "text",
+            required: true,
           },
-          { name: "unidade_id", label: "Filial", type: "select" },
+          { name: "telefone", label: "WhatsApp", type: "text", required: true },
         ],
       },
       SECAO_ENDERECO,
@@ -115,7 +117,7 @@ export const MAPA_SISMOB: any = {
     papel: "3",
     columns: [
       { label: "Nome", key: "nome" },
-      { label: "WhatsApp", key: "telefone" },
+      { label: "WhatsApp", key: "telefone" }, // <--- RESTAURADO NO GRID
     ],
     sections: [
       {
@@ -123,33 +125,43 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "nome",
-            label: "Nome",
+            label: "Nome Completo",
             type: "text",
             required: true,
             fullWidth: true,
           },
           {
             name: "documento",
-            label: "CPF/CNPJ",
+            label: "CPF / CNPJ",
             type: "text",
             required: true,
           },
           {
+            name: "email",
+            label: "E-mail de Contrato",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "telefone",
+            label: "WhatsApp / Celular",
+            type: "text",
+            required: true,
+          }, // <--- OBRIGATÓRIO NO FORM
+          {
             name: "tipo",
-            label: "Personalidade",
+            label: "Tipo",
             type: "select",
             options: [
               { label: "Física", value: "f" },
               { label: "Jurídica", value: "j" },
             ],
           },
-          { name: "unidade_id", label: "Unidade", type: "select" },
         ],
       },
       SECAO_ENDERECO,
     ],
   },
-
   inquilinos: {
     title: "Gestão de Inquilinos",
     entity: "pessoas",

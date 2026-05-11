@@ -91,21 +91,23 @@ export class PessoasService {
 
         // 3. MONTAGEM DO PAYLOAD BLINDADO
         const payloadPessoa = {
-          ...dadosRestantes,
+          ...dadosRestantes, // Espalha nome, email, telefone, etc.
           tenant_id: tenantId,
           unidade_id: unidadeIdFinal,
 
-          // SOLUÇÃO DO ERRO: Se documento for vazio (comum em Leads), gera um ID temporário
-          // Isso evita o erro: null value in column "documento" violates not-null constraint
-          documento: dadosRestantes.documento || `LEAD-${Date.now()}`,
+          // 1. BLINDAGEM DE DOCUMENTO: Se não vier, gera um ID de Lead para não travar o banco
+          documento: dadosRestantes.documento || `DOC-${Date.now()}`,
 
-          // Garante que o papel seja uma string válida do Enum
+          // 2. BLINDAGEM DE PAPEL: OBRIGATÓRIO!
+          // Ele vem do frontend via initialData. Se falhar, assume '2' (Lead)
           papel: String(dadosRestantes.papel || '2'),
 
+          // 3. BLINDAGEM DE TIPO: Garante que seja 'f' ou 'j'
           tipo:
             dadosRestantes.tipo === 'f' || dadosRestantes.tipo === 'j'
               ? dadosRestantes.tipo
               : 'f',
+
           updated_at: new Date(),
         };
 
