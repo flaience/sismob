@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   UseInterceptors,
   UploadedFiles,
   Body,
@@ -11,20 +12,17 @@ import { FilesService } from './files.service';
 
 @Controller('files') // <--- GARANTA QUE O PREFIXO É 'files'
 export class FilesController {
-  private readonly logger = new Logger(FilesController.name);
-
   constructor(private readonly filesService: FilesService) {}
 
-  @Post('upload') // <--- ROTA FINAL: /files/upload
-  @UseInterceptors(FilesInterceptor('files')) // O frontend envia no campo 'files'
+  // ADICIONE ESTA ROTA DE TESTE:
+  @Get('check')
+  ping() {
+    return { status: 'Motor de Mídia Online' };
+  }
+
+  @Post('upload')
+  @UseInterceptors(FilesInterceptor('files'))
   async upload(@UploadedFiles() files: any[]) {
-    this.logger.log(`📸 Recebendo ${files?.length || 0} arquivos para upload.`);
-
-    if (!files || files.length === 0) {
-      return [];
-    }
-
-    // Retorna as URLs do Supabase Storage
     return await this.filesService.uploadMultiple(files, 'imoveis');
   }
 }

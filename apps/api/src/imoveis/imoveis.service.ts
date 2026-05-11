@@ -45,54 +45,64 @@ export class ImoveisService {
   async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        // 1. EXTRAÇÃO DOS DADOS (Tratando o objeto 'endereco' do seu Mapa)
+        // 1. EXTRAÇÃO CIRÚRGICA (Conforme sua versão melhorada)
         const {
           id,
           atributos,
           midias,
-          endereco,
+          endereco, // O objeto aninhado vindo do SECAO_ENDERECO
           created_at,
           updated_at,
           ...dadosRestantes
         } = dto;
 
         const tableImoveis = schema.imoveis as any;
+        const tableAtributos = schema.imoveisAtributos as any;
+        const tableMidias = schema.midias as any;
 
-        // 2. CONSTRUÇÃO DO ENDEREÇO (A peça que faltava para matar o erro 500)
-        // Pegamos os dados de dentro de 'endereco' (vinda do SECAO_ENDERECO)
+        // 2. CONSTRUÇÃO DO ENDEREÇO (Sincronia com o seu Schema)
         const logradouro = endereco?.logradouro || '';
         const numero = endereco?.numero || 'SN';
         const bairro = endereco?.bairro || '';
         const cidade = endereco?.cidade || '';
         const estado = endereco?.estado || '';
+        const cep = endereco?.cep || '';
 
         const enderecoString = `${logradouro}, ${numero} - ${bairro}, ${cidade}/${estado}`;
 
         const payload = {
           ...dadosRestantes,
           tenant_id: tenantId,
-          // Mapeia para as colunas físicas da tabela 'imoveis'
+          // Mapeamento das colunas físicas da tabela 'imoveis'
           logradouro,
           numero,
           bairro,
           cidade,
           estado,
-          endereco_original: enderecoString, // <--- OBRIGATÓRIO NO BANCO
+          cep,
+          endereco_original: enderecoString, // <--- RESOLVE O ERRO 500 DEFINITIVAMENTE
 
           unidade_id: dadosRestantes.unidade_id
             ? Number(dadosRestantes.unidade_id)
             : null,
+          proprietario_id: dadosRestantes.proprietario_id || null,
+
           preco_venda: dadosRestantes.preco_venda
             ? dadosRestantes.preco_venda.toString()
+            : '0',
+          preco_aluguel: dadosRestantes.preco_aluguel
+            ? dadosRestantes.preco_aluguel.toString()
             : '0',
           area_privativa: dadosRestantes.area_privativa
             ? dadosRestantes.area_privativa.toString()
             : '0',
+
           updated_at: new Date(),
         };
 
         let imovelId = id;
 
+        // 3. PERSISTÊNCIA DO IMÓVEL
         if (id && id !== 'undefined') {
           await tx
             .update(tableImoveis)
@@ -106,21 +116,48 @@ export class ImoveisService {
           imovelId = novo.id;
         }
 
-        // 3. GRAVAÇÃO DOS ATRIBUTOS (O SEU CARDÁPIO)
+        // 4. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
         if (atributos && Array.isArray(atributos)) {
-          const tableAttr = schema.imoveisAtributos as any;
-          await tx.delete(tableAttr).where(eq(tableAttr.imovel_id, imovelId));
-          const inserts = atributos.map((attrId: any) => ({
+          // Limpa seleções anteriores para não duplicar
+          await tx
+            .delete(tableAtributos)
+            .where(eq(tableAtributos.imovel_id, imovelId));
+
+          const insertsAtributos = atributos.map((attrId: any) => ({
             imovel_id: imovelId,
             atributo_id: Number(attrId),
           }));
-          if (inserts.length > 0) await tx.insert(tableAttr).values(inserts);
+
+          if (insertsAtributos.length > 0) {
+            await tx.insert(tableAtributos).values(insertsAtributos);
+          }
+        }
+
+        // 5. GRAVAÇÃO DE MÍDIAS (Fotos e 360°)
+        if (midias && Array.isArray(midias)) {
+          await tx
+            .delete(tableMidias)
+            .where(eq(tableMidias.imovel_id, imovelId));
+
+          const insertsMidias = midias.map((m: any, idx: number) => ({
+            imovel_id: imovelId,
+            url: m.url,
+            tipo: m.tipo || 'foto_interna',
+            is_capa: m.is_capa || idx === 0,
+            ordem: idx,
+          }));
+
+          if (insertsMidias.length > 0) {
+            await tx.insert(tableMidias).values(insertsMidias);
+          }
         }
 
         return { id: imovelId, success: true };
       } catch (e: any) {
-        console.error('❌ [ERRO IMÓVEL]:', e.message);
-        throw new InternalServerErrorException(e.message);
+        console.error('❌ [SISMOB DB FATAL]:', e.message);
+        throw new InternalServerErrorException(
+          `Falha industrial: ${e.message}`,
+        );
       }
     });
   }

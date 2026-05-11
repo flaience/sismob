@@ -16,13 +16,12 @@ import { FinanceiroModule } from './financeiro/financeiro.module';
     DatabaseModule,
     AuthModule,
     PessoasModule,
-    SaasModule,
     ImoveisModule,
-    SaasModule,
-    FilesModule,
+    FilesModule, // Única menção
     ConfiguracoesModule,
     FinanceiroModule,
+    SaasModule, // Única menção
   ],
-  controllers: [AppController], // <--- REGISTRADO AQUI PARA O 'PULSO' FUNCIONAR
+  controllers: [AppController],
 })
 export class AppModule {}

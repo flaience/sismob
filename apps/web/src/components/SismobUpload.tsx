@@ -37,10 +37,13 @@ export default function SismobUpload({
         onChange(res.data[0].url);
       }
       console.log("✅ Upload concluído e estado atualizado!");
-    } catch (err) {
-      alert(
-        "Falha no upload das imagens. Verifique se o módulo Files está no AppModule.",
-      );
+    } catch (err: any) {
+      // O SEGREDO DO DIAGNÓSTICO:
+      const status = err.response?.status;
+      const msg = err.response?.data?.message || err.message;
+
+      console.error("❌ Erro Detalhado no Upload:", { status, msg });
+      alert(`Falha no Upload (${status}): ${msg}`);
     } finally {
       setLoading(false);
     }
