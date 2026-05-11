@@ -45,53 +45,110 @@ export class ImoveisService {
   async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        const { id, atributos, created_at, updated_at, ...dadosImovel } = dto;
-        const table = schema.imoveis as any;
-        const tableAtributos = schema.imoveisAtributos as any;
+        // 1. DESESTRUTURAÇÃO DE LIMPEZA
+        // Extraímos id, atributos, midias e as datas para não dar erro de casting no Drizzle
+        const {
+          id,
+          atributos,
+          midias,
+          created_at,
+          updated_at,
+          ...dadosRestantes
+        } = dto;
 
-        // SANITIZAÇÃO INDUSTRIAL: Garante que os campos de endereço cheguem ao banco
+        const tableImoveis = schema.imoveis as any;
+        const tableAtributos = schema.imoveisAtributos as any;
+        const tableMidias = schema.midias as any;
+
+        // 2. PAYLOAD HIGIENIZADO (Garante Endereço e Números)
         const payload = {
-          ...dadosImovel,
+          ...dadosRestantes, // Aqui entram logradouro, bairro, cidade, etc.
           tenant_id: tenantId,
-          // Garante que campos numéricos não vão como string vazia
-          unidade_id: dadosImovel.unidade_id
-            ? Number(dadosImovel.unidade_id)
+          unidade_id: dadosRestantes.unidade_id
+            ? Number(dadosRestantes.unidade_id)
             : null,
-          preco_venda: dadosImovel.preco_venda
-            ? dadosImovel.preco_venda.toString()
+          proprietario_id: dadosRestantes.proprietario_id || null,
+
+          // Conversão de valores para o padrão decimal do banco
+          preco_venda: dadosRestantes.preco_venda
+            ? dadosRestantes.preco_venda.toString()
             : null,
-          area_privativa: dadosImovel.area_privativa
-            ? dadosImovel.area_privativa.toString()
+          preco_aluguel: dadosRestantes.preco_aluguel
+            ? dadosRestantes.preco_aluguel.toString()
             : null,
+          area_privativa: dadosRestantes.area_privativa
+            ? dadosRestantes.area_privativa.toString()
+            : null,
+
           updated_at: new Date(),
         };
 
         let imovelId = id;
 
+        // 3. GRAVAÇÃO DO IMÓVEL (Master)
         if (id && id !== 'undefined') {
-          await tx.update(table).set(payload).where(eq(table.id, id));
+          console.log(`🏭 [SISMOB] Atualizando Imóvel: ${id}`);
+          await tx
+            .update(tableImoveis)
+            .set(payload)
+            .where(eq(tableImoveis.id, id));
         } else {
-          const [novo] = await tx.insert(table).values(payload).returning();
+          console.log(
+            `🏭 [SISMOB] Criando Novo Imóvel para Tenant: ${tenantId}`,
+          );
+          const [novo] = await tx
+            .insert(tableImoveis)
+            .values(payload)
+            .returning();
           imovelId = novo.id;
         }
 
-        // VÍNCULO DE ATRIBUTOS (O "Cardápio" que você marcou)
+        // 4. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
+        // O DTO traz um vetor de IDs (ex: [10, 15, 22]) vindo do seu novo seletor
         if (atributos && Array.isArray(atributos)) {
+          console.log(
+            `🔗 [SISMOB] Vinculando ${atributos.length} atributos ao imóvel ${imovelId}`,
+          );
+
+          // Limpa as seleções anteriores (Estratégia de Sincronia)
           await tx
             .delete(tableAtributos)
             .where(eq(tableAtributos.imovel_id, imovelId));
-          const inserts = atributos.map((attrId: any) => ({
+
+          // Insere o novo lote
+          const insertsAtributos = atributos.map((attrId: any) => ({
             imovel_id: imovelId,
             atributo_id: Number(attrId),
           }));
-          if (inserts.length > 0)
-            await tx.insert(tableAtributos).values(inserts);
+
+          if (insertsAtributos.length > 0) {
+            await tx.insert(tableAtributos).values(insertsAtributos);
+          }
+        }
+
+        // 5. GRAVAÇÃO DE MÍDIAS (Fotos)
+        // Caso o frontend envie o array de URLs já prontas após o upload
+        if (midias && Array.isArray(midias)) {
+          await tx
+            .delete(tableMidias)
+            .where(eq(tableMidias.imovel_id, imovelId));
+          const insertsMidias = midias.map((m: any, idx: number) => ({
+            imovel_id: imovelId,
+            url: m.url,
+            tipo: m.tipo || 'foto_interna',
+            is_capa: m.is_capa || idx === 0, // Primeira foto é a capa por padrão
+            ordem: idx,
+          }));
+          if (insertsMidias.length > 0)
+            await tx.insert(tableMidias).values(insertsMidias);
         }
 
         return { id: imovelId, success: true };
       } catch (e: any) {
         console.error('❌ [DB FATAL]:', e.message);
-        throw new InternalServerErrorException(`Falha no banco: ${e.message}`);
+        throw new InternalServerErrorException(
+          `Falha na persistência industrial: ${e.message}`,
+        );
       }
     });
   }

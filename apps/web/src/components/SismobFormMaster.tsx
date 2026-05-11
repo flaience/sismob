@@ -203,41 +203,61 @@ export default function SismobFormMaster({
                         onChange={(val: any) => updateField(field.name, val)}
                       />
                     ) : field.type === "checklist" ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
-                        {(options[field.name] || []).map((opt: any) => (
-                          <label
-                            key={opt.id}
-                            className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm cursor-pointer hover:ring-2 ring-indigo-600 transition-all group border border-transparent"
-                          >
-                            <input
-                              type="checkbox"
-                              className="w-6 h-6 rounded-xl border-none ring-1 ring-slate-300 checked:bg-indigo-600 transition-all cursor-pointer"
-                              checked={
-                                Array.isArray(formData[field.name]) &&
-                                formData[field.name].includes(opt.id)
-                              }
-                              onChange={(e) => {
-                                const current = Array.isArray(
-                                  formData[field.name],
-                                )
-                                  ? formData[field.name]
-                                  : [];
-                                const newValue = e.target.checked
-                                  ? [...current, opt.id]
-                                  : current.filter((id: any) => id !== opt.id);
-                                updateField(field.name, newValue);
-                              }}
-                            />
-                            <div className="flex items-center gap-2">
-                              <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-1 rounded-lg shrink-0">
-                                {opt.quantidade}x
-                              </span>
-                              <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-900 uppercase tracking-tighter truncate">
-                                {opt.nome}
-                              </span>
-                            </div>
-                          </label>
-                        ))}
+                      <div className="w-full col-span-full space-y-4">
+                        <div className="flex justify-between items-end mb-2 px-6">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">
+                            Selecione os atributos disponíveis no cardápio
+                            abaixo
+                          </p>
+                          <span className="bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-full font-black">
+                            {formData[field.name]?.length || 0} SELECIONADOS
+                          </span>
+                        </div>
+
+                        {/* GRID DE SELEÇÃO RÁPIDA (O SEU CARDÁPIO) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-100 p-6 rounded-[3rem] border border-slate-200 shadow-inner max-h-96 overflow-y-auto custom-scrollbar">
+                          {(options[field.name] || []).map((opt: any) => {
+                            const isSelected =
+                              Array.isArray(formData[field.name]) &&
+                              formData[field.name].includes(opt.id);
+
+                            return (
+                              <div
+                                key={opt.id}
+                                onClick={() => {
+                                  const current = Array.isArray(
+                                    formData[field.name],
+                                  )
+                                    ? formData[field.name]
+                                    : [];
+                                  const newValue = isSelected
+                                    ? current.filter((id: any) => id !== opt.id)
+                                    : [...current, opt.id];
+                                  updateField(field.name, newValue);
+                                }}
+                                className={`
+              cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center text-center transition-all duration-300 border-2
+              ${
+                isSelected
+                  ? "bg-indigo-600 border-indigo-400 shadow-lg scale-95"
+                  : "bg-white border-transparent hover:border-indigo-200 shadow-sm hover:scale-105"
+              }
+            `}
+                              >
+                                <span
+                                  className={`text-[10px] font-black uppercase mb-1 ${isSelected ? "text-indigo-100" : "text-indigo-600"}`}
+                                >
+                                  {opt.quantidade}x
+                                </span>
+                                <span
+                                  className={`text-xs font-bold uppercase tracking-tighter ${isSelected ? "text-white" : "text-slate-700"}`}
+                                >
+                                  {opt.nome}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     ) : field.type === "select" ? (
                       <div className="relative">
