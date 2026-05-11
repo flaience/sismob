@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 // apps/api/src/main.ts
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors({ origin: '*' });
+  app.enableCors({ origin: '*', credentials: true });
 
   // 1. PEGA A PORTA DO RAILWAY
   const port = process.env.PORT || 3000;
