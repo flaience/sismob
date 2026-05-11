@@ -19,21 +19,28 @@ export default function SismobUpload({
     setLoading(true);
     const formData = new FormData();
 
-    // Se for múltiplo (Galeria de Imóvel), enviamos todos
+    // O SEGREDO: O nome tem que ser 'files' (plural) para bater com o Controller
     for (let i = 0; i < files.length; i++) {
       formData.append("files", files[i]);
     }
 
     try {
-      // Endpoint que criamos anteriormente no NestJS
       const res = await api.post("/files/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Retorna a URL ou Array de URLs para o FormMaster
-      onChange(multiple ? [...(value || []), ...res.data] : res.data[0]);
+      // Se for galeria (Imóvel), ele concatena as fotos novas com as que já estavam lá
+      if (multiple) {
+        onChange([...(value || []), ...res.data]);
+      } else {
+        // Se for Logo (Imobiliária), apenas substitui pela primeira
+        onChange(res.data[0].url);
+      }
+      console.log("✅ Upload concluído e estado atualizado!");
     } catch (err) {
-      alert("Falha no upload das imagens.");
+      alert(
+        "Falha no upload das imagens. Verifique se o módulo Files está no AppModule.",
+      );
     } finally {
       setLoading(false);
     }

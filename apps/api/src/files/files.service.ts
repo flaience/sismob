@@ -40,26 +40,34 @@ export class FilesService {
    * UPLOAD MÚLTIPLO (Galeria de Imóveis)
    * Resolve o erro de reconhecimento no Controller
    */
-  async uploadMultiple(
-    files: any[],
-    path: string = 'imoveis',
-  ): Promise<string[]> {
+  async uploadMultiple(files: any[], path: string = 'imoveis'): Promise<any[]> {
     if (!files || files.length === 0) return [];
 
-    console.log(
-      `📸 [SISMOB] Processando upload de ${files.length} arquivos...`,
-    );
+    const uploadPromises = files.map(async (file) => {
+      const nomeLimpo = sanitizeFileName(file.originalname);
+      const filePath = `${path}/${Date.now()}-${nomeLimpo}`;
 
-    // Mapeia cada arquivo para uma promessa de upload
-    const uploadPromises = files.map((file) => this.uploadSingle(file, path));
+      const { error } = await this.supabase.storage
+        .from('sismob-media')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true,
+        });
 
-    // Executa todos os uploads em paralelo para maior agilidade industrial
-    try {
-      const urls = await Promise.all(uploadPromises);
-      console.log(`✅ [SISMOB] Upload concluído. URLs geradas: ${urls.length}`);
-      return urls;
-    } catch (error) {
-      throw new BadRequestException('Falha ao processar lote de imagens.');
-    }
+      if (error) throw new Error(error.message);
+
+      const { data } = this.supabase.storage
+        .from('sismob-media')
+        .getPublicUrl(filePath);
+
+      // RETORNA UM OBJETO RICO (O segredo para o banco de mídias)
+      return {
+        url: data.publicUrl,
+        tipo: 'foto_interna', // Padrão inicial
+        is_capa: false,
+      };
+    });
+
+    return await Promise.all(uploadPromises);
   }
 }
