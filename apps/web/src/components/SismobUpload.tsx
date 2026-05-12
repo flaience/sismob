@@ -1,6 +1,12 @@
 "use client";
 import { useState } from "react";
-import { UploadCloud, X, Image as ImageIcon, Camera } from "lucide-react";
+import {
+  UploadCloud,
+  X,
+  Camera,
+  Image as ImageIcon,
+  Loader2,
+} from "lucide-react";
 import api from "@/lib/api";
 
 export default function SismobUpload({
@@ -8,9 +14,11 @@ export default function SismobUpload({
   value,
   onChange,
   multiple = false,
-  is360 = false,
 }: any) {
-  const [uploading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Garante que 'value' seja sempre um array para a galeria
+  const imagens = Array.isArray(value) ? value : value ? [{ url: value }] : [];
 
   const handleUpload = async (e: any) => {
     const files = e.target.files;
@@ -18,8 +26,6 @@ export default function SismobUpload({
 
     setLoading(true);
     const formData = new FormData();
-
-    // O SEGREDO: O nome tem que ser 'files' (plural) para bater com o Controller
     for (let i = 0; i < files.length; i++) {
       formData.append("files", files[i]);
     }
@@ -29,24 +35,27 @@ export default function SismobUpload({
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Se for galeria (Imóvel), ele concatena as fotos novas com as que já estavam lá
-      if (multiple) {
-        onChange([...(value || []), ...res.data]);
-      } else {
-        // Se for Logo (Imobiliária), apenas substitui pela primeira
-        onChange(res.data[0].url);
-      }
-      console.log("✅ Upload concluído e estado atualizado!");
-    } catch (err: any) {
-      // O SEGREDO DO DIAGNÓSTICO:
-      const status = err.response?.status;
-      const msg = err.response?.data?.message || err.message;
+      // A API retorna um array de objetos: [{url: '...'}, {url: '...'}]
+      const novasImagens = res.data;
 
-      console.error("❌ Erro Detalhado no Upload:", { status, msg });
-      alert(`Falha no Upload (${status}): ${msg}`);
+      if (multiple) {
+        // Galeria: Adiciona as novas fotos ao que já existia
+        onChange([...imagens, ...novasImagens]);
+      } else {
+        // Logo/Perfil: Pega apenas a primeira URL (string pura)
+        onChange(novasImagens[0].url);
+      }
+      console.log("✅ Imagens carregadas no estado!");
+    } catch (err) {
+      alert("Falha no processamento das imagens.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const removeImage = (index: number) => {
+    const newImgs = imagens.filter((_, i) => i !== index);
+    onChange(multiple ? newImgs : "");
   };
 
   return (
@@ -55,33 +64,58 @@ export default function SismobUpload({
         {label}
       </label>
 
-      <div className="flex flex-wrap gap-4 p-6 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all">
-        {/* PREVIEW DA IMAGEM (OU LOGO) */}
-        {!multiple && value && (
-          <div className="relative w-32 h-32 rounded-3xl overflow-hidden shadow-md">
-            <img src={value} className="w-full h-full object-cover" />
+      <div className="flex flex-wrap gap-4 p-8 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all">
+        {/* RENDERIZAÇÃO DAS FOTOS EXISTENTES */}
+        {imagens.map((img: any, idx: number) => (
+          <div
+            key={idx}
+            className="relative w-40 h-40 rounded-[2rem] overflow-hidden shadow-xl border-4 border-white group"
+          >
+            <img
+              src={img.url || img}
+              className="w-full h-full object-cover transition-transform group-hover:scale-110"
+              alt="Preview"
+            />
             <button
-              onClick={() => onChange("")}
-              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
+              type="button"
+              onClick={() => removeImage(idx)}
+              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-all"
             >
               <X size={14} />
             </button>
+            {/* Tag para identificar se é 360 ou Capa */}
+            <div className="absolute bottom-2 left-2 flex gap-1">
+              {img.tipo === "foto_360" && (
+                <span className="bg-orange-500 text-white p-1 rounded-lg">
+                  <Camera size={10} />
+                </span>
+              )}
+              {img.is_capa && (
+                <span className="bg-emerald-500 text-white p-1 rounded-lg">
+                  <ImageIcon size={10} />
+                </span>
+              )}
+            </div>
           </div>
-        )}
+        ))}
 
-        {/* INPUT DE ARQUIVO DISFARCADO DE BOTÃO */}
-        <label className="cursor-pointer flex flex-col items-center justify-center w-32 h-32 bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all border border-slate-100 group">
-          {uploading ? (
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+        {/* BOTÃO DE ADICIONAR (ATALHO) */}
+        <label className="cursor-pointer w-40 h-40 bg-white rounded-[2rem] shadow-sm flex flex-col items-center justify-center hover:scale-105 transition-all border border-slate-100 group">
+          {loading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="animate-spin text-indigo-600" />
+              <span className="text-[9px] font-black text-slate-400 uppercase">
+                Subindo...
+              </span>
+            </div>
           ) : (
             <>
-              {is360 ? (
-                <Camera className="text-slate-300 group-hover:text-indigo-600" />
-              ) : (
-                <UploadCloud className="text-slate-300 group-hover:text-indigo-600" />
-              )}
-              <span className="text-[9px] font-black text-slate-400 mt-2">
-                SUBIR {is360 ? "360°" : "FOTO"}
+              <UploadCloud
+                className="text-slate-300 group-hover:text-indigo-600 transition-colors"
+                size={32}
+              />
+              <span className="text-[9px] font-black text-slate-400 mt-2 uppercase">
+                Adicionar
               </span>
             </>
           )}
