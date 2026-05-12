@@ -117,19 +117,30 @@ export class ImoveisService {
         }
 
         // 4. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
+        // 4. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
         if (atributos && Array.isArray(atributos)) {
-          // Limpa seleções anteriores para não duplicar
+          console.log(`🔗 [SISMOB] Tentando vincular atributos:`, atributos);
+
+          // Limpa as seleções anteriores para não duplicar ou dar conflito
           await tx
             .delete(tableAtributos)
             .where(eq(tableAtributos.imovel_id, imovelId));
 
-          const insertsAtributos = atributos.map((attrId: any) => ({
-            imovel_id: imovelId,
-            atributo_id: Number(attrId),
-          }));
+          // Filtramos apenas IDs válidos e convertemos para Number
+          const idsValidos = atributos
+            .map((id) => Number(id))
+            .filter((id) => !isNaN(id) && id > 0);
 
-          if (insertsAtributos.length > 0) {
+          if (idsValidos.length > 0) {
+            const insertsAtributos = idsValidos.map((attrId: number) => ({
+              imovel_id: imovelId,
+              atributo_id: attrId,
+            }));
+
             await tx.insert(tableAtributos).values(insertsAtributos);
+            console.log(
+              `✅ [SISMOB] ${idsValidos.length} atributos vinculados.`,
+            );
           }
         }
 

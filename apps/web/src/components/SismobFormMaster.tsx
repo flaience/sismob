@@ -253,60 +253,87 @@ export default function SismobFormMaster({
                         onChange={(val: any) => updateField(field.name, val)}
                       />
                     ) : field.type === "checklist" ? (
-                      <div className="w-full col-span-full space-y-4">
+                      <div className="w-full col-span-full space-y-4 animate-in fade-in duration-500">
                         <div className="flex justify-between items-end mb-2 px-6">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">
-                            Selecione os atributos disponíveis no cardápio
-                            abaixo
-                          </p>
-                          <span className="bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-full font-black">
-                            {formData[field.name]?.length || 0} SELECIONADOS
+                          <div className="space-y-1">
+                            <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">
+                              {field.label}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                              Toque nos itens do cardápio para selecionar
+                            </p>
+                          </div>
+                          <span className="bg-brand text-white text-[10px] px-4 py-1.5 rounded-full font-black shadow-lg shadow-indigo-100">
+                            {Array.isArray(formData[field.name])
+                              ? formData[field.name].length
+                              : 0}{" "}
+                            SELECIONADOS
                           </span>
                         </div>
 
                         {/* GRID DE SELEÇÃO RÁPIDA (O SEU CARDÁPIO) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-100 p-6 rounded-[3rem] border border-slate-200 shadow-inner max-h-96 overflow-y-auto custom-scrollbar">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-100 p-8 rounded-[3.5rem] border border-slate-200 shadow-inner max-h-[500px] overflow-y-auto custom-scrollbar">
                           {(options[field.name] || []).map((opt: any) => {
-                            const isSelected =
-                              Array.isArray(formData[field.name]) &&
-                              formData[field.name].includes(opt.id);
+                            // 1. GARANTIA DE TIPO: Forçamos o ID para Number para evitar erro de Foreign Key
+                            const optId = Number(opt.id);
+                            const currentSelection = Array.isArray(
+                              formData[field.name],
+                            )
+                              ? formData[field.name]
+                              : [];
+                            const isSelected = currentSelection.includes(optId);
 
                             return (
                               <div
                                 key={opt.id}
                                 onClick={() => {
-                                  const current = Array.isArray(
-                                    formData[field.name],
-                                  )
-                                    ? formData[field.name]
-                                    : [];
+                                  // 2. LÓGICA DE TOGGLE INDUSTRIAL
                                   const newValue = isSelected
-                                    ? current.filter((id: any) => id !== opt.id)
-                                    : [...current, opt.id];
+                                    ? currentSelection.filter(
+                                        (id: any) => Number(id) !== optId,
+                                      )
+                                    : [...currentSelection, optId];
+
                                   updateField(field.name, newValue);
                                 }}
                                 className={`
-              cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center text-center transition-all duration-300 border-2
+              relative cursor-pointer p-5 rounded-[2rem] flex flex-col items-center justify-center text-center transition-all duration-300 border-2
               ${
                 isSelected
-                  ? "bg-indigo-600 border-indigo-400 shadow-lg scale-95"
-                  : "bg-white border-transparent hover:border-indigo-200 shadow-sm hover:scale-105"
+                  ? "bg-brand border-indigo-400 shadow-xl scale-95 -rotate-1"
+                  : "bg-white border-transparent hover:border-indigo-200 shadow-sm hover:scale-105 hover:rotate-1"
               }
             `}
                               >
+                                {/* Indicador visual de seleção (Checkzinho no canto) */}
+                                {isSelected && (
+                                  <div className="absolute top-2 right-2 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-brand rounded-full" />
+                                  </div>
+                                )}
+
                                 <span
-                                  className={`text-[10px] font-black uppercase mb-1 ${isSelected ? "text-indigo-100" : "text-indigo-600"}`}
+                                  className={`text-[10px] font-black uppercase mb-1 tracking-widest ${isSelected ? "text-indigo-200" : "text-brand"}`}
                                 >
                                   {opt.quantidade}x
                                 </span>
                                 <span
-                                  className={`text-xs font-bold uppercase tracking-tighter ${isSelected ? "text-white" : "text-slate-700"}`}
+                                  className={`text-xs font-black uppercase tracking-tighter leading-none ${isSelected ? "text-white" : "text-slate-700"}`}
                                 >
                                   {opt.nome}
                                 </span>
                               </div>
                             );
                           })}
+
+                          {(!options[field.name] ||
+                            options[field.name].length === 0) && (
+                            <div className="col-span-full py-10 text-center">
+                              <p className="text-slate-400 font-bold italic text-sm">
+                                Nenhum atributo cadastrado no sistema.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : field.type === "select" ? (
