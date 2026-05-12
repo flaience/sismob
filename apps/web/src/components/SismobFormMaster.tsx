@@ -147,10 +147,27 @@ export default function SismobFormMaster({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 1. HIGIENIZAÇÃO INDUSTRIAL: Limpa o array de atributos (converte para números puros)
+    const atributosLimpos: number[] = Array.isArray(formData.atributos)
+      ? formData.atributos
+          .map((a: any) => (typeof a === "object" ? a.id : a))
+          .map((val: any) => Number(val)) // Garante conversão numérica
+          .filter((id: number) => !isNaN(id)) // <--- TIPAGEM ADICIONADA AQUI (Mata o erro TS7006)
+      : [];
+
+    // 2. MONTAGEM DO PAYLOAD: O que vai de fato para o servidor
+    const dadosParaEnviar = {
+      ...formData,
+      atributos: atributosLimpos,
+      imobiliariaId: tenant?.id,
+    };
+
+    // 3. MOTOR DE CONSISTÊNCIA: Valida no objeto higienizado
     const missingFields: string[] = [];
     sections.forEach((section: any) => {
       section.fields.forEach((field: any) => {
-        if (field.required && !formData[field.name]) {
+        // Checa se o campo é obrigatório e se está vazio no dadosParaEnviar
+        if (field.required && !dadosParaEnviar[field.name]) {
           missingFields.push(field.name);
         }
       });
@@ -158,16 +175,30 @@ export default function SismobFormMaster({
 
     if (missingFields.length > 0) {
       setErrors(missingFields);
-      alert("⚠️ Preencha os campos obrigatórios marcados em vermelho.");
+      alert(
+        "⚠️ Atenção: Preencha todos os campos obrigatórios marcados em vermelho.",
+      );
+
+      // Foca no primeiro campo com erro para agilidade industrial
+      const firstError = document.getElementsByName(missingFields[0])[0];
+      firstError?.focus();
       return;
     }
 
+    // 4. TIRO DE MISERICÓRDIA: Envia os dados limpos
     setLoading(true);
     try {
-      await api.post(endpoint, { ...formData, imobiliariaId: tenant?.id });
+      console.log("🏭 [SISMOB] Enviando dados higienizados:", dadosParaEnviar);
+
+      await api.post(endpoint, dadosParaEnviar);
+
+      alert("✅ Registro salvo com sucesso!");
       router.back();
     } catch (err: any) {
-      alert(`❌ Erro: ${err.response?.data?.message || "Falha na gravação"}`);
+      console.error("❌ [ERRO DE GRAVAÇÃO]:", err);
+      alert(
+        `❌ Erro no Servidor: ${err.response?.data?.message || "Falha na persistência"}`,
+      );
     } finally {
       setLoading(false);
     }
