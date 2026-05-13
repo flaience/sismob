@@ -242,24 +242,29 @@ export default function SismobFormMaster({
         {sections?.map((section: any, sIdx: number) => (
           <div
             key={sIdx}
-            className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 space-y-10"
+            className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500"
           >
+            {/* TÍTULO DA SEÇÃO COM IDENTIDADE SISMOB */}
             <h2 className="text-xl font-black text-slate-800 border-l-4 border-indigo-600 pl-6 uppercase tracking-tighter">
               {section.title}
             </h2>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-8">
+            {/* CONTAINER FLEXÍVEL: Impede o caos de sobreposição */}
+            <div className="flex flex-wrap gap-x-6 gap-y-10">
               {section.fields?.map((field: any) => {
+                // Lógica para valores aninhados (ex: endereco.cep) ou simples (ex: nome)
                 const nameParts = field.name.split(".");
                 const value = field.name.includes(".")
                   ? formData[nameParts[0]]?.[nameParts[1]] || ""
                   : formData[field.name] || "";
 
+                // Define se o campo ocupa a linha toda (Mídia e Listas sempre ocupam)
                 const isWide =
                   field.fullWidth ||
                   field.type === "checklist" ||
                   field.type === "gallery" ||
                   field.type === "image";
+
                 const isInvalid = errors.includes(field.name);
 
                 return (
@@ -268,7 +273,9 @@ export default function SismobFormMaster({
                     className={`${isWide ? "w-full" : "flex-1 min-w-[280px]"}`}
                   >
                     <label
-                      className={`text-[10px] font-black uppercase tracking-[0.2em] ml-6 mb-3 block ${isInvalid ? "text-red-500" : "text-slate-400"}`}
+                      className={`text-[10px] font-black uppercase tracking-[0.2em] ml-6 mb-3 block ${
+                        isInvalid ? "text-red-500" : "text-slate-400"
+                      }`}
                     >
                       {field.label}{" "}
                       {field.required && (
@@ -276,6 +283,7 @@ export default function SismobFormMaster({
                       )}
                     </label>
 
+                    {/* 1. ATALHO DE IMAGEM / GALERIA */}
                     {field.type === "image" || field.type === "gallery" ? (
                       <SismobUpload
                         label={field.label}
@@ -283,18 +291,14 @@ export default function SismobFormMaster({
                         multiple={field.type === "gallery"}
                         onChange={(val: any) => updateField(field.name, val)}
                       />
-                    ) : field.type === "checklist" ? (
-                      <div className="w-full col-span-full space-y-4 animate-in fade-in duration-500">
+                    ) : /* 2. CARDÁPIO DE ATRIBUTOS (O SEGREDO DA AGILIDADE) */
+                    field.type === "checklist" ? (
+                      <div className="w-full space-y-4">
                         <div className="flex justify-between items-end mb-2 px-6">
-                          <div className="space-y-1">
-                            <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">
-                              {field.label}
-                            </p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
-                              Toque nos itens do cardápio para selecionar
-                            </p>
-                          </div>
-                          <span className="bg-brand text-white text-[10px] px-4 py-1.5 rounded-full font-black shadow-lg shadow-indigo-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                            Toque nos itens para selecionar
+                          </p>
+                          <span className="bg-indigo-600 text-white text-[10px] px-4 py-1.5 rounded-full font-black shadow-lg">
                             {Array.isArray(formData[field.name])
                               ? formData[field.name].length
                               : 0}{" "}
@@ -302,10 +306,9 @@ export default function SismobFormMaster({
                           </span>
                         </div>
 
-                        {/* GRID DE SELEÇÃO RÁPIDA (O SEU CARDÁPIO) */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-100 p-8 rounded-[3.5rem] border border-slate-200 shadow-inner max-h-[500px] overflow-y-auto custom-scrollbar">
                           {(options[field.name] || []).map((opt: any) => {
-                            // 1. GARANTIA DE TIPO: Forçamos o ID para Number para evitar erro de Foreign Key
+                            // GARANTIA DE TIPO: Forçamos ID numérico para o banco não dar erro de FK
                             const optId = Number(opt.id);
                             const currentSelection = Array.isArray(
                               formData[field.name],
@@ -318,33 +321,29 @@ export default function SismobFormMaster({
                               <div
                                 key={opt.id}
                                 onClick={() => {
-                                  // 2. LÓGICA DE TOGGLE INDUSTRIAL
                                   const newValue = isSelected
                                     ? currentSelection.filter(
                                         (id: any) => Number(id) !== optId,
                                       )
                                     : [...currentSelection, optId];
-
                                   updateField(field.name, newValue);
                                 }}
                                 className={`
-              relative cursor-pointer p-5 rounded-[2rem] flex flex-col items-center justify-center text-center transition-all duration-300 border-2
-              ${
-                isSelected
-                  ? "bg-brand border-indigo-400 shadow-xl scale-95 -rotate-1"
-                  : "bg-white border-transparent hover:border-indigo-200 shadow-sm hover:scale-105 hover:rotate-1"
-              }
-            `}
+                          relative cursor-pointer p-5 rounded-[2rem] flex flex-col items-center justify-center text-center transition-all duration-300 border-2
+                          ${
+                            isSelected
+                              ? "bg-indigo-600 border-indigo-400 shadow-xl scale-95"
+                              : "bg-white border-transparent hover:border-indigo-200 shadow-sm hover:scale-105"
+                          }
+                        `}
                               >
-                                {/* Indicador visual de seleção (Checkzinho no canto) */}
                                 {isSelected && (
                                   <div className="absolute top-2 right-2 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                                    <div className="w-2 h-2 bg-brand rounded-full" />
+                                    <div className="w-2 h-2 bg-indigo-600 rounded-full" />
                                   </div>
                                 )}
-
                                 <span
-                                  className={`text-[10px] font-black uppercase mb-1 tracking-widest ${isSelected ? "text-indigo-200" : "text-brand"}`}
+                                  className={`text-[10px] font-black uppercase mb-1 ${isSelected ? "text-indigo-200" : "text-indigo-600"}`}
                                 >
                                   {opt.quantidade}x
                                 </span>
@@ -356,21 +355,17 @@ export default function SismobFormMaster({
                               </div>
                             );
                           })}
-
-                          {(!options[field.name] ||
-                            options[field.name].length === 0) && (
-                            <div className="col-span-full py-10 text-center">
-                              <p className="text-slate-400 font-bold italic text-sm">
-                                Nenhum atributo cadastrado no sistema.
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    ) : field.type === "select" ? (
+                    ) : /* 3. SELEÇÃO (AUTO-LOOKUPS) */
+                    field.type === "select" ? (
                       <div className="relative">
                         <select
-                          className={`w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer focus:ring-2 ${isInvalid ? "ring-2 ring-red-500" : "focus:ring-indigo-600"}`}
+                          className={`w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer focus:ring-2 ${
+                            isInvalid
+                              ? "ring-2 ring-red-500"
+                              : "focus:ring-indigo-600"
+                          }`}
                           value={value}
                           onChange={(e) =>
                             updateField(field.name, e.target.value)
@@ -398,11 +393,16 @@ export default function SismobFormMaster({
                         />
                       </div>
                     ) : (
+                      /* 4. INPUTS PADRÃO (TEXTO, NÚMERO, DATA) */
                       <input
                         type={field.type}
                         name={field.name}
                         placeholder={field.label}
-                        className={`w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none focus:ring-2 ${isInvalid ? "ring-2 ring-red-500 bg-red-50" : "focus:ring-indigo-600"}`}
+                        className={`w-full p-5 bg-slate-50 rounded-3xl border-none font-bold text-slate-700 transition-all outline-none focus:ring-2 ${
+                          isInvalid
+                            ? "ring-2 ring-red-500 bg-red-50"
+                            : "focus:ring-indigo-600"
+                        }`}
                         value={value}
                         onChange={(e) =>
                           updateField(field.name, e.target.value)

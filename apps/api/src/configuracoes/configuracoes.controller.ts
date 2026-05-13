@@ -28,7 +28,7 @@ export class ConfiguracoesController {
         return 'grupoCaixa';
       case 'atributos':
         return 'atributos'; // <--- OBRIGA A GRAVAR EM ATRIBUTOS
-      case 'categorias-itens':
+      case 'categorias-atributos':
         return 'categoriasAtributos';
       default:
         return slug;

@@ -341,12 +341,31 @@ export const MAPA_SISMOB: any = {
       },
     ],
   },
+  "categorias-atributos": {
+    title: "Categorias de Comodidades",
+    entity: "configuracoes/categorias-atributos",
+    columns: [{ label: "Nome da Categoria", key: "nome" }],
+    sections: [
+      {
+        title: "Dados da Categoria",
+        fields: [
+          {
+            name: "nome",
+            label: "Ex: Lazer, Estrutura, Segurança",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+        ],
+      },
+    ],
+  },
   "atributos-itens": {
     title: "Itens e Comodidades",
     entity: "configuracoes/atributos",
     columns: [
       { label: "Item", key: "nome" },
-      { label: "Qtd Padrão", key: "quantidade" },
+      { label: "Qtd", key: "quantidade" },
     ],
     sections: [
       {
@@ -354,16 +373,21 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "nome",
-            label: "Descrição (Ex: Quarto, Suíte, Vaga)",
+            label: "Descrição (Ex: Quarto, Suíte)",
             type: "text",
             required: true,
-            fullWidth: true,
           },
-          // AQUI ESTÁ O CAMPO QUE VOCÊ NÃO ESTAVA VENDO:
           {
             name: "quantidade",
-            label: "Quantidade Padrão (Ex: 1, 2, 3)",
+            label: "Quantidade",
             type: "number",
+            required: true,
+          },
+          // NOVO CAMPO: O formulário vai buscar a lista de categorias sozinho
+          {
+            name: "categoria_id",
+            label: "Vincular à Categoria",
+            type: "select",
             required: true,
           },
         ],

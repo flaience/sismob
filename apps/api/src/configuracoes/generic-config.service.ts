@@ -11,11 +11,24 @@ export class GenericConfigService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   async findAll(tableName: string, tenantId: string) {
-    const table = (schema as any)[tableName];
-    return await this.db
-      .select()
-      .from(table)
-      .where(eq(table.tenant_id, tenantId));
+    try {
+      const table = (schema as any)[tableName];
+      if (!table) return [];
+
+      console.log(
+        `📡 [SISMOB] Buscando ${tableName} para o Tenant: ${tenantId}`,
+      );
+
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.tenant_id, tenantId)); // <--- GARANTE O FILTRO
+
+      return results;
+    } catch (e) {
+      console.error(`❌ Erro ao buscar ${tableName}:`, e.message);
+      return [];
+    }
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {

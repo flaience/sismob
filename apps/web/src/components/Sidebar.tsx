@@ -118,6 +118,11 @@ export default function Sidebar() {
         icon: Building2,
       },
       {
+        label: "Categorias de Itens",
+        href: "/gestao/categorias-atributos",
+        icon: Settings,
+      },
+      {
         label: "Itens / Atributos",
         href: "/gestao/atributos-itens",
         icon: Settings,
