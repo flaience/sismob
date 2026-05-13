@@ -37,20 +37,26 @@ export class ConfiguracoesController {
 
   @Get(':slug')
   async list(@Param('slug') slug: string, @Query('imobiliariaId') tid: string) {
-    const table = this.getTableName(slug);
-    return this.configService.findAll(table, tid);
+    let tableTarget = slug === 'atributos' ? 'atributos' : slug;
+    if (slug === 'grupos-caixa') tableTarget = 'grupoCaixa';
+
+    return this.configService.findAll(tableTarget, tid);
   }
 
   @Post(':slug')
   async save(@Param('slug') slug: string, @Body() dto: any) {
-    const table = this.getTableName(slug);
+    // MAPEAMENTO FORÇADO POR HARDCODE
+    let tableTarget = '';
 
-    // LOG DE SEGURANÇA: Verifique isso no Railway!
-    this.logger.log(
-      `🏭 Recebido slug: ${slug} | Mapeado para Tabela: ${table}`,
-    );
+    if (slug === 'atributos') tableTarget = 'atributos';
+    else if (slug === 'unidades') tableTarget = 'unidades';
+    else if (slug === 'bancos') tableTarget = 'bancos';
+    else if (slug === 'grupos-caixa') tableTarget = 'grupoCaixa';
+    else tableTarget = slug;
 
-    return this.configService.upsert(table, dto, dto.imobiliariaId);
+    this.logger.log(`🏗️ Rota: ${slug} -> Gravando na Tabela: ${tableTarget}`);
+
+    return this.configService.upsert(tableTarget, dto, dto.imobiliariaId);
   }
 
   @Delete(':slug/:id')
