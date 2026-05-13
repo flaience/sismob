@@ -4,16 +4,49 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and, desc, inArray, sql } from 'drizzle-orm'; // 1. IMPORTADO inArray
+import { eq, and, desc, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class ImoveisService {
+  // 1. CONSTRUTOR INDUSTRIAL (Bypass de versão do Drizzle)
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
-  async upsert(dto: any, files: any, tenantId: string) {
-    // MARCA DE VERSÃO PARA O LUIS CONFERIR NO LOG
-    console.log('🚀 [SISMOB SYSTEM] EXECUTANDO UPSERT v185 - FILTRO ATIVO');
+  /**
+   * LISTAGEM DO GRID (O que estava faltando e causou o erro)
+   */
+  async findAll(tenantId: string) {
+    try {
+      console.log(`📡 [SISMOB] Listando imóveis do tenant: ${tenantId}`);
+      const table = schema.imoveis as any;
 
+      return await this.db
+        .select()
+        .from(table)
+        .where(eq(table.tenant_id, tenantId))
+        .orderBy(desc(table.id));
+    } catch (e: any) {
+      console.error('❌ [SISMOB] Erro ao listar imóveis:', e.message);
+      return [];
+    }
+  }
+
+  /**
+   * BUSCA ÚNICA (Para Edição)
+   */
+  async findOne(id: number, tenantId: string) {
+    const table = schema.imoveis as any;
+    const results = await this.db
+      .select()
+      .from(table)
+      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
+      .limit(1);
+    return results[0] || null;
+  }
+
+  /**
+   * MOTOR DE GRAVAÇÃO ATÔMICA (Imóvel + Atributos + Endereço)
+   */
+  async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
         const {
@@ -27,37 +60,38 @@ export class ImoveisService {
         } = dto;
         const tableImoveis = schema.imoveis as any;
         const tableAtributos = schema.imoveisAtributos as any;
-        const tableDefinicao = schema.atributos as any;
 
-        // 1. CONSTRUÇÃO DO ENDEREÇO (Ajustado para o seu Schema)
-        const logradouro = endereco?.logradouro || '';
-        const numero = endereco?.numero || 'SN';
+        // Higienização de Endereço (Sincronia com o seu Mapa v4.0)
+        const rua = endereco?.logradouro || '';
+        const num = endereco?.numero || 'SN';
         const bairro = endereco?.bairro || '';
         const cidade = endereco?.cidade || '';
-        const estado = endereco?.estado || '';
-        const cep = endereco?.cep || '';
-        const enderecoString = `${logradouro}, ${numero} - ${bairro}, ${cidade}/${estado}`;
+        const uf = endereco?.estado || '';
+        const enderecoString = `${rua}, ${num} - ${bairro}, ${cidade}/${uf}`;
 
         const payload = {
           ...dadosRestantes,
           tenant_id: tenantId,
-          logradouro,
-          numero,
-          bairro,
-          cidade,
-          estado,
-          cep,
+          logradouro: rua,
+          numero: num,
+          bairro: bairro,
+          cidade: cidade,
+          estado: uf,
           endereco_original: enderecoString,
           unidade_id: dadosRestantes.unidade_id
             ? Number(dadosRestantes.unidade_id)
             : null,
-          proprietario_id: dadosRestantes.proprietario_id || null,
+          preco_venda: dadosRestantes.preco_venda
+            ? dadosRestantes.preco_venda.toString()
+            : '0',
+          area_privativa: dadosRestantes.area_privativa
+            ? dadosRestantes.area_privativa.toString()
+            : '0',
           updated_at: new Date(),
         };
 
         let imovelId = id;
 
-        // 2. SALVA O IMÓVEL
         if (id && id !== 'undefined') {
           await tx
             .update(tableImoveis)
@@ -71,47 +105,50 @@ export class ImoveisService {
           imovelId = novo.id;
         }
 
-        // 3. O TIRO DE MISERICÓRDIA NO ERRO 500 (Atributos)
-        // Limpamos tudo primeiro
-        await tx
-          .delete(tableAtributos)
-          .where(eq(tableAtributos.imovel_id, imovelId));
-
-        if (atributos && Array.isArray(atributos) && atributos.length > 0) {
-          // Converte e limpa a lista do frontend
-          const idsNumericos = atributos
-            .map((val) => Number(val))
-            .filter((val) => !isNaN(val) && val > 0);
-
-          if (idsNumericos.length > 0) {
-            // BUSCA SENSÍVEL: Só pegamos IDs que REALMENTE existem na tabela atributos
-            const existentes = await tx
-              .select({ id: tableDefinicao.id })
-              .from(tableDefinicao)
-              .where(inArray(tableDefinicao.id, idsNumericos));
-
-            const idsValidados = existentes.map((e: any) => e.id);
-
-            if (idsValidados.length > 0) {
-              const inserts = idsValidados.map((aid: number) => ({
-                imovel_id: imovelId,
-                atributo_id: aid,
-              }));
-              await tx.insert(tableAtributos).values(inserts);
-              console.log(
-                `✅ [SISMOB] ${idsValidados.length} atributos vinculados.`,
-              );
-            }
-          }
+        // VÍNCULO DE ATRIBUTOS (O "Cardápio" que você pediu)
+        if (atributos && Array.isArray(atributos)) {
+          await tx
+            .delete(tableAtributos)
+            .where(eq(tableAtributos.imovel_id, imovelId));
+          const inserts = atributos.map((attrId: any) => ({
+            imovel_id: imovelId,
+            atributo_id: Number(attrId),
+          }));
+          if (inserts.length > 0)
+            await tx.insert(tableAtributos).values(inserts);
         }
 
         return { id: imovelId, success: true };
       } catch (e: any) {
-        console.error('❌ [DB FATAL v185]:', e.message);
-        throw new InternalServerErrorException(
-          `Falha industrial: ${e.message}`,
-        );
+        console.error('❌ [SISMOB DB ERROR]:', e.message);
+        throw new InternalServerErrorException(e.message);
       }
     });
+  }
+
+  /**
+   * EXCLUSÃO COM LIMPEZA DE RASTRO
+   */
+  async remove(id: number, tenantId: string) {
+    try {
+      const tableImoveis = schema.imoveis as any;
+      const tableMidias = schema.midias as any;
+      const tableAtributos = schema.imoveisAtributos as any;
+
+      await this.db.delete(tableMidias).where(eq(tableMidias.imovel_id, id));
+      await this.db
+        .delete(tableAtributos)
+        .where(eq(tableAtributos.imovel_id, id));
+
+      return await this.db
+        .delete(tableImoveis)
+        .where(
+          and(eq(tableImoveis.id, id), eq(tableImoveis.tenant_id, tenantId)),
+        );
+    } catch (e: any) {
+      throw new InternalServerErrorException(
+        'Erro ao excluir: verifique dependências.',
+      );
+    }
   }
 }
