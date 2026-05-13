@@ -21,11 +21,16 @@ export class ConfiguracoesController {
       bancos: 'bancos',
       unidades: 'unidades',
       'grupos-caixa': 'grupoCaixa',
-      atributos: 'categoriasAtributos',
+
+      // O TIRO DE MISERICÓRDIA NO ERRO:
+      // Quando a URL for /configuracoes/atributos, grava na tabela 'atributos'
+      atributos: 'atributos',
+
+      // Se um dia quiser gerenciar as categorias:
+      'categorias-itens': 'categoriasAtributos',
     };
     return map[slug];
   }
-
   @Get(':slug')
   async list(
     @Param('slug') slug: string,

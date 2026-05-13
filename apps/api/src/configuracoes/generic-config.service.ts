@@ -41,12 +41,13 @@ export class GenericConfigService {
       const table = (schema as any)[tableName];
       const { id, ...data } = dto;
 
-      // HIGIENIZAÇÃO: Garante que se houver quantidade, ela seja um número
       const payload = {
         ...data,
         tenant_id: tenantId,
-        // Converte quantidade para número se o campo existir
-        ...(data.quantidade ? { quantidade: Number(data.quantidade) } : {}),
+        // Converte a quantidade vinda do formulário em número real para o Postgres
+        ...(data.quantidade !== undefined
+          ? { quantidade: Number(data.quantidade) }
+          : {}),
       };
 
       if (id && id !== 'undefined') {
@@ -55,9 +56,7 @@ export class GenericConfigService {
         return await this.db.insert(table).values(payload).returning();
       }
     } catch (e: any) {
-      throw new InternalServerErrorException(
-        `Erro ao salvar em ${tableName}: ${e.message}`,
-      );
+      throw new InternalServerErrorException(e.message);
     }
   }
 
