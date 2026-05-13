@@ -32,24 +32,34 @@ export class GenericConfigService {
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
+      // 1. BUSCA A TABELA NO SCHEMA
       const table = (schema as any)[tableName];
-      const { id, created_at, updated_at, ...data } = dto;
 
+      // 2. VALIDAÇÃO DE SEGURANÇA (Evita o erro de Symbol drizzle:Columns)
+      if (!table) {
+        console.error(
+          `❌ [SISMOB] A tabela '${tableName}' não existe no Schema.ts`,
+        );
+        throw new InternalServerErrorException(
+          `Erro de configuração: Tabela ${tableName} não mapeada.`,
+        );
+      }
+
+      const { id, created_at, updated_at, ...data } = dto;
       const payload = {
         ...data,
         tenant_id: tenantId,
-        // Garante que a quantidade seja gravada como número real
-        ...(data.quantidade ? { quantidade: Number(data.quantidade) } : {}),
+        ...(tableName === 'atributos'
+          ? { quantidade: Number(data.quantidade || 1) }
+          : {}),
       };
 
       if (id && id !== 'undefined') {
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // RETURNING() blindado com as any
-        return await (this.db.insert(table).values(payload).returning() as any);
+        return await this.db.insert(table).values(payload).returning();
       }
     } catch (e: any) {
-      console.error(`❌ Erro na tabela ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
