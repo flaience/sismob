@@ -32,11 +32,12 @@ export class GenericConfigService {
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
+      //tableName aqui será 'categoriasAtributos' (vinda do Controller)
       const table = (schema as any)[tableName];
 
       if (!table) {
         throw new InternalServerErrorException(
-          `Tabela ${tableName} não localizada no motor Drizzle.`,
+          `A constante '${tableName}' não foi encontrada no arquivo schema.ts`,
         );
       }
 
@@ -44,10 +45,8 @@ export class GenericConfigService {
       const payload = {
         ...data,
         tenant_id: tenantId,
-        // Garante conversão de número para evitar erro de banco
-        ...(data.quantidade ? { quantidade: Number(data.quantidade) } : {}),
-        ...(data.categoria_id
-          ? { categoria_id: Number(data.categoria_id) }
+        ...(tableName === 'atributos'
+          ? { quantidade: Number(data.quantidade || 1) }
           : {}),
       };
 
@@ -57,11 +56,9 @@ export class GenericConfigService {
         return await this.db.insert(table).values(payload).returning();
       }
     } catch (e: any) {
-      console.error(`❌ Erro na tabela ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
-
   async remove(tableName: string, id: number, tenantId: string) {
     const table = (schema as any)[tableName];
     return await this.db

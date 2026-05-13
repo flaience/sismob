@@ -18,50 +18,39 @@ export class ConfiguracoesController {
   constructor(private readonly configService: GenericConfigService) {}
 
   private getTableName(slug: string): string {
-    // MAPEAMENTO FORÇADO (O segredo para matar o erro 500)
-    const map: any = {
+    const map: Record<string, string> = {
       bancos: 'bancos',
       unidades: 'unidades',
       'grupos-caixa': 'grupoCaixa',
-
-      // Quando a URL for /configuracoes/atributos -> Grava na tabela 'atributos'
       atributos: 'atributos',
-
-      // Quando a URL for /configuracoes/categorias-atributos -> Grava na tabela 'categoriasAtributos'
+      'atributos-itens': 'atributos',
+      // O TIRO DE MISERICÓRDIA:
+      // Converte o slug com traço para o nome exato da variável exportada no schema.ts
       'categorias-atributos': 'categoriasAtributos',
     };
 
     const table = map[slug];
+
     if (!table) {
-      console.error(
-        `❌ [SISMOB] Rota ${slug} não mapeada para nenhuma tabela!`,
-      );
+      console.error(`❌ [SISMOB] SLUG NÃO MAPEADO: ${slug}`);
+      return slug; // Fallback
     }
-    return table || slug;
+
+    console.log(`🏭 [SISMOB] Mapeando Rota: ${slug} -> Tabela: ${table}`);
+    return table;
   }
 
   @Get(':slug')
   async list(@Param('slug') slug: string, @Query('imobiliariaId') tid: string) {
-    let tableTarget = slug === 'atributos' ? 'atributos' : slug;
-    if (slug === 'grupos-caixa') tableTarget = 'grupoCaixa';
-
-    return this.configService.findAll(tableTarget, tid);
+    const mappedTable = this.getTableName(slug);
+    return this.configService.findAll(mappedTable, tid);
   }
 
   @Post(':slug')
   async save(@Param('slug') slug: string, @Body() dto: any) {
-    // MAPEAMENTO FORÇADO POR HARDCODE
-    let tableTarget = '';
-
-    if (slug === 'atributos') tableTarget = 'atributos';
-    else if (slug === 'unidades') tableTarget = 'unidades';
-    else if (slug === 'bancos') tableTarget = 'bancos';
-    else if (slug === 'grupos-caixa') tableTarget = 'grupoCaixa';
-    else tableTarget = slug;
-
-    this.logger.log(`🏗️ Rota: ${slug} -> Gravando na Tabela: ${tableTarget}`);
-
-    return this.configService.upsert(tableTarget, dto, dto.imobiliariaId);
+    const mappedTable = this.getTableName(slug);
+    // ENVIAMOS O NOME CORRETO (categoriasAtributos) PARA O SERVICE
+    return this.configService.upsert(mappedTable, dto, dto.imobiliariaId);
   }
 
   @Delete(':slug/:id')
