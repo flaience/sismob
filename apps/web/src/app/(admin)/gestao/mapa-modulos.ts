@@ -314,12 +314,35 @@ export const MAPA_SISMOB: any = {
       "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos. O campo 'atributos' deve ser usado para destacar o valor do imóvel.",
   },
 
-  atributos: {
+  // 1. O PAI: Categorias (Ex: Lazer, Estrutura)
+  "categorias-atributos": {
+    title: "Categorias de Itens",
+    entity: "configuracoes/categorias-atributos", // URL da rota
+    columns: [{ label: "Nome da Categoria", key: "nome" }],
+    sections: [
+      {
+        title: "Geral",
+        fields: [
+          {
+            name: "nome",
+            label: "Ex: Lazer, Estrutura, Vagas",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  // 2. O FILHO: Itens/Comodidades (Ex: Piscina, Suíte)
+  // Mantenha esta chave pois é a que sua Sidebar chama
+  "atributos-itens": {
     title: "Itens e Comodidades",
-    entity: "configuracoes/atributos",
+    entity: "configuracoes/atributos", // URL da rota
     columns: [
       { label: "Item", key: "nome" },
-      { label: "Qtd", key: "quantidade" },
+      { label: "Qtd Padrão", key: "quantidade" },
     ],
     sections: [
       {
@@ -337,56 +360,10 @@ export const MAPA_SISMOB: any = {
             type: "number",
             required: true,
           },
-        ],
-      },
-    ],
-  },
-  "categorias-atributos": {
-    title: "Categorias de Comodidades",
-    entity: "configuracoes/categorias-atributos",
-    columns: [{ label: "Nome da Categoria", key: "nome" }],
-    sections: [
-      {
-        title: "Dados da Categoria",
-        fields: [
-          {
-            name: "nome",
-            label: "Ex: Lazer, Estrutura, Segurança",
-            type: "text",
-            required: true,
-            fullWidth: true,
-          },
-        ],
-      },
-    ],
-  },
-  "atributos-itens": {
-    title: "Itens e Comodidades",
-    entity: "configuracoes/atributos",
-    columns: [
-      { label: "Item", key: "nome" },
-      { label: "Qtd", key: "quantidade" },
-    ],
-    sections: [
-      {
-        title: "Configuração do Item",
-        fields: [
-          {
-            name: "nome",
-            label: "Descrição (Ex: Quarto, Suíte)",
-            type: "text",
-            required: true,
-          },
-          {
-            name: "quantidade",
-            label: "Quantidade",
-            type: "number",
-            required: true,
-          },
-          // NOVO CAMPO: O formulário vai buscar a lista de categorias sozinho
+          // VINCULA AO PAI:
           {
             name: "categoria_id",
-            label: "Vincular à Categoria",
+            label: "Categoria Pai",
             type: "select",
             required: true,
           },

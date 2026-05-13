@@ -18,21 +18,26 @@ export class ConfiguracoesController {
   constructor(private readonly configService: GenericConfigService) {}
 
   private getTableName(slug: string): string {
-    // MAPEAMENTO MANUAL E FORÇADO (Sem chance de erro)
-    switch (slug) {
-      case 'bancos':
-        return 'bancos';
-      case 'unidades':
-        return 'unidades';
-      case 'grupos-caixa':
-        return 'grupoCaixa';
-      case 'atributos':
-        return 'atributos'; // <--- OBRIGA A GRAVAR EM ATRIBUTOS
-      case 'categorias-atributos':
-        return 'categoriasAtributos';
-      default:
-        return slug;
+    // MAPEAMENTO FORÇADO (O segredo para matar o erro 500)
+    const map: any = {
+      bancos: 'bancos',
+      unidades: 'unidades',
+      'grupos-caixa': 'grupoCaixa',
+
+      // Quando a URL for /configuracoes/atributos -> Grava na tabela 'atributos'
+      atributos: 'atributos',
+
+      // Quando a URL for /configuracoes/categorias-atributos -> Grava na tabela 'categoriasAtributos'
+      'categorias-atributos': 'categoriasAtributos',
+    };
+
+    const table = map[slug];
+    if (!table) {
+      console.error(
+        `❌ [SISMOB] Rota ${slug} não mapeada para nenhuma tabela!`,
+      );
     }
+    return table || slug;
   }
 
   @Get(':slug')
