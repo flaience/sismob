@@ -38,30 +38,41 @@ export class GenericConfigService {
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
-      //tableName aqui será 'categoriasAtributos' (vinda do Controller)
       const table = (schema as any)[tableName];
 
       if (!table) {
         throw new InternalServerErrorException(
-          `A constante '${tableName}' não foi encontrada no arquivo schema.ts`,
+          `Tabela ${tableName} não localizada.`,
         );
       }
 
+      // 1. LIMPEZA E MAPEAMENTO (O TIRO DE MISERICÓRDIA NO ERRO 500)
       const { id, created_at, updated_at, ...data } = dto;
+
       const payload = {
         ...data,
-        tenant_id: tenantId,
+        tenant_id: tenantId, // <--- GARANTE QUE O ID DA IMOBILIÁRIA SEJA GRAVADO
+        // Se for a tabela de atributos, garante que os IDs e Números sejam Inteiros
         ...(tableName === 'atributos'
-          ? { quantidade: Number(data.quantidade || 1) }
+          ? {
+              quantidade: Number(data.quantidade || 1),
+              categoria_id: Number(data.categoria_id),
+            }
           : {}),
       };
 
       if (id && id !== 'undefined') {
+        // UPDATE
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        return await this.db.insert(table).values(payload).returning();
+        // INSERT (O as any aqui evita erros de tipagem no build)
+        return await (this.db.insert(table).values(payload).returning() as any);
       }
     } catch (e: any) {
+      console.error(
+        `❌ [SISMOB] Erro de persistência na tabela ${tableName}:`,
+        e.message,
+      );
       throw new InternalServerErrorException(e.message);
     }
   }
