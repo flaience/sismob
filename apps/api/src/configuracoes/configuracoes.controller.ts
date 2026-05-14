@@ -18,26 +18,13 @@ export class ConfiguracoesController {
   constructor(private readonly configService: GenericConfigService) {}
 
   private getTableName(slug: string): string {
-    const map: Record<string, string> = {
-      bancos: 'bancos',
-      unidades: 'unidades',
-      'grupos-caixa': 'grupoCaixa',
-      atributos: 'atributos',
-      'atributos-itens': 'atributos',
-      // O TIRO DE MISERICÓRDIA:
-      // Converte o slug com traço para o nome exato da variável exportada no schema.ts
-      'categorias-atributos': 'categoriasAtributos',
-    };
-
-    const table = map[slug];
-
-    if (!table) {
-      console.error(`❌ [SISMOB] SLUG NÃO MAPEADO: ${slug}`);
-      return slug; // Fallback
-    }
-
-    console.log(`🏭 [SISMOB] Mapeando Rota: ${slug} -> Tabela: ${table}`);
-    return table;
+    // MAPEAMENTO RADICAL: Sem chance de erro humano
+    if (slug === 'atributos') return 'atributos';
+    if (slug === 'categorias-atributos') return 'categoriasAtributos';
+    if (slug === 'unidades') return 'unidades';
+    if (slug === 'bancos') return 'bancos';
+    if (slug === 'grupos-caixa') return 'grupoCaixa';
+    return slug;
   }
 
   @Get(':slug')
