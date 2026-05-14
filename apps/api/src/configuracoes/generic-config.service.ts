@@ -37,32 +37,30 @@ export class GenericConfigService {
     }
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
-    // 1. TRAVA DE SEGURANÇA: Se o ID chegar nulo da API, a gente nem tenta o banco
-    if (!tenantId || tenantId === 'undefined') {
+    // 1. DIAGNÓSTICO DE FRONTEIRA: Veja isso no log do Railway!
+    console.log(
+      `🏭 [SISMOB FACTORY] Tabela: ${tableName} | ID Imobiliária: ${tenantId}`,
+    );
+
+    if (!tenantId || tenantId === 'undefined' || tenantId === 'null') {
       throw new InternalServerErrorException(
-        `O campo tenant_id é obrigatório para a tabela ${tableName}.`,
+        `🚨 ERRO: O tenantId chegou vazio no Service. A gravação foi abortada para evitar erro 500.`,
       );
     }
 
     try {
       const table = (schema as any)[tableName];
-      if (!table)
-        throw new InternalServerErrorException(
-          `Tabela ${tableName} não mapeada.`,
-        );
-
       const { id, created_at, updated_at, imobiliariaId, ...dadosRestantes } =
         dto;
 
-      // 2. MONTAGEM DO PAYLOAD (A ordem aqui importa!)
+      // 2. MONTAGEM DO PAYLOAD (A ordem aqui é vital!)
       const payload: any = {
-        ...dadosRestantes, // Primeiro espalhamos os dados do form
+        ...dadosRestantes, // Dados do formulário
       };
 
-      // 3. SOBREESCRITA DE SEGURANÇA: Garantimos que o ID do Luis entre por último
+      // 3. SOBREPOSIÇÃO ABSOLUTA: Garantimos que o ID do Luis seja o dono do registro
       payload.tenant_id = tenantId;
 
-      // 4. TRATAMENTO ESPECÍFICO
       if (tableName === 'atributos') {
         payload.quantidade = Number(dto.quantidade || 1);
         payload.categoria_id = dto.categoria_id
@@ -70,11 +68,10 @@ export class GenericConfigService {
           : null;
       }
 
-      console.log(`🏭 [DB WRITE] Tabela: ${tableName} | Tenant: ${tenantId}`);
-
       if (id && id !== 'undefined') {
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
+        // 4. INSERT BLINDADO
         const [novo] = await (this.db
           .insert(table)
           .values(payload)
@@ -82,7 +79,7 @@ export class GenericConfigService {
         return novo;
       }
     } catch (e: any) {
-      console.error(`❌ [DB FATAL] Erro ao gravar ${tableName}:`, e.message);
+      console.error(`❌ [DB FATAL ERROR] Na tabela ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }

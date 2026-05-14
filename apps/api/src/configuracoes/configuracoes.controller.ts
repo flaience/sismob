@@ -35,19 +35,23 @@ export class ConfiguracoesController {
     // 2. Chama o service com o nome CORRETO (ex: categoriasAtributos)
     return this.configService.findAll(mappedTable, tid);
   }
-
   @Post(':slug')
-  async save(
-    @Param('slug') slug: string,
-    @Body() dto: any,
-    @Query('imobiliariaId') queryId: string,
-  ) {
-    const table = this.getTableName(slug);
+  async save(@Param('slug') slug: string, @Body() dto: any) {
+    const tableMapped = this.getTableName(slug);
 
-    // Pega o ID de onde ele estiver disponível
-    const tenantId = dto.imobiliariaId || queryId;
+    // O SEGREDO: Pegamos o ID que o Frontend envia no campo 'imobiliariaId'
+    const tenantId = dto.imobiliariaId;
 
-    return this.configService.upsert(table, dto, tenantId);
+    if (!tenantId) {
+      this.logger.error(
+        `❌ O campo imobiliariaId não veio no Body para a rota ${slug}`,
+      );
+      throw new InternalServerErrorException(
+        'ID da imobiliária ausente na requisição.',
+      );
+    }
+
+    return this.configService.upsert(tableMapped, dto, tenantId);
   }
 
   @Delete(':slug/:id')
