@@ -104,8 +104,10 @@ export default function SismobFormMaster({
     }
 
     // 2. MOTOR DE AUTO-LOOKUP INDUSTRIAL
+    // MOTOR DE AUTO-LOOKUP INDUSTRIAL v225
     sections?.forEach((section: any) => {
       section.fields.forEach(async (field: any) => {
+        // 1. Só buscamos se for um Select/Checklist e não tiver opções fixas
         if (
           (field.type === "select" || field.type === "checklist") &&
           !field.options
@@ -114,30 +116,47 @@ export default function SismobFormMaster({
             let endpointLookup = "";
             let params: any = { imobiliariaId: tenant.id };
 
-            if (field.name === "proprietario_id") {
+            // 2. REGRA DE ROTEAMENTO (Onde buscar cada dado)
+
+            // Caso A: Busca o PAI (Categorias)
+            if (field.name === "categoria_id") {
+              endpointLookup = "/configuracoes/categorias-atributos";
+            }
+            // Caso B: Busca Proprietários (Papel 3)
+            else if (field.name === "proprietario_id") {
               endpointLookup = "/pessoas";
               params.papel = "3";
-            } else if (
-              field.name === "atributos" ||
-              field.entity === "atributos"
-            ) {
-              endpointLookup = "/configuracoes/atributos";
-            } else if (field.name === "unidade_id") {
+            }
+            // Caso C: Busca Unidades/Filiais
+            else if (field.name === "unidade_id") {
               endpointLookup = "/configuracoes/unidades";
-            } else {
-              const entity = field.entity || field.name.replace("_id", "s");
+            }
+            // Caso D: Regra Genérica (Remove o _id e pluraliza)
+            else {
+              const entity =
+                field.entity ||
+                field.name.replace("_id", "s").replace("_", "-");
               endpointLookup = `/configuracoes/${entity}`;
             }
 
+            console.log(
+              `📡 [SISMOB] Carregando lookup para ${field.label} em: ${endpointLookup}`,
+            );
+
             const res = await api.get(endpointLookup, { params });
+
+            // 3. GARANTIA DE FORMATO (Trata Array ou Objeto Único)
             const dados = Array.isArray(res.data)
               ? res.data
               : res.data
                 ? [res.data]
                 : [];
+
             setOptions((prev: any) => ({ ...prev, [field.name]: dados }));
           } catch (e) {
-            console.warn(`⚠️ [SISMOB] Falha no lookup: ${field.name}`);
+            console.warn(
+              `⚠️ [SISMOB] Falha ao carregar opções para: ${field.name}`,
+            );
           }
         }
       });

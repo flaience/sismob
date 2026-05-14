@@ -363,7 +363,7 @@ export const MAPA_SISMOB: any = {
           // VINCULA AO PAI:
           {
             name: "categoria_id",
-            label: "Categoria Pai",
+            label: "Categoria do Item",
             type: "select",
             required: true,
           },

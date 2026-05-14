@@ -42,7 +42,10 @@ export class ConfiguracoesController {
 
   @Get(':slug')
   async list(@Param('slug') slug: string, @Query('imobiliariaId') tid: string) {
+    // 1. Traduz a URL com traço para o nome da variável no Schema.ts
     const mappedTable = this.getTableName(slug);
+
+    // 2. Chama o service com o nome CORRETO (ex: categoriasAtributos)
     return this.configService.findAll(mappedTable, tid);
   }
 
