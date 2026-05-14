@@ -37,30 +37,24 @@ export class GenericConfigService {
     }
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
-    // 1. DIAGNÓSTICO DE FRONTEIRA: Veja isso no log do Railway!
-    console.log(
-      `🏭 [SISMOB FACTORY] Tabela: ${tableName} | ID Imobiliária: ${tenantId}`,
-    );
-
-    if (!tenantId || tenantId === 'undefined' || tenantId === 'null') {
-      throw new InternalServerErrorException(
-        `🚨 ERRO: O tenantId chegou vazio no Service. A gravação foi abortada para evitar erro 500.`,
-      );
-    }
+    // 1. PROVA DE VIDA NO LOG (VEJA ISSO NO RAILWAY)
+    console.log(`🚀 [SISMOB v225] Tabela: ${tableName} | Tenant: ${tenantId}`);
 
     try {
       const table = (schema as any)[tableName];
-      const { id, created_at, updated_at, imobiliariaId, ...dadosRestantes } =
+      if (!table) throw new Error(`Tabela ${tableName} inexistente.`);
+
+      // 2. EXTRAÇÃO MANUAL (Garante que nada 'suje' o tenant_id)
+      const { id, created_at, updated_at, imobiliariaId, tenant_id, ...limpo } =
         dto;
 
-      // 2. MONTAGEM DO PAYLOAD (A ordem aqui é vital!)
-      const payload: any = {
-        ...dadosRestantes, // Dados do formulário
+      const payload = {
+        ...limpo,
+        tenant_id: tenantId, // <--- INJEÇÃO FORÇADA
+        updated_at: new Date(),
       };
 
-      // 3. SOBREPOSIÇÃO ABSOLUTA: Garantimos que o ID do Luis seja o dono do registro
-      payload.tenant_id = tenantId;
-
+      // 3. TRATAMENTO DE NÚMEROS (Garante que o banco aceite)
       if (tableName === 'atributos') {
         payload.quantidade = Number(dto.quantidade || 1);
         payload.categoria_id = dto.categoria_id
@@ -71,7 +65,7 @@ export class GenericConfigService {
       if (id && id !== 'undefined') {
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // 4. INSERT BLINDADO
+        // 4. INSERT EXPLICITAMENTE PASSANDO O PAYLOAD
         const [novo] = await (this.db
           .insert(table)
           .values(payload)
@@ -79,7 +73,7 @@ export class GenericConfigService {
         return novo;
       }
     } catch (e: any) {
-      console.error(`❌ [DB FATAL ERROR] Na tabela ${tableName}:`, e.message);
+      console.error(`❌ [DB FATAL v225] Erro:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }

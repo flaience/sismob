@@ -168,9 +168,10 @@ export const categoriasAtributos = pgTable("categorias_atributos", {
 // 2. O CARDÁPIO DE ITENS (O que você sugeriu)
 export const atributos = pgTable("atributos", {
   id: serial("id").primaryKey(),
+  // ESTA LINHA É A CHAVE DA VITÓRIA:
   tenant_id: uuid("tenant_id")
     .references(() => tenants.id)
-    .notNull(), // <--- ADICIONADO
+    .notNull(),
   categoria_id: integer("categoria_id").references(
     () => categoriasAtributos.id,
   ),
