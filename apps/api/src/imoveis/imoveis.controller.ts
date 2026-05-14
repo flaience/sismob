@@ -25,6 +25,14 @@ export class ImoveisController {
     return this.imoveisService.findAll(tenantId);
   }
 
+  @Get('portal/search') // Rota: /imoveis/portal/search
+  async search(@Query('imobiliariaId') tid: string, @Query() query: any) {
+    // Converte a string de atributos (ex: "1,2,3") em um array de números
+    if (query.atributos && typeof query.atributos === 'string') {
+      query.atributos = query.atributos.split(',').map(Number);
+    }
+    return this.imoveisService.buscarPortal(tid, query);
+  }
   @Get(':id')
   async findOne(
     @Param('id') id: string,

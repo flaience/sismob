@@ -1,129 +1,159 @@
 "use client";
-import { useState } from "react";
-import { Search, Bed, Bath, Maximize, MapPin, DollarSign } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import {
+  Search,
+  Bed,
+  Bath,
+  Maximize,
+  MapPin,
+  DollarSign,
+  Sparkles,
+  Loader2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTenant } from "@/context/TenantContext";
+import SismobAttributePicker from "@/components/SismobAttributePicker";
+import PortalCardImovel from "@/components/PortalCardImovel";
+import api from "@/lib/api";
 
 export default function PortalVitrini() {
-  const [filtros, setFiltros] = useState({
+  const { tenant } = useTenant();
+  const [loading, setLoading] = useState(true);
+  const [imoveis, setImoveis] = useState<any[]>([]);
+  const [showPicker, setShowPicker] = useState(false);
+
+  const [filtros, setFiltros] = useState<any>({
     tipo: "",
-    quartos: "",
-    preco: 500000,
+    cidade: "",
+    precoMax: 5000000,
+    atributos: [], // Array de IDs do cardápio
   });
 
+  // FUNÇÃO MESTRE DE BUSCA
+  const handleSearch = async () => {
+    if (!tenant?.id) return;
+    setLoading(true);
+    try {
+      const res = await api.get("/imoveis/portal/search", {
+        params: { ...filtros, imobiliariaId: tenant.id },
+      });
+      setImoveis(res.data);
+    } catch (e) {
+      console.error("Erro na busca");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tenant?.id) handleSearch();
+  }, [tenant?.id]);
+
   return (
-    <div className="relative">
-      {/* HERO SECTION - O IMPACTO */}
-      <section className="relative h-[90vh] flex items-center justify-center">
+    <div className="relative bg-[#F8F9FA] min-h-screen">
+      {/* HERO SECTION */}
+      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?q=80&w=2071"
           className="absolute inset-0 w-full h-full object-cover"
-          alt="Luxury House"
+          alt="Hero"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-[#F8F9FA]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-[#F8F9FA]" />
 
-        <div className="relative z-10 text-center space-y-6 px-4">
+        <div className="relative z-10 text-center px-4">
           <motion.h1
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="text-6xl md:text-8xl font-black text-white tracking-tighter"
           >
-            Seu novo lar, <br />{" "}
-            <span className="text-indigo-400">sob medida.</span>
+            O lar dos seus <br /> <span className="text-brand">sonhos.</span>
           </motion.h1>
-          <p className="text-white/70 text-xl font-medium max-w-2xl mx-auto">
-            Encontre mansões, apartamentos e terrenos com a curadoria exclusiva
-            Sismob.
-          </p>
         </div>
       </section>
 
-      {/* SUPER FORMULÁRIO DE CONSULTA (A MÁGICA QUE VOCÊ PEDIU) */}
-      <div className="max-w-6xl mx-auto px-6 -mt-32 relative z-20">
-        <div className="bg-white/80 backdrop-blur-3xl p-8 rounded-[4rem] shadow-2xl border border-white flex flex-wrap lg:flex-nowrap gap-8 items-center">
-          <div className="flex-1 space-y-3 px-4 border-r border-gray-100">
-            <label className="text-[10px] font-black uppercase text-indigo-600 tracking-widest flex items-center gap-2">
+      {/* SUPER FILTRO INDUSTRIAL */}
+      <div className="max-w-6xl mx-auto px-6 -mt-32 relative z-50">
+        <div className="bg-white/90 backdrop-blur-3xl p-8 rounded-[4rem] shadow-2xl border border-white flex flex-wrap lg:flex-nowrap gap-6 items-center">
+          <div className="flex-1 space-y-2 px-4 border-r border-slate-100">
+            <label className="text-[10px] font-black uppercase text-brand tracking-widest flex items-center gap-2">
               <MapPin size={12} /> Localização
             </label>
             <input
               placeholder="Cidade ou Bairro"
               className="w-full bg-transparent font-bold text-lg outline-none"
+              onChange={(e) =>
+                setFiltros({ ...filtros, cidade: e.target.value })
+              }
             />
           </div>
 
-          <div className="flex-1 space-y-3 px-4 border-r border-gray-100">
-            <label className="text-[10px] font-black uppercase text-indigo-600 tracking-widest flex items-center gap-2">
-              <Bed size={12} /> Dormitórios
+          <div className="flex-1 space-y-2 px-4 border-r border-slate-100">
+            <label className="text-[10px] font-black uppercase text-brand tracking-widest flex items-center gap-2">
+              <Sparkles size={12} /> Comodidades
             </label>
-            <select className="w-full bg-transparent font-bold text-lg outline-none appearance-none">
-              <option value="">Qualquer qto</option>
-              <option value="2">2+ Quartos</option>
-              <option value="3">3+ Quartos</option>
-              <option value="4">4+ Quartos</option>
-            </select>
+            <button
+              onClick={() => setShowPicker(true)}
+              className="w-full text-left font-bold text-lg text-slate-400 hover:text-brand transition-colors"
+            >
+              {filtros.atributos.length > 0
+                ? `${filtros.atributos.length} Selecionados`
+                : "O que é essencial?"}
+            </button>
           </div>
 
-          <div className="flex-1 space-y-3 px-4">
-            <label className="text-[10px] font-black uppercase text-indigo-600 tracking-widest flex items-center gap-2">
-              <DollarSign size={12} /> Orçamento máximo
+          <div className="flex-1 space-y-2 px-4">
+            <label className="text-[10px] font-black uppercase text-brand tracking-widest flex items-center gap-2">
+              <DollarSign size={12} /> Até R${" "}
+              {filtros.precoMax.toLocaleString()}
             </label>
             <input
               type="range"
               min="100000"
-              max="5000000"
+              max="10000000"
               step="50000"
               onChange={(e) =>
-                setFiltros({ ...filtros, preco: Number(e.target.value) })
+                setFiltros({ ...filtros, precoMax: Number(e.target.value) })
               }
-              className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              className="w-full accent-brand cursor-pointer"
             />
-            <div className="flex justify-between font-bold text-xs text-gray-500">
-              <span>100k</span>
-              <span className="text-indigo-600">
-                R$ {filtros.preco.toLocaleString()}
-              </span>
-              <span>5M+</span>
-            </div>
           </div>
 
-          <button className="bg-indigo-600 text-white p-8 rounded-[2.5rem] shadow-2xl hover:scale-105 transition-all">
+          <button
+            onClick={handleSearch}
+            className="bg-brand text-white p-8 rounded-[2.5rem] shadow-2xl hover:scale-105 transition-all"
+          >
             <Search size={32} strokeWidth={3} />
           </button>
         </div>
       </div>
 
-      {/* VITRINE DE IMÓVEIS (A SER ALIMENTADA PELO ADMIN) */}
-      <section className="max-w-7xl mx-auto py-32 px-10">
-        <h2 className="text-4xl font-black tracking-tighter mb-12 uppercase italic">
-          Lançamentos <span className="text-indigo-600">Sismob</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {/* Aqui entrará o seu .map de imóveis vindo da API */}
-          <div className="bg-white rounded-[4rem] p-4 shadow-sm border border-gray-100">
-            <div className="h-80 bg-gray-200 rounded-[3.5rem] mb-8 overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="px-6 pb-6">
-              <h3 className="text-2xl font-black tracking-tighter mb-4">
-                Casa no Bosque
-              </h3>
-              <div className="flex gap-4 text-gray-400 font-bold text-xs">
-                <span className="flex items-center gap-1">
-                  <Bed size={14} /> 4
-                </span>
-                <span className="flex items-center gap-1">
-                  <Bath size={14} /> 3
-                </span>
-                <span className="flex items-center gap-1">
-                  <Maximize size={14} /> 350m²
-                </span>
-              </div>
-            </div>
+      {/* RESULTADOS */}
+      <section className="max-w-7xl mx-auto py-20 px-10">
+        {loading ? (
+          <div className="flex justify-center p-20 animate-pulse font-black text-slate-300 uppercase tracking-widest">
+            Cruzando dados...
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            {imoveis.map((imovel) => (
+              <PortalCardImovel key={imovel.id} imovel={imovel} />
+            ))}
+          </div>
+        )}
       </section>
+
+      {/* MODAL DE ATRIBUTOS (REUSADO DO ADMIN) */}
+      {showPicker && (
+        <SismobAttributePicker
+          tenantId={tenant?.id}
+          selectedIds={filtros.atributos}
+          onClose={() => setShowPicker(false)}
+          onConfirm={(ids: number[]) => {
+            setFiltros({ ...filtros, atributos: ids });
+            setShowPicker(false);
+          }}
+        />
+      )}
     </div>
   );
 }

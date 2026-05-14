@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, ilike, and, lte, desc, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class ImoveisService {
@@ -126,6 +126,38 @@ export class ImoveisService {
     });
   }
 
+  async buscarPortal(tenantId: string, query: any) {
+    const table = schema.imoveis as any;
+    const tableLink = schema.imoveisAtributos as any;
+
+    // 1. Filtros básicos
+    let conds = [eq(table.tenant_id, tenantId), eq(table.status, 'disponivel')];
+
+    if (query.tipo) conds.push(eq(table.tipo, query.tipo));
+    if (query.cidade) conds.push(ilike(table.cidade, `%${query.cidade}%`));
+    if (query.precoMax)
+      conds.push(lte(table.preco_venda, query.precoMax.toString()));
+
+    // 2. FILTRO POR ATRIBUTOS (A MÁGICA)
+    // Busca apenas imóveis que possuam os IDs de atributos selecionados
+    if (
+      query.atributos &&
+      Array.isArray(query.atributos) &&
+      query.atributos.length > 0
+    ) {
+      const subQuery = this.db
+        .select({ imovelId: tableLink.imovel_id })
+        .from(tableLink)
+        .where(inArray(tableLink.atributo_id, query.atributos.map(Number)));
+
+      conds.push(inArray(table.id, subQuery));
+    }
+
+    return await this.db
+      .select()
+      .from(table)
+      .where(and(...conds));
+  }
   /**
    * EXCLUSÃO COM LIMPEZA DE RASTRO
    */
