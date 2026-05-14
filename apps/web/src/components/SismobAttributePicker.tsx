@@ -36,9 +36,12 @@ export default function SismobAttributePicker({
     load();
   }, [tenantId]);
 
-  const toggle = (id: number) => {
+  const toggle = (id: any) => {
+    const numericId = Number(id); // <--- GARANTIA INDUSTRIAL
     setTempSelection((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      prev.includes(numericId)
+        ? prev.filter((x) => x !== numericId)
+        : [...prev, numericId],
     );
   };
 

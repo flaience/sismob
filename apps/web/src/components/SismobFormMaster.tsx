@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronDown, Sparkles } from "lucide-react"; // Adicionado Sparkles
+import { ArrowLeft, X, Plus, ChevronDown, Sparkles } from "lucide-react"; // Adicionado Sparkles
 import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
 import SismobButton from "./SismobButton";
@@ -314,31 +314,56 @@ export default function SismobFormMaster({
                       />
                     ) : /* 2. CARDÁPIO DE ATRIBUTOS (O SEGREDO DA AGILIDADE) */
                     field.type === "checklist" ? (
-                      <div className="w-full col-span-full">
+                      <div className="w-full col-span-full space-y-4">
+                        {/* VITRINE DE SELECIONADOS: O corretor vê o que marcou aqui */}
+                        <div className="flex flex-wrap gap-2 mb-2 min-h-[50px] p-4 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                          {formData[field.name]?.length > 0 ? (
+                            formData[field.name].map((id: number) => {
+                              const attr = options[field.name]?.find(
+                                (o: any) => o.id === id,
+                              );
+                              return (
+                                <span
+                                  key={id}
+                                  className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2 animate-in zoom-in"
+                                >
+                                  {attr?.quantidade}x {attr?.nome}
+                                  <X
+                                    size={12}
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                      const newValue = formData[
+                                        field.name
+                                      ].filter((x: any) => x !== id);
+                                      updateField(field.name, newValue);
+                                    }}
+                                  />
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <p className="text-slate-400 text-xs font-bold italic py-2 ml-4">
+                              Nenhum diferencial selecionado ainda...
+                            </p>
+                          )}
+                        </div>
+
+                        {/* BOTÃO QUE ABRE O MODAL */}
                         <button
                           type="button"
                           onClick={() => setShowAttrPicker(true)}
-                          className="w-full p-10 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 hover:border-indigo-600 hover:bg-indigo-50 transition-all flex flex-col items-center gap-4 group"
+                          className="w-full p-8 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200 hover:border-brand hover:bg-indigo-50 transition-all flex items-center justify-center gap-4 group"
                         >
-                          <div className="bg-white p-4 rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
-                            <Sparkles className="text-indigo-600" size={32} />
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xl font-black text-slate-800 uppercase tracking-tighter">
-                              Configurar Atributos do Imóvel
-                            </p>
-                            <p className="text-xs font-bold text-slate-400 uppercase mt-1">
-                              {formData[field.name]?.length || 0} diferenciais
-                              selecionados
-                            </p>
-                          </div>
+                          <Plus className="text-brand group-hover:rotate-90 transition-transform" />
+                          <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">
+                            Abrir Cardápio de Atributos
+                          </span>
                         </button>
 
-                        {/* O MODAL QUE VOCÊ PEDIU */}
                         {showAttrPicker && (
                           <SismobAttributePicker
                             tenantId={tenant.id}
-                            selectedIds={formData[field.name]}
+                            selectedIds={formData[field.name] || []}
                             onClose={() => setShowAttrPicker(false)}
                             onConfirm={(newIds: number[]) => {
                               updateField(field.name, newIds);
