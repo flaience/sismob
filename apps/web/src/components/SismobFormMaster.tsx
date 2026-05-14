@@ -168,26 +168,31 @@ export default function SismobFormMaster({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Log de Auditoria: Veja no console do navegador (F12) o que está saindo
-    const payload = { ...formData, imobiliariaId: tenant?.id };
-    console.log("🚀 [SISMOB] Tentando salvar payload:", payload);
+    // 1. O TIRO DE MISERICÓRDIA NO FRONTEND
+    const tid = tenant?.id;
 
-    if (!tenant?.id) {
-      alert("❌ Erro: Imobiliária não identificada. Recarregue a página.");
+    if (!tid) {
+      alert(
+        "❌ ERRO CRÍTICO: Imobiliária não identificada. Por favor, recarregue a página (F5).",
+      );
       return;
     }
 
+    // Criamos o pacote de dados garantindo que o ID está no topo
+    const payload = {
+      ...formData,
+      imobiliariaId: tid, // Enviamos para a API
+    };
+
+    console.log("🚀 [SISMOB] Payload saindo para a API:", payload);
+
     setLoading(true);
     try {
-      const res = await api.post(endpoint, payload);
-      console.log("✅ [SISMOB] Resposta de sucesso:", res.data);
+      await api.post(endpoint, payload);
       router.back();
     } catch (err: any) {
-      // 2. MÁGICA INDUSTRIAL: Mostra o erro REAL do servidor
-      const serverMessage = err.response?.data?.message || err.message;
-      console.error("❌ [SISMOB] Erro na API:", serverMessage);
-
-      alert(`⚠️ FALHA NA GRAVAÇÃO:\n${serverMessage}`);
+      const msg = err.response?.data?.message || "Erro desconhecido";
+      alert(`⚠️ FALHA NO SERVIDOR:\n${msg}`);
     } finally {
       setLoading(false);
     }

@@ -37,6 +37,13 @@ export class GenericConfigService {
     }
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
+    // 1. TRAVA DE SEGURANÇA: Se o ID chegar nulo da API, a gente nem tenta o banco
+    if (!tenantId || tenantId === 'undefined') {
+      throw new InternalServerErrorException(
+        `O campo tenant_id é obrigatório para a tabela ${tableName}.`,
+      );
+    }
+
     try {
       const table = (schema as any)[tableName];
       if (!table)
@@ -44,18 +51,18 @@ export class GenericConfigService {
           `Tabela ${tableName} não mapeada.`,
         );
 
-      // 1. LIMPEZA E EXTRAÇÃO
-      // Removemos campos que não são colunas do banco de dados
       const { id, created_at, updated_at, imobiliariaId, ...dadosRestantes } =
         dto;
 
-      // 2. MONTAGEM DO PAYLOAD (O SEGREDO DA VITÓRIA)
+      // 2. MONTAGEM DO PAYLOAD (A ordem aqui importa!)
       const payload: any = {
-        ...dadosRestantes,
-        tenant_id: tenantId, // <--- FORÇA O ID DO LUIS AQUI
+        ...dadosRestantes, // Primeiro espalhamos os dados do form
       };
 
-      // 3. TRATAMENTOS DE TIPO (Garante que números não vão como strings)
+      // 3. SOBREESCRITA DE SEGURANÇA: Garantimos que o ID do Luis entre por último
+      payload.tenant_id = tenantId;
+
+      // 4. TRATAMENTO ESPECÍFICO
       if (tableName === 'atributos') {
         payload.quantidade = Number(dto.quantidade || 1);
         payload.categoria_id = dto.categoria_id
@@ -63,19 +70,11 @@ export class GenericConfigService {
           : null;
       }
 
-      if (tableName === 'unidades') {
-        payload.is_matriz = dto.is_matriz === true || dto.is_matriz === 'true';
-      }
-
-      console.log(
-        `🏭 [SISMOB] Gravando em ${tableName} para Tenant: ${tenantId}`,
-      );
+      console.log(`🏭 [DB WRITE] Tabela: ${tableName} | Tenant: ${tenantId}`);
 
       if (id && id !== 'undefined') {
-        // ATUALIZAÇÃO
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // INSERÇÃO
         const [novo] = await (this.db
           .insert(table)
           .values(payload)
@@ -83,7 +82,7 @@ export class GenericConfigService {
         return novo;
       }
     } catch (e: any) {
-      console.error(`❌ [SISMOB DB FATAL] Tabela ${tableName}:`, e.message);
+      console.error(`❌ [DB FATAL] Erro ao gravar ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }

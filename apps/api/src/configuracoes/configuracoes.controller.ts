@@ -37,17 +37,15 @@ export class ConfiguracoesController {
   }
 
   @Post(':slug')
-  async save(@Param('slug') slug: string, @Body() dto: any) {
+  async save(
+    @Param('slug') slug: string,
+    @Body() dto: any,
+    @Query('imobiliariaId') queryId: string,
+  ) {
     const table = this.getTableName(slug);
 
-    // O imobiliariaId vem do Frontend (TenantContext) dentro do objeto dto
-    const tenantId = dto.imobiliariaId;
-
-    if (!tenantId) {
-      throw new InternalServerErrorException(
-        'Impossível gravar: tenantId não enviado pelo frontend.',
-      );
-    }
+    // Pega o ID de onde ele estiver disponível
+    const tenantId = dto.imobiliariaId || queryId;
 
     return this.configService.upsert(table, dto, tenantId);
   }
