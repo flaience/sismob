@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { useTenant } from "@/context/TenantContext";
 import SismobButton from "./SismobButton";
 import SismobUpload from "./SismobUpload";
+import SismobAttributePicker from "./SismobAttributePicker"; // Import do
 
 interface SismobFormProps {
   title: string;
@@ -45,6 +46,7 @@ export default function SismobFormMaster({
   const [options, setOptions] = useState<any>({});
   const [errors, setErrors] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+  const [showAttrPicker, setShowAttrPicker] = useState(false);
 
   // 2. SINCRONIA DE IDENTIDADE:
   // Garante que se você mudar de "Leads" para "Proprietários", o formulário
@@ -312,69 +314,38 @@ export default function SismobFormMaster({
                       />
                     ) : /* 2. CARDÁPIO DE ATRIBUTOS (O SEGREDO DA AGILIDADE) */
                     field.type === "checklist" ? (
-                      <div className="w-full space-y-4">
-                        <div className="flex justify-between items-end mb-2 px-6">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
-                            Toque nos itens para selecionar
-                          </p>
-                          <span className="bg-indigo-600 text-white text-[10px] px-4 py-1.5 rounded-full font-black shadow-lg">
-                            {Array.isArray(formData[field.name])
-                              ? formData[field.name].length
-                              : 0}{" "}
-                            SELECIONADOS
-                          </span>
-                        </div>
+                      <div className="w-full col-span-full">
+                        <button
+                          type="button"
+                          onClick={() => setShowAttrPicker(true)}
+                          className="w-full p-10 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 hover:border-indigo-600 hover:bg-indigo-50 transition-all flex flex-col items-center gap-4 group"
+                        >
+                          <div className="bg-white p-4 rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
+                            <Sparkles className="text-indigo-600" size={32} />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xl font-black text-slate-800 uppercase tracking-tighter">
+                              Configurar Atributos do Imóvel
+                            </p>
+                            <p className="text-xs font-bold text-slate-400 uppercase mt-1">
+                              {formData[field.name]?.length || 0} diferenciais
+                              selecionados
+                            </p>
+                          </div>
+                        </button>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-100 p-8 rounded-[3.5rem] border border-slate-200 shadow-inner max-h-[500px] overflow-y-auto custom-scrollbar">
-                          {(options[field.name] || []).map((opt: any) => {
-                            // GARANTIA DE TIPO: Forçamos ID numérico para o banco não dar erro de FK
-                            const optId = Number(opt.id);
-                            const currentSelection = Array.isArray(
-                              formData[field.name],
-                            )
-                              ? formData[field.name]
-                              : [];
-                            const isSelected = currentSelection.includes(optId);
-
-                            return (
-                              <div
-                                key={opt.id}
-                                onClick={() => {
-                                  const newValue = isSelected
-                                    ? currentSelection.filter(
-                                        (id: any) => Number(id) !== optId,
-                                      )
-                                    : [...currentSelection, optId];
-                                  updateField(field.name, newValue);
-                                }}
-                                className={`
-                          relative cursor-pointer p-5 rounded-[2rem] flex flex-col items-center justify-center text-center transition-all duration-300 border-2
-                          ${
-                            isSelected
-                              ? "bg-indigo-600 border-indigo-400 shadow-xl scale-95"
-                              : "bg-white border-transparent hover:border-indigo-200 shadow-sm hover:scale-105"
-                          }
-                        `}
-                              >
-                                {isSelected && (
-                                  <div className="absolute top-2 right-2 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                                    <div className="w-2 h-2 bg-indigo-600 rounded-full" />
-                                  </div>
-                                )}
-                                <span
-                                  className={`text-[10px] font-black uppercase mb-1 ${isSelected ? "text-indigo-200" : "text-indigo-600"}`}
-                                >
-                                  {opt.quantidade}x
-                                </span>
-                                <span
-                                  className={`text-xs font-black uppercase tracking-tighter leading-none ${isSelected ? "text-white" : "text-slate-700"}`}
-                                >
-                                  {opt.nome}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        {/* O MODAL QUE VOCÊ PEDIU */}
+                        {showAttrPicker && (
+                          <SismobAttributePicker
+                            tenantId={tenant.id}
+                            selectedIds={formData[field.name]}
+                            onClose={() => setShowAttrPicker(false)}
+                            onConfirm={(newIds: number[]) => {
+                              updateField(field.name, newIds);
+                              setShowAttrPicker(false);
+                            }}
+                          />
+                        )}
                       </div>
                     ) : /* 3. SELEÇÃO (AUTO-LOOKUPS) */
                     field.type === "select" ? (

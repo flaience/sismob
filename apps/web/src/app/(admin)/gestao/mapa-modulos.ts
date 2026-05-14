@@ -372,7 +372,7 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
-  // --- FINANCEIRO ---
+  // --- FINANCEIRO --
   "contas-bancarias": {
     title: "Minhas Contas Bancárias",
     entity: "configuracoes/contas-bancarias",
