@@ -13,20 +13,32 @@ export class GenericConfigService {
   async findAll(tableName: string, tenantId: string) {
     try {
       const table = (schema as any)[tableName];
-      if (!table) return [];
+      if (!table) {
+        console.error(
+          `❌ [SISMOB] Tabela não encontrada no Schema: ${tableName}`,
+        );
+        return [];
+      }
 
       console.log(
-        `📡 [SISMOB] Buscando ${tableName} para o Tenant: ${tenantId}`,
+        `📡 [SISMOB] Buscando registros de '${tableName}' para o Tenant: ${tenantId}`,
       );
 
       const results = await this.db
         .select()
         .from(table)
-        .where(eq(table.tenant_id, tenantId)); // <--- GARANTE O FILTRO
+        .where(eq(table.tenant_id, tenantId));
+
+      console.log(
+        `✅ [SISMOB] Tabela '${tableName}' retornou ${results.length} registros.`,
+      );
 
       return results;
-    } catch (e) {
-      console.error(`❌ Erro ao buscar ${tableName}:`, e.message);
+    } catch (e: any) {
+      console.error(
+        `❌ [SISMOB] Erro fatal na busca de ${tableName}:`,
+        e.message,
+      );
       return [];
     }
   }

@@ -21,21 +21,40 @@ export default function SismobListMaster({ config, papelUrl }: any) {
 
     setLoading(true);
     try {
+      // 1. LOG DE ENVIO: Vamos ver qual ID de imobiliária o site está mandando
+      console.log(`📡 [SISMOB DEBUG] Requisitando: /${endpoint}`, {
+        tenantIdEnviado: tenant.id,
+        papel: config.papel,
+        filtroBusca: searchTerm,
+      });
+
       const res = await api.get(`/${endpoint}`, {
         params: {
           imobiliariaId: tenant.id,
           papel: config.papel,
-          search: searchTerm, // 2. ENVIA O TERMO PARA A API
+          search: searchTerm,
         },
       });
+
+      // 2. LOG DE RESPOSTA: Vamos ver o que o Banco de Dados devolveu de verdade
+      console.log(
+        `✅ [SISMOB DEBUG] Resposta da API para ${config.title}:`,
+        res.data,
+      );
 
       const resultado = Array.isArray(res.data)
         ? res.data
         : res.data
           ? [res.data]
           : [];
+
+      // Se o log acima mostrar dados mas a tela continuar vazia, o problema é o nome das colunas no MAPA_SISMOB
       setData(resultado);
-    } catch (e) {
+    } catch (e: any) {
+      console.error(
+        `❌ [SISMOB DEBUG] Falha na comunicação com a API (${config.title}):`,
+        e.message,
+      );
       setData([]);
     } finally {
       setLoading(false);
