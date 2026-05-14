@@ -44,28 +44,38 @@ export class GenericConfigService {
           `Tabela ${tableName} não mapeada.`,
         );
 
-      // 1. LIMPEZA DE CAMPOS DE SISTEMA
+      // 1. LIMPEZA E EXTRAÇÃO
+      // Removemos campos que não são colunas do banco de dados
       const { id, created_at, updated_at, imobiliariaId, ...dadosRestantes } =
         dto;
 
-      // 2. MONTAGEM DO PAYLOAD COM TIPAGEM FORÇADA
+      // 2. MONTAGEM DO PAYLOAD (O SEGREDO DA VITÓRIA)
       const payload: any = {
         ...dadosRestantes,
-        tenant_id: tenantId, // Garante o vínculo com o Luis (Super-Admin)
+        tenant_id: tenantId, // <--- FORÇA O ID DO LUIS AQUI
       };
 
-      // 3. TRATAMENTO ESPECÍFICO PARA ATRIBUTOS
+      // 3. TRATAMENTOS DE TIPO (Garante que números não vão como strings)
       if (tableName === 'atributos') {
         payload.quantidade = Number(dto.quantidade || 1);
-        payload.categoria_id = Number(dto.categoria_id);
+        payload.categoria_id = dto.categoria_id
+          ? Number(dto.categoria_id)
+          : null;
       }
 
-      console.log(`🏭 [SISMOB] Persistindo na tabela ${tableName}:`, payload);
+      if (tableName === 'unidades') {
+        payload.is_matriz = dto.is_matriz === true || dto.is_matriz === 'true';
+      }
+
+      console.log(
+        `🏭 [SISMOB] Gravando em ${tableName} para Tenant: ${tenantId}`,
+      );
 
       if (id && id !== 'undefined') {
+        // ATUALIZAÇÃO
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // RETURNING() blindado
+        // INSERÇÃO
         const [novo] = await (this.db
           .insert(table)
           .values(payload)
@@ -73,8 +83,7 @@ export class GenericConfigService {
         return novo;
       }
     } catch (e: any) {
-      console.error(`❌ [SISMOB DB ERROR] Tabela ${tableName}:`, e.message);
-      // Retorna o erro exato do Postgres para o Frontend mostrar no alert
+      console.error(`❌ [SISMOB DB FATAL] Tabela ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }

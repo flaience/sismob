@@ -38,9 +38,18 @@ export class ConfiguracoesController {
 
   @Post(':slug')
   async save(@Param('slug') slug: string, @Body() dto: any) {
-    const mappedTable = this.getTableName(slug);
-    // ENVIAMOS O NOME CORRETO (categoriasAtributos) PARA O SERVICE
-    return this.configService.upsert(mappedTable, dto, dto.imobiliariaId);
+    const table = this.getTableName(slug);
+
+    // O imobiliariaId vem do Frontend (TenantContext) dentro do objeto dto
+    const tenantId = dto.imobiliariaId;
+
+    if (!tenantId) {
+      throw new InternalServerErrorException(
+        'Impossível gravar: tenantId não enviado pelo frontend.',
+      );
+    }
+
+    return this.configService.upsert(table, dto, tenantId);
   }
 
   @Delete(':slug/:id')
