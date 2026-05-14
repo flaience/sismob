@@ -168,12 +168,14 @@ export const categoriasAtributos = pgTable("categorias_atributos", {
 // 2. O CARDÁPIO DE ITENS (O que você sugeriu)
 export const atributos = pgTable("atributos", {
   id: serial("id").primaryKey(),
-  tenant_id: uuid("tenant_id").references(() => tenants.id),
+  tenant_id: uuid("tenant_id")
+    .references(() => tenants.id)
+    .notNull(), // <--- ADICIONADO
   categoria_id: integer("categoria_id").references(
     () => categoriasAtributos.id,
   ),
-  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Quarto"
-  quantidade: integer("quantidade").default(1), // Ex: 3
+  nome: varchar("nome", { length: 100 }).notNull(),
+  quantidade: integer("quantidade").default(1),
 });
 
 // 3. A PONTE (Vínculo Imóvel <-> Atributo)

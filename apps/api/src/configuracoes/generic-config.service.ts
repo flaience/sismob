@@ -13,23 +13,26 @@ export class GenericConfigService {
   async findAll(tableName: string, tenantId: string) {
     try {
       const table = (schema as any)[tableName];
+      if (!table) return [];
 
-      // LOG DE AUDITORIA (VEJA NO RAILWAY)
-      console.log(`[SISMOB AUDIT] Buscando na tabela: ${tableName}`);
-      console.log(`[SISMOB AUDIT] Com o Tenant ID: ${tenantId}`);
+      // SEGREDO INDUSTRIAL: Verifica se a tabela tem a coluna tenant_id
+      // Se não tiver (como era o caso do atributos), ele não tenta filtrar e não dá erro de sintaxe
+      if (!table.tenant_id) {
+        console.error(
+          `❌ [SISMOB] A tabela ${tableName} está sem a coluna tenant_id no Schema!`,
+        );
+        return this.db.select().from(table); // Busca sem filtro apenas para teste
+      }
 
-      const results = await this.db
+      return await this.db
         .select()
         .from(table)
         .where(eq(table.tenant_id, tenantId));
-
-      console.log(
-        `[SISMOB AUDIT] O banco retornou: ${results.length} registros.`,
-      );
-
-      return results;
     } catch (e: any) {
-      console.error(`❌ [SISMOB ERROR] Falha na busca:`, e.message);
+      console.error(
+        `❌ [SISMOB ERROR] Erro na busca da tabela ${tableName}:`,
+        e.message,
+      );
       return [];
     }
   }
