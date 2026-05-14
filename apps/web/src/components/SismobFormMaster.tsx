@@ -167,13 +167,27 @@ export default function SismobFormMaster({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Log de Auditoria: Veja no console do navegador (F12) o que está saindo
+    const payload = { ...formData, imobiliariaId: tenant?.id };
+    console.log("🚀 [SISMOB] Tentando salvar payload:", payload);
+
+    if (!tenant?.id) {
+      alert("❌ Erro: Imobiliária não identificada. Recarregue a página.");
+      return;
+    }
+
     setLoading(true);
     try {
-      // O FRONTEND ENVIA 'imobiliariaId', que o SERVICE recebe como 'tenantId'
-      await api.post(endpoint, { ...formData, imobiliariaId: tenant?.id });
+      const res = await api.post(endpoint, payload);
+      console.log("✅ [SISMOB] Resposta de sucesso:", res.data);
       router.back();
-    } catch (err) {
-      alert("Falha ao salvar. Verifique os campos obrigatórios.");
+    } catch (err: any) {
+      // 2. MÁGICA INDUSTRIAL: Mostra o erro REAL do servidor
+      const serverMessage = err.response?.data?.message || err.message;
+      console.error("❌ [SISMOB] Erro na API:", serverMessage);
+
+      alert(`⚠️ FALHA NA GRAVAÇÃO:\n${serverMessage}`);
     } finally {
       setLoading(false);
     }

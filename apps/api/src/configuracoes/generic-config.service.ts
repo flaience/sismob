@@ -39,40 +39,42 @@ export class GenericConfigService {
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
       const table = (schema as any)[tableName];
-
-      if (!table) {
+      if (!table)
         throw new InternalServerErrorException(
-          `Tabela ${tableName} não localizada.`,
+          `Tabela ${tableName} não mapeada.`,
         );
-      }
 
-      // 1. LIMPEZA E MAPEAMENTO (O TIRO DE MISERICÓRDIA NO ERRO 500)
-      const { id, created_at, updated_at, ...data } = dto;
+      // 1. LIMPEZA DE CAMPOS DE SISTEMA
+      const { id, created_at, updated_at, imobiliariaId, ...dadosRestantes } =
+        dto;
 
-      const payload = {
-        ...data,
-        tenant_id: tenantId, // <--- GARANTE QUE O ID DA IMOBILIÁRIA SEJA GRAVADO
-        // Se for a tabela de atributos, garante que os IDs e Números sejam Inteiros
-        ...(tableName === 'atributos'
-          ? {
-              quantidade: Number(data.quantidade || 1),
-              categoria_id: Number(data.categoria_id),
-            }
-          : {}),
+      // 2. MONTAGEM DO PAYLOAD COM TIPAGEM FORÇADA
+      const payload: any = {
+        ...dadosRestantes,
+        tenant_id: tenantId, // Garante o vínculo com o Luis (Super-Admin)
       };
 
+      // 3. TRATAMENTO ESPECÍFICO PARA ATRIBUTOS
+      if (tableName === 'atributos') {
+        payload.quantidade = Number(dto.quantidade || 1);
+        payload.categoria_id = Number(dto.categoria_id);
+      }
+
+      console.log(`🏭 [SISMOB] Persistindo na tabela ${tableName}:`, payload);
+
       if (id && id !== 'undefined') {
-        // UPDATE
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // INSERT (O as any aqui evita erros de tipagem no build)
-        return await (this.db.insert(table).values(payload).returning() as any);
+        // RETURNING() blindado
+        const [novo] = await (this.db
+          .insert(table)
+          .values(payload)
+          .returning() as any);
+        return novo;
       }
     } catch (e: any) {
-      console.error(
-        `❌ [SISMOB] Erro de persistência na tabela ${tableName}:`,
-        e.message,
-      );
+      console.error(`❌ [SISMOB DB ERROR] Tabela ${tableName}:`, e.message);
+      // Retorna o erro exato do Postgres para o Frontend mostrar no alert
       throw new InternalServerErrorException(e.message);
     }
   }
