@@ -13,16 +13,10 @@ export class GenericConfigService {
   async findAll(tableName: string, tenantId: string) {
     try {
       const table = (schema as any)[tableName];
-      if (!table) {
-        console.error(
-          `❌ [SISMOB] Tabela não encontrada no Schema: ${tableName}`,
-        );
-        return [];
-      }
 
-      console.log(
-        `📡 [SISMOB] Buscando registros de '${tableName}' para o Tenant: ${tenantId}`,
-      );
+      // LOG DE AUDITORIA (VEJA NO RAILWAY)
+      console.log(`[SISMOB AUDIT] Buscando na tabela: ${tableName}`);
+      console.log(`[SISMOB AUDIT] Com o Tenant ID: ${tenantId}`);
 
       const results = await this.db
         .select()
@@ -30,15 +24,12 @@ export class GenericConfigService {
         .where(eq(table.tenant_id, tenantId));
 
       console.log(
-        `✅ [SISMOB] Tabela '${tableName}' retornou ${results.length} registros.`,
+        `[SISMOB AUDIT] O banco retornou: ${results.length} registros.`,
       );
 
       return results;
     } catch (e: any) {
-      console.error(
-        `❌ [SISMOB] Erro fatal na busca de ${tableName}:`,
-        e.message,
-      );
+      console.error(`❌ [SISMOB ERROR] Falha na busca:`, e.message);
       return [];
     }
   }
