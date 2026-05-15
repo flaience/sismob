@@ -16,6 +16,11 @@ import * as schema from '@sismob/database';
       useFactory: () => {
         try {
           const connectionString = process.env.DATABASE_URL;
+
+          if (!connectionString) {
+            throw new Error('DATABASE_URL não configurada.');
+          }
+
           const postgresClient = ((postgres as any).default || postgres)(
             connectionString,
             {
@@ -24,11 +29,19 @@ import * as schema from '@sismob/database';
               connect_timeout: 10,
             },
           );
+
           console.log('📡 [SISMOB] Driver de banco carregado.');
-          return (drizzle as any)(postgresClient, { schema });
-        } catch (e) {
+
+          // O TIRO DE MISERICÓRDIA: Ativamos o logger: true
+          // Agora, cada INSERT será impresso no console do Railway
+          return (drizzle as any)(postgresClient, {
+            schema,
+            logger: true,
+          });
+        } catch (e: any) {
           console.error(
-            '⚠️ [SISMOB] Banco de dados falhou, mas liberando o boot...',
+            '⚠️ [SISMOB] Banco de dados falhou, mas liberando o boot: ',
+            e.message,
           );
           return null;
         }
