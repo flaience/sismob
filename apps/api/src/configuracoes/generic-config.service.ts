@@ -37,43 +37,47 @@ export class GenericConfigService {
     }
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
-    // 1. PROVA DE VIDA NO LOG (VEJA ISSO NO RAILWAY)
-    console.log(`🚀 [SISMOB v225] Tabela: ${tableName} | Tenant: ${tenantId}`);
+    // LOG DE PROVA: Verifique isso no Railway!
+    console.log(
+      `🚀 [SISMOB v231] Tabela: ${tableName} | ID do Luis: ${tenantId}`,
+    );
 
     try {
       const table = (schema as any)[tableName];
-      if (!table) throw new Error(`Tabela ${tableName} inexistente.`);
+      if (!table) throw new Error(`Tabela ${tableName} não localizada.`);
 
-      // 2. EXTRAÇÃO MANUAL (Garante que nada 'suje' o tenant_id)
-      const { id, created_at, updated_at, imobiliariaId, tenant_id, ...limpo } =
-        dto;
+      // 1. LIMPEZA RADICAL
+      const { id, created_at, updated_at, imobiliariaId, ...dadosPuros } = dto;
 
-      const payload = {
-        ...limpo,
-        tenant_id: tenantId, // <--- INJEÇÃO FORÇADA
+      // 2. MONTAGEM DO OBJETO DE FORMA EXPLÍCITA
+      // Usamos [table.tenant_id.name] para garantir que pegamos o nome da coluna física
+      const payload: any = {
+        ...dadosPuros,
+        tenant_id: tenantId, // <--- FORÇA O NOME QUE ESTÁ NO SCHEMA
         updated_at: new Date(),
       };
 
-      // 3. TRATAMENTO DE NÚMEROS (Garante que o banco aceite)
+      // 3. TRATAMENTO DE ATRIBUTOS
       if (tableName === 'atributos') {
         payload.quantidade = Number(dto.quantidade || 1);
-        payload.categoria_id = dto.categoria_id
-          ? Number(dto.categoria_id)
-          : null;
+        payload.categoria_id = Number(dto.categoria_id);
       }
+
+      // LOG DO COMANDO: Veja se o tenant_id aparece aqui no console do Railway!
+      console.log(`🏭 [SISMOB v231] Payload Final:`, JSON.stringify(payload));
 
       if (id && id !== 'undefined') {
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // 4. INSERT EXPLICITAMENTE PASSANDO O PAYLOAD
+        // 4. INSERT USANDO 'any' PARA IGNORAR O CACHE DO SCHEMA
         const [novo] = await (this.db
-          .insert(table)
+          .insert(table as any)
           .values(payload)
           .returning() as any);
         return novo;
       }
     } catch (e: any) {
-      console.error(`❌ [DB FATAL v225] Erro:`, e.message);
+      console.error(`❌ [DB ERROR v231]:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
