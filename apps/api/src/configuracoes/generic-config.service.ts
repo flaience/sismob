@@ -37,39 +37,43 @@ export class GenericConfigService {
     }
   }
   async upsert(tableName: string, dto: any, tenantId: string) {
-    // LOG DE PROVA: Verifique isso no Railway!
-    console.log(
-      `🚀 [SISMOB v231] Tabela: ${tableName} | ID do Luis: ${tenantId}`,
-    );
-
     try {
       const table = (schema as any)[tableName];
-      if (!table) throw new Error(`Tabela ${tableName} não localizada.`);
+      if (!table) throw new Error(`Tabela ${tableName} inexistente.`);
 
-      // 1. LIMPEZA RADICAL
-      const { id, created_at, updated_at, imobiliariaId, ...dadosPuros } = dto;
+      // 1. LIMPEZA E EXTRAÇÃO
+      const {
+        id,
+        created_at,
+        updated_at,
+        imobiliariaId,
+        tenant_id,
+        ...dadosLimpos
+      } = dto;
 
-      // 2. MONTAGEM DO OBJETO DE FORMA EXPLÍCITA
-      // Usamos [table.tenant_id.name] para garantir que pegamos o nome da coluna física
+      // 2. MONTAGEM DO PAYLOAD (AQUI ESTÁ A MÁGICA)
+      // Forçamos o 'tenant_id' como uma chave de string para o Drizzle não apagar
       const payload: any = {
-        ...dadosPuros,
-        tenant_id: tenantId, // <--- FORÇA O NOME QUE ESTÁ NO SCHEMA
+        ...dadosLimpos,
         updated_at: new Date(),
       };
 
-      // 3. TRATAMENTO DE ATRIBUTOS
+      // Injeção forçada usando o nome físico da coluna
+      payload['tenant_id'] = tenantId;
+
       if (tableName === 'atributos') {
         payload.quantidade = Number(dto.quantidade || 1);
         payload.categoria_id = Number(dto.categoria_id);
       }
 
-      // LOG DO COMANDO: Veja se o tenant_id aparece aqui no console do Railway!
-      console.log(`🏭 [SISMOB v231] Payload Final:`, JSON.stringify(payload));
+      console.log(
+        `🚀 [SISMOB v232] Tabela: ${tableName} | Gravando para: ${tenantId}`,
+      );
 
       if (id && id !== 'undefined') {
         return await this.db.update(table).set(payload).where(eq(table.id, id));
       } else {
-        // 4. INSERT USANDO 'any' PARA IGNORAR O CACHE DO SCHEMA
+        // 3. USAMOS 'table as any' PARA BYPASS TOTAL DE VALIDAÇÃO DE SCHEMA
         const [novo] = await (this.db
           .insert(table as any)
           .values(payload)
@@ -77,7 +81,7 @@ export class GenericConfigService {
         return novo;
       }
     } catch (e: any) {
-      console.error(`❌ [DB ERROR v231]:`, e.message);
+      console.error(`❌ [SISMOB FATAL v232]:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
