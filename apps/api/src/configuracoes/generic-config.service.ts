@@ -1,3 +1,5 @@
+//src/configuracoes/generic-config.service.ts
+
 import {
   Injectable,
   Inject,
@@ -85,6 +87,7 @@ export class GenericConfigService {
       throw new InternalServerErrorException(e.message);
     }
   }
+
   async remove(tableName: string, id: number, tenantId: string) {
     const table = (schema as any)[tableName];
     return await this.db
