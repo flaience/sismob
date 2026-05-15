@@ -22,11 +22,12 @@ export class ConfiguracoesController {
     const map: Record<string, string> = {
       bancos: 'bancos',
       unidades: 'unidades',
-      'grupos-caixa': 'grupoCaixa',
+      'grupos-caixa': 'grupo_caixa', // Nome real no Postgres
       atributos: 'atributos',
       'atributos-itens': 'atributos',
-      'categorias-atributos': 'categoriasAtributos',
+      'categorias-atributos': 'categorias_atributos', // Nome real no Postgres
     };
+
     return map[slug] || slug;
   }
 

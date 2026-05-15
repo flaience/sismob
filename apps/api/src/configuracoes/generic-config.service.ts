@@ -12,10 +12,11 @@ export class GenericConfigService {
 
   /**
    * 1. LISTAGEM INDUSTRIAL (Grid)
-   */
+   */ // apps/api/src/configuracoes/generic-config.service.ts
+
   async findAll(tableName: string, tenantId: string) {
     try {
-      // Usamos SQL puro para garantir que todos os campos (ex: quantidade) cheguem ao Grid
+      // tableName agora vem como 'categorias_atributos'
       const res = await this.db.execute(sql`
         SELECT * FROM ${sql.raw(tableName)} 
         WHERE tenant_id = ${tenantId} 
@@ -23,14 +24,11 @@ export class GenericConfigService {
       `);
       return res.rows || res;
     } catch (e: any) {
-      console.error(`❌ [SISMOB] Erro ao listar ${tableName}:`, e.message);
+      console.error(`❌ [SISMOB] Erro no findAll ${tableName}:`, e.message);
       return [];
     }
   }
 
-  /**
-   * 2. BUSCA ÚNICA (Edição)
-   */
   async findOne(tableName: string, id: number, tenantId: string) {
     try {
       const res = await this.db.execute(sql`
@@ -41,59 +39,46 @@ export class GenericConfigService {
       const data = res.rows || res;
       return data[0] || null;
     } catch (e: any) {
-      console.error(
-        `❌ [SISMOB] Erro ao buscar ID ${id} em ${tableName}:`,
-        e.message,
-      );
       return null;
     }
   }
 
-  /**
-   * 3. GRAVAÇÃO (UPSERT)
-   */
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
       const { id, created_at, updated_at, imobiliariaId, ...limpo } = dto;
 
-      // MODO NUCLEAR PARA INSERÇÃO DE ATRIBUTOS (Resolve o erro de quantidade)
-      if (tableName === 'atributos' && (!id || id === 'undefined')) {
+      // 1. INSERÇÃO (Bypass total para qualquer tabela de config)
+      if (!id || id === 'undefined') {
+        const colunas = Object.keys(limpo).filter((k) => k !== 'tenant_id');
+        const valores = colunas.map((k) => {
+          if (k === 'quantidade' || k === 'categoria_id')
+            return Number(limpo[k]);
+          return limpo[k];
+        });
+
         return await this.db.execute(sql`
-          INSERT INTO atributos (nome, quantidade, categoria_id, tenant_id, updated_at)
-          VALUES (${limpo.nome}, ${Number(limpo.quantidade || 1)}, ${Number(limpo.categoria_id)}, ${tenantId}, NOW())
+          INSERT INTO ${sql.raw(tableName)} (tenant_id, ${sql.raw(colunas.join(', '))}, updated_at)
+          VALUES (${tenantId}, ${sql.join(valores, sql`, `)}, NOW())
           RETURNING *;
         `);
       }
 
-      // MODO NUCLEAR PARA UPDATE DE ATRIBUTOS
-      if (tableName === 'atributos' && id) {
-        return await this.db.execute(sql`
-          UPDATE atributos 
-          SET nome = ${limpo.nome}, quantidade = ${Number(limpo.quantidade)}, 
-              categoria_id = ${Number(limpo.categoria_id)}, updated_at = NOW()
-          WHERE id = ${Number(id)} AND tenant_id = ${tenantId}
-        `);
-      }
+      // 2. UPDATE (Bypass total)
+      const sets = Object.keys(limpo).map((k) => {
+        const val =
+          k === 'quantidade' || k === 'categoria_id'
+            ? Number(limpo[k])
+            : limpo[k];
+        return sql`${sql.raw(k)} = ${val}`;
+      });
 
-      // FALLBACK PARA OUTRAS TABELAS (Unidades, Bancos...)
-      const table = (schema as any)[tableName];
-      const payload: any = {
-        ...limpo,
-        tenant_id: tenantId,
-        updated_at: new Date(),
-      };
-
-      if (id && id !== 'undefined') {
-        return await this.db.update(table).set(payload).where(eq(table.id, id));
-      } else {
-        const [novo] = await (this.db
-          .insert(table)
-          .values(payload)
-          .returning() as any);
-        return novo;
-      }
+      return await this.db.execute(sql`
+        UPDATE ${sql.raw(tableName)} 
+        SET ${sql.join(sets, sql`, `)}, updated_at = NOW()
+        WHERE id = ${Number(id)} AND tenant_id = ${tenantId}
+      `);
     } catch (e: any) {
-      console.error(`❌ [SISMOB] Erro no upsert de ${tableName}:`, e.message);
+      console.error(`❌ [SISMOB] Erro no upsert ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
