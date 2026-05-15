@@ -11,15 +11,52 @@ export class GenericConfigService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   /**
-   * 1. GRAVAÇÃO NUCLEAR (Bypass total de Schema)
+   * 1. LISTAGEM INDUSTRIAL (Grid)
+   */
+  async findAll(tableName: string, tenantId: string) {
+    try {
+      // Usamos SQL puro para garantir que todos os campos (ex: quantidade) cheguem ao Grid
+      const res = await this.db.execute(sql`
+        SELECT * FROM ${sql.raw(tableName)} 
+        WHERE tenant_id = ${tenantId} 
+        ORDER BY id DESC
+      `);
+      return res.rows || res;
+    } catch (e: any) {
+      console.error(`❌ [SISMOB] Erro ao listar ${tableName}:`, e.message);
+      return [];
+    }
+  }
+
+  /**
+   * 2. BUSCA ÚNICA (Edição)
+   */
+  async findOne(tableName: string, id: number, tenantId: string) {
+    try {
+      const res = await this.db.execute(sql`
+        SELECT * FROM ${sql.raw(tableName)} 
+        WHERE id = ${id} AND tenant_id = ${tenantId} 
+        LIMIT 1
+      `);
+      const data = res.rows || res;
+      return data[0] || null;
+    } catch (e: any) {
+      console.error(
+        `❌ [SISMOB] Erro ao buscar ID ${id} em ${tableName}:`,
+        e.message,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * 3. GRAVAÇÃO (UPSERT)
    */
   async upsert(tableName: string, dto: any, tenantId: string) {
-    console.log(`🔥 [SISMOB v245] Gravando em: ${tableName} | ID: ${dto.id}`);
-
     try {
       const { id, created_at, updated_at, imobiliariaId, ...limpo } = dto;
 
-      // INSERÇÃO NUCLEAR (Atributos)
+      // MODO NUCLEAR PARA INSERÇÃO DE ATRIBUTOS (Resolve o erro de quantidade)
       if (tableName === 'atributos' && (!id || id === 'undefined')) {
         return await this.db.execute(sql`
           INSERT INTO atributos (nome, quantidade, categoria_id, tenant_id, updated_at)
@@ -28,67 +65,57 @@ export class GenericConfigService {
         `);
       }
 
-      // UPDATE NUCLEAR (Garante que a alteração funcione e salve a quantidade)
-      if (id && id !== 'undefined') {
-        if (tableName === 'atributos') {
-          return await this.db.execute(sql`
-            UPDATE atributos 
-            SET nome = ${limpo.nome}, quantidade = ${Number(limpo.quantidade)}, 
-                categoria_id = ${Number(limpo.categoria_id)}, updated_at = NOW()
-            WHERE id = ${Number(id)} AND tenant_id = ${tenantId}
-          `);
-        }
-        // Update genérico para outras tabelas
-        const table = (schema as any)[tableName];
-        return await this.db
-          .update(table)
-          .set({ ...limpo, tenant_id: tenantId })
-          .where(eq(table.id, id));
+      // MODO NUCLEAR PARA UPDATE DE ATRIBUTOS
+      if (tableName === 'atributos' && id) {
+        return await this.db.execute(sql`
+          UPDATE atributos 
+          SET nome = ${limpo.nome}, quantidade = ${Number(limpo.quantidade)}, 
+              categoria_id = ${Number(limpo.categoria_id)}, updated_at = NOW()
+          WHERE id = ${Number(id)} AND tenant_id = ${tenantId}
+        `);
       }
 
-      // Insert genérico para outras tabelas
+      // FALLBACK PARA OUTRAS TABELAS (Unidades, Bancos...)
       const table = (schema as any)[tableName];
-      return await (this.db
-        .insert(table)
-        .values({ ...limpo, tenant_id: tenantId })
-        .returning() as any);
+      const payload: any = {
+        ...limpo,
+        tenant_id: tenantId,
+        updated_at: new Date(),
+      };
+
+      if (id && id !== 'undefined') {
+        return await this.db.update(table).set(payload).where(eq(table.id, id));
+      } else {
+        const [novo] = await (this.db
+          .insert(table)
+          .values(payload)
+          .returning() as any);
+        return novo;
+      }
     } catch (e: any) {
-      console.error(`❌ [DB FATAL v245]:`, e.message);
+      console.error(`❌ [SISMOB] Erro no upsert de ${tableName}:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
   }
 
   /**
-   * 2. LISTAGEM NUCLEAR (Resolve o erro da quantidade sumida no Grid)
+   * 4. REMOÇÃO (O MÉTODO QUE FALTAVA)
+   * Resolve o erro TS2339 no Controller
    */
-  async findAll(tableName: string, tenantId: string) {
+  async remove(tableName: string, id: number, tenantId: string) {
     try {
-      console.log(`📡 [SISMOB v245] Buscando TUDO de ${tableName}`);
+      console.log(`🗑️ [SISMOB] Excluindo registro: ${tableName} | ID: ${id}`);
 
-      // O TIRO DE MISERICÓRDIA: Usamos SQL puro para o Drizzle não filtrar colunas "desconhecidas"
-      const res = await this.db.execute(sql`
-        SELECT * FROM ${sql.raw(tableName)} WHERE tenant_id = ${tenantId} ORDER BY id DESC
+      // SQL Puro para garantir que a trava de segurança por Tenant seja respeitada
+      return await this.db.execute(sql`
+        DELETE FROM ${sql.raw(tableName)} 
+        WHERE id = ${id} AND tenant_id = ${tenantId}
       `);
-
-      return res.rows || res; // Retorna os dados brutos para o Grid
     } catch (e: any) {
-      console.error(`❌ [SISMOB v245] Erro ao listar:`, e.message);
-      return [];
-    }
-  }
-
-  /**
-   * 3. BUSCA ÚNICA (Para carregar o formulário de edição)
-   */
-  async findOne(tableName: string, id: number, tenantId: string) {
-    try {
-      const res = await this.db.execute(sql`
-        SELECT * FROM ${sql.raw(tableName)} WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
-      `);
-      const data = res.rows || res;
-      return data[0] || null;
-    } catch (e) {
-      return null;
+      console.error(`❌ [SISMOB] Erro ao remover de ${tableName}:`, e.message);
+      throw new InternalServerErrorException(
+        'Não foi possível excluir o registro. Verifique dependências.',
+      );
     }
   }
 }
