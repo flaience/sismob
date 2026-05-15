@@ -168,7 +168,6 @@ export const categoriasAtributos = pgTable("categorias_atributos", {
 // 2. O CARDÁPIO DE ITENS (O que você sugeriu)
 export const atributos = pgTable("atributos", {
   id: serial("id").primaryKey(),
-  // ESTA LINHA É A CHAVE DA VITÓRIA:
   tenant_id: uuid("tenant_id")
     .references(() => tenants.id)
     .notNull(),
@@ -177,6 +176,7 @@ export const atributos = pgTable("atributos", {
   ),
   nome: varchar("nome", { length: 100 }).notNull(),
   quantidade: integer("quantidade").default(1),
+  updated_at: timestamp("updated_at").defaultNow(), // <--- ADICIONE ESTA LINHA
 });
 
 // 3. A PONTE (Vínculo Imóvel <-> Atributo)
