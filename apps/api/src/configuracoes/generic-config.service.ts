@@ -12,32 +12,6 @@ import { eq, and } from 'drizzle-orm';
 export class GenericConfigService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
-  async findAll(tableName: string, tenantId: string) {
-    try {
-      const table = (schema as any)[tableName];
-      if (!table) return [];
-
-      // SEGREDO INDUSTRIAL: Verifica se a tabela tem a coluna tenant_id
-      // Se não tiver (como era o caso do atributos), ele não tenta filtrar e não dá erro de sintaxe
-      if (!table.tenant_id) {
-        console.error(
-          `❌ [SISMOB] A tabela ${tableName} está sem a coluna tenant_id no Schema!`,
-        );
-        return this.db.select().from(table); // Busca sem filtro apenas para teste
-      }
-
-      return await this.db
-        .select()
-        .from(table)
-        .where(eq(table.tenant_id, tenantId));
-    } catch (e: any) {
-      console.error(
-        `❌ [SISMOB ERROR] Erro na busca da tabela ${tableName}:`,
-        e.message,
-      );
-      return [];
-    }
-  }
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
       const table = (schema as any)[tableName];
@@ -86,6 +60,14 @@ export class GenericConfigService {
       console.error(`❌ [SISMOB FATAL v232]:`, e.message);
       throw new InternalServerErrorException(e.message);
     }
+  }
+
+  async findAll(tableName: string, tenantId: string) {
+    const table = (schema as any)[tableName];
+    return await this.db
+      .select()
+      .from(table)
+      .where(eq(table.tenant_id, tenantId));
   }
 
   async remove(tableName: string, id: number, tenantId: string) {
