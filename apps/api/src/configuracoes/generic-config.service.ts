@@ -45,16 +45,35 @@ export class GenericConfigService {
 
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
-      const { id, created_at, updated_at, imobiliariaId, ...limpo } = dto;
+      // 1. FILTRAGEM INDUSTRIAL (Limpeza de rastro de formulário)
+      // Extraímos 'id', 'endereco' e campos de sistema para que NÃO entrem no SQL
+      const {
+        id,
+        created_at,
+        updated_at,
+        imobiliariaId,
+        endereco,
+        ...dadosLimpos
+      } = dto;
 
-      // 1. INSERÇÃO (Bypass total para qualquer tabela de config)
+      const table = (schema as any)[tableName];
+      if (!table) throw new Error(`Tabela ${tableName} não mapeada.`);
+
+      // 2. INSERÇÃO (Bypass total para qualquer tabela de config)
       if (!id || id === 'undefined') {
-        const colunas = Object.keys(limpo).filter((k) => k !== 'tenant_id');
+        const colunas = Object.keys(dadosLimpos);
+
         const valores = colunas.map((k) => {
-          if (k === 'quantidade' || k === 'categoria_id')
-            return Number(limpo[k]);
-          return limpo[k];
+          // Converte campos técnicos para número
+          if (k === 'quantidade' || k === 'categoria_id' || k === 'banco_id') {
+            return Number(dadosLimpos[k] || 0);
+          }
+          return dadosLimpos[k];
         });
+
+        console.log(
+          `🏭 [SISMOB] Gravando ${tableName} - Colunas: ${colunas.join(', ')}`,
+        );
 
         return await this.db.execute(sql`
           INSERT INTO ${sql.raw(tableName)} (tenant_id, ${sql.raw(colunas.join(', '))}, updated_at)
@@ -63,12 +82,12 @@ export class GenericConfigService {
         `);
       }
 
-      // 2. UPDATE (Bypass total)
-      const sets = Object.keys(limpo).map((k) => {
+      // 3. UPDATE (Bypass total)
+      const sets = Object.keys(dadosLimpos).map((k) => {
         const val =
-          k === 'quantidade' || k === 'categoria_id'
-            ? Number(limpo[k])
-            : limpo[k];
+          k === 'quantidade' || k === 'categoria_id' || k === 'banco_id'
+            ? Number(dadosLimpos[k] || 0)
+            : dadosLimpos[k];
         return sql`${sql.raw(k)} = ${val}`;
       });
 
