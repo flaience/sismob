@@ -325,7 +325,7 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "nome",
-            label: "Ex: Lazer, Estrutura, Vagas",
+            label: "Ex: Lazer, Estrutura, Segurança, Infraestrutura ",
             type: "text",
             required: true,
             fullWidth: true,
