@@ -397,68 +397,41 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
+
   negociacoes: {
-    title: "Negociações e Vendas",
+    title: "Negociações Ativas",
     entity: "negociacoes",
     columns: [
-      { label: "Status", key: "status" },
-      { label: "Intensidade", key: "intensidade" },
-      { label: "Valor Total", key: "comissao_total" },
+      { label: "Cliente", key: "cliente_nome" },
+      { label: "Imóvel", key: "imovel_titulo" },
+      { label: "Estágio", key: "status" },
+      { label: "Intensidade", key: "intensidade" }
     ],
     sections: [
       {
-        title: "Dados da Venda",
+        title: "Dados do Acordo",
         fields: [
-          {
-            name: "imovel_id",
-            label: "Imóvel",
-            type: "select",
-            required: true,
-          },
-          {
-            name: "cliente_id",
-            label: "Comprador",
-            type: "select",
-            required: true,
-          },
-          {
-            name: "corretor_id",
-            label: "Responsável",
-            type: "select",
-            required: true,
-          },
-          {
-            name: "intensidade",
-            label: "Intensidade",
-            type: "select",
-            options: [
-              { label: "Urgente", value: "urgente" },
-              { label: "Alta", value: "alta" },
-              { label: "Média", value: "media" },
-            ],
-          },
-        ],
+          { name: "imovel_id", label: "Imóvel em Negociação", type: "select", required: true },
+          { name: "cliente_id", label: "Comprador / Interessado", type: "select", required: true },
+          { name: "corretor_id", label: "Corretor Responsável", type: "select", required: true },
+          { name: "intensidade", label: "Intensidade", type: "select", required: true, options: [
+            {label: "🔥 Urgente (Fechamento)", value: "urgente"},
+            {label: "⚡ Alta", value: "alta"},
+            {label: "⏳ Média", value: "media"},
+            {label: "❄️ Baixa (Frio)", value: "baixa"}
+          ]},
+        ]
       },
       {
-        title: "Engenharia Financeira",
+        title: "Engenharia de Pagamento (Composição do Contrato)",
         fields: [
-          // USANDO O NOVO WIDGET JSONB
-          {
-            name: "estrutura_pagamento",
-            label: "Definir Composição do Pagamento",
-            type: "payment-builder",
-          },
-          {
-            name: "comissao_total",
-            label: "Comissão Total (R$)",
-            type: "number",
-            required: true,
-          },
-        ],
-      },
+          // Widget que criamos para gerar o JSON {id, desc, valor, texto_contrato}
+          { name: "estrutura_pagamento", label: "Composição de Valores", type: "payment-builder" },
+          { name: "comissao_total", label: "Comissão da Imobiliária (R$)", type: "number", required: true },
+        ]
+      }
     ],
-    aiMetadata:
-      "O campo 'estrutura_pagamento' é a fonte de dados para o Gerador de Contratos. Garanta que o texto_contrato esteja claro para evitar erros jurídicos.",
+    aiMetadata: "Este é o coração do sistema. O Agente MCP deve monitorar negociações 'Urgentes' e cobrar o envio das minutas de contrato."
   },
 
   // --- FINANCEIRO --
