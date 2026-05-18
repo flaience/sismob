@@ -397,6 +397,70 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
+  negociacoes: {
+    title: "Negociações e Vendas",
+    entity: "negociacoes",
+    columns: [
+      { label: "Status", key: "status" },
+      { label: "Intensidade", key: "intensidade" },
+      { label: "Valor Total", key: "comissao_total" },
+    ],
+    sections: [
+      {
+        title: "Dados da Venda",
+        fields: [
+          {
+            name: "imovel_id",
+            label: "Imóvel",
+            type: "select",
+            required: true,
+          },
+          {
+            name: "cliente_id",
+            label: "Comprador",
+            type: "select",
+            required: true,
+          },
+          {
+            name: "corretor_id",
+            label: "Responsável",
+            type: "select",
+            required: true,
+          },
+          {
+            name: "intensidade",
+            label: "Intensidade",
+            type: "select",
+            options: [
+              { label: "Urgente", value: "urgente" },
+              { label: "Alta", value: "alta" },
+              { label: "Média", value: "media" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Engenharia Financeira",
+        fields: [
+          // USANDO O NOVO WIDGET JSONB
+          {
+            name: "estrutura_pagamento",
+            label: "Definir Composição do Pagamento",
+            type: "payment-builder",
+          },
+          {
+            name: "comissao_total",
+            label: "Comissão Total (R$)",
+            type: "number",
+            required: true,
+          },
+        ],
+      },
+    ],
+    aiMetadata:
+      "O campo 'estrutura_pagamento' é a fonte de dados para o Gerador de Contratos. Garanta que o texto_contrato esteja claro para evitar erros jurídicos.",
+  },
+
   // --- FINANCEIRO --
   "contas-bancarias": {
     title: "Minhas Contas Bancárias",
