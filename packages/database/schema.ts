@@ -308,6 +308,7 @@ export const caixa = pgTable("caixa", {
 // 7. NEGOCIAÇÕES E TIMELINE (CRM)
 // ==========================================
 // --- 1. FORMAS DE PAGAMENTO ---
+// --- 1. FORMAS DE PAGAMENTO ---
 export const formasPagamento = pgTable("formas_pagamento", {
   id: serial("id").primaryKey(),
   tenant_id: uuid("tenant_id")
@@ -315,13 +316,11 @@ export const formasPagamento = pgTable("formas_pagamento", {
     .notNull(),
   nome: varchar("nome", { length: 100 }).notNull(),
   acao: varchar("acao", { length: 20 }).notNull(), // 'imediato' ou 'titulo'
-
-  // A AMARRAÇÃO QUE VOCÊ PEDIU:
   grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id),
-
   conta_bancaria_id: integer("conta_bancaria_id").references(
     () => contasBancarias.id,
   ),
+  created_at: timestamp("created_at").defaultNow(), // <--- ADICIONADO CONFORME SEU BANCO
 });
 
 // --- 2. CONDIÇÕES DE PAGAMENTO ---
@@ -333,9 +332,10 @@ export const condicoesPagamento = pgTable("condicoes_pagamento", {
   nome: varchar("nome", { length: 100 }).notNull(),
   qtd_parcelas: integer("qtd_parcelas").default(1),
   intervalo_dias: integer("intervalo_dias").default(30),
+  created_at: timestamp("created_at").defaultNow(), // <--- ADICIONADO CONFORME SEU BANCO
 });
 
-// --- 3. NEGOCIAÇÕES (VERSÃO COMPLETA) ---
+// --- 3. NEGOCIAÇÕES (SINCRONIA TOTAL COM SUA LISTA) ---
 export const negociacoes = pgTable("negociacoes", {
   id: serial("id").primaryKey(),
   tenant_id: uuid("tenant_id")
@@ -344,12 +344,10 @@ export const negociacoes = pgTable("negociacoes", {
   imovel_id: integer("imovel_id").references(() => imoveis.id),
   corretor_id: uuid("corretor_id").references(() => pessoas.id),
   cliente_id: uuid("cliente_id").references(() => pessoas.id),
-
-  // STATUS E INTENSIDADE
   status: statusNegociacao("status").default("proposta"),
-  intensidade: varchar("intensidade", { length: 20 }).default("media"), // baixa, media, alta, urgente
-  grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id),
-  // ENGENHARIA FINANCEIRA DE FECHAMENTO
+
+  // Nomes exatos da sua lista:
+  valor_proposta: decimal("valor_proposta", { precision: 12, scale: 2 }),
   comissao_total: decimal("comissao_total", {
     precision: 12,
     scale: 2,
@@ -358,23 +356,23 @@ export const negociacoes = pgTable("negociacoes", {
     "0",
   ),
 
-  // Vínculo com a Forma da Entrada (PIX, Dinheiro...)
+  // Chaves Estrangeiras (FKs)
   forma_entrada_id: integer("forma_entrada_id").references(
     () => formasPagamento.id,
   ),
-
-  // Vínculo com a Condição e Forma do Saldo (Boleto 10x, Cartão 5x...)
   condicao_saldo_id: integer("condicao_saldo_id").references(
     () => condicoesPagamento.id,
   ),
   forma_saldo_id: integer("forma_saldo_id").references(
     () => formasPagamento.id,
   ),
+  grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id),
 
-  // O SEGREDO: JSON Flexível para o Contrato e IA
+  intensidade: varchar("intensidade", { length: 20 }).default("media"),
+
+  // O seu campo JSONB para o motor de contrato
   estrutura_pagamento: jsonb("estrutura_pagamento").default([]),
 
-  valor_proposta: decimal("valor_proposta", { precision: 12, scale: 2 }),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });

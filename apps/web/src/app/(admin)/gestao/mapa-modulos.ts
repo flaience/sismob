@@ -24,24 +24,49 @@ export const MAPA_SISMOB: any = {
     columns: [
       { label: "Nome", key: "nome" },
       { label: "Cargo", key: "cargo" },
+      { label: "WhatsApp", key: "telefone" },
     ],
     sections: [
       {
         title: "Dados do Colaborador",
         fields: [
-          { name: "nome", label: "Nome", type: "text", required: true },
-          { name: "email", label: "E-mail", type: "text", required: true },
+          {
+            name: "nome",
+            label: "Nome Completo",
+            type: "text",
+            required: true,
+            fullWidth: true,
+          },
+          {
+            name: "email",
+            label: "E-mail de Login",
+            type: "text",
+            required: true,
+          },
+          { name: "documento", label: "CPF", type: "text", required: true },
+          { name: "telefone", label: "WhatsApp Corporativo", type: "text" },
           {
             name: "cargo",
-            label: "Cargo",
+            label: "Cargo / Função",
             type: "select",
+            required: true,
             options: [
               { label: "Corretor", value: "corretor" },
-              { label: "Gerente", value: "gerente" },
+              { label: "Secretária", value: "secretaria" },
+              { label: "Gerente Financeiro", value: "financeiro" },
+              { label: "Gestor de Vendas", value: "gerente" },
             ],
+          },
+          {
+            name: "unidade_id",
+            label: "Filial de Trabalho",
+            type: "select",
+            required: true,
           },
         ],
       },
+      // Injetamos a Seção de Endereço que já criamos para agilizar
+      SECAO_ENDERECO,
     ],
   },
 
