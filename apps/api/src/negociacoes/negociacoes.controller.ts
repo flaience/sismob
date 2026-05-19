@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Query, Param, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  Param,
+  Delete,
+  Patch,
+  Req,
+} from '@nestjs/common';
 import { NegociacoesService } from './negociacoes.service';
 
 @Controller('negociacoes')
@@ -11,7 +21,7 @@ export class NegociacoesController {
   }
 
   @Get(':id')
-  async one(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
+  async findOne(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
     return this.negociacoesService.findOne(Number(id), tid);
   }
 
@@ -21,7 +31,17 @@ export class NegociacoesController {
   }
 
   @Post(':id/finalizar')
-  async finish(@Param('id') id: string, @Body('imobiliariaId') tid: string, @Req() req: any) {
+  async finish(
+    @Param('id') id: string,
+    @Body('imobiliariaId') tid: string,
+    @Req() req: any,
+  ) {
+    // req.user.id vem do token do Supabase
     return this.negociacoesService.finalizar(Number(id), tid, req.user?.id);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Query('imobiliariaId') tid: string) {
+    return this.negociacoesService.remove(Number(id), tid);
   }
 }

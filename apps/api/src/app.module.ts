@@ -19,6 +19,7 @@ import { SaasModule } from './saas/saas.module';
     ImoveisModule,
     FilesModule, // <--- REGISTRADO
     ConfiguracoesModule,
+
     FinanceiroModule,
     SaasModule,
   ],
