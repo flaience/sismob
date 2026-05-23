@@ -26,16 +26,11 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="flex-1 ml-0 md:ml-[84px] lg:ml-[280px] p-4 md:p-10 pb-24 md:pb-10 transition-all">
-        {loading ? (
-          <div className="p-20 text-center animate-pulse font-black text-indigo-600">
-            SINCRONIZANDO...
-          </div>
-        ) : (
-          children
-        )}
+      <main className="flex-1 ml-0 md:ml-[84px] lg:ml-[100px] p-4 md:p-10 pb-32 md:pb-10 transition-all">
+        {/* ml-0 no mobile, ml-[84px] no desktop. pb-32 garante espaço para a bottom bar */}
+        <div className="max-w-7xl mx-auto">{children}</div>
       </main>
     </div>
   );

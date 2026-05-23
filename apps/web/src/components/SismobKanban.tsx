@@ -25,7 +25,7 @@ export default function SismobKanban({ tenantId }: any) {
       {ESTAGIOS.map((col) => (
         <div
           key={col.id}
-          className="snap-center flex-shrink-0 w-[85vw] md:w-full md:flex-1 min-w-[320px] bg-slate-100/50 p-6 rounded-[3rem] border border-slate-200/50"
+          className="snap-center flex-shrink-0 w-[85vw] md:w-[320px] bg-slate-100/50 p-6 rounded-[3rem] border border-slate-200/50"
         >
           <div className="flex items-center justify-between mb-6 px-4">
             <h3 className="font-black text-slate-800 uppercase tracking-tighter">
