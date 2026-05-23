@@ -28,7 +28,7 @@ export default function AdminLayout({
   return (
     <div className="flex min-h-screen bg-slate-50 overflow-hidden">
       <Sidebar />
-      <main className="flex-1 ml-[84px] md:ml-[280px] p-4 md:p-10 h-screen overflow-y-auto">
+      <main className="flex-1 ml-0 md:ml-[84px] lg:ml-[280px] p-4 md:p-10 pb-24 md:pb-10 transition-all">
         {loading ? (
           <div className="p-20 text-center animate-pulse font-black text-indigo-600">
             SINCRONIZANDO...
