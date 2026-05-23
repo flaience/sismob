@@ -397,41 +397,82 @@ export const MAPA_SISMOB: any = {
     ],
   },
 
+  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
 
   negociacoes: {
-    title: "Negociações Ativas",
+    title: "Vendas e Negociações",
     entity: "negociacoes",
     columns: [
       { label: "Cliente", key: "cliente_nome" },
       { label: "Imóvel", key: "imovel_titulo" },
       { label: "Estágio", key: "status" },
-      { label: "Intensidade", key: "intensidade" }
+      { label: "Intensidade", key: "intensidade" },
     ],
     sections: [
       {
-        title: "Dados do Acordo",
+        title: "1. Vínculo Rápido (O que o corretor faz em 10s)",
         fields: [
-          { name: "imovel_id", label: "Imóvel em Negociação", type: "select", required: true },
-          { name: "cliente_id", label: "Comprador / Interessado", type: "select", required: true },
-          { name: "corretor_id", label: "Corretor Responsável", type: "select", required: true },
-          { name: "intensidade", label: "Intensidade", type: "select", required: true, options: [
-            {label: "🔥 Urgente (Fechamento)", value: "urgente"},
-            {label: "⚡ Alta", value: "alta"},
-            {label: "⏳ Média", value: "media"},
-            {label: "❄️ Baixa (Frio)", value: "baixa"}
-          ]},
-        ]
+          {
+            name: "imovel_id",
+            label: "Imóvel",
+            type: "select",
+            required: true,
+          },
+          {
+            name: "cliente_id",
+            label: "Interessado / Comprador",
+            type: "select",
+            required: true,
+          },
+          {
+            name: "intensidade",
+            label: "Qual a temperatura?",
+            type: "select",
+            required: true,
+            options: [
+              { label: "❄️ Frio (Só olhando)", value: "baixa" },
+              { label: "⏳ Morno (Interesse real)", value: "media" },
+              { label: "☀️ Quente (Proposta vindo)", value: "alta" },
+              { label: "🔥 Urgente (Fechamento)", value: "urgente" },
+            ],
+          },
+        ],
       },
       {
-        title: "Engenharia de Pagamento (Composição do Contrato)",
+        title: "2. Proposta e Evolução",
         fields: [
-          // Widget que criamos para gerar o JSON {id, desc, valor, texto_contrato}
-          { name: "estrutura_pagamento", label: "Composição de Valores", type: "payment-builder" },
-          { name: "comissao_total", label: "Comissão da Imobiliária (R$)", type: "number", required: true },
-        ]
-      }
+          {
+            name: "valor_proposta",
+            label: "Valor Oferecido (R$)",
+            type: "number",
+          },
+          {
+            name: "corretor_id",
+            label: "Corretor Responsável",
+            type: "select",
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "3. Engenharia de Fechamento (Para o Contrato)",
+        fields: [
+          // Aqui entra o Honda Civic, a entrada e as parcelas
+          {
+            name: "estrutura_pagamento",
+            label: "Composição da Verba",
+            type: "payment-builder",
+          },
+          {
+            name: "comissao_total",
+            label: "Comissão Final (R$)",
+            type: "number",
+          },
+        ],
+      },
     ],
-    aiMetadata: "Este é o coração do sistema. O Agente MCP deve monitorar negociações 'Urgentes' e cobrar o envio das minutas de contrato."
+    aiMetadata:
+      "Negociações começam como vínculos. Se o status for 'proposta', o Agente MCP deve sugerir o preenchimento da seção 3 para gerar a minuta automática.",
   },
 
   // --- FINANCEIRO --
