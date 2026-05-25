@@ -15,21 +15,13 @@ export class ImoveisService {
    * LISTAGEM DO GRID (O que estava faltando e causou o erro)
    */
   async findAll(tenantId: string) {
-    try {
-      console.log(`📡 [SISMOB] Listando imóveis do tenant: ${tenantId}`);
-      const table = schema.imoveis as any;
-
-      return await this.db
-        .select()
-        .from(table)
-        .where(eq(table.tenant_id, tenantId))
-        .orderBy(desc(table.id));
-    } catch (e: any) {
-      console.error('❌ [SISMOB] Erro ao listar imóveis:', e.message);
-      return [];
-    }
+    const table = schema.imoveis as any;
+    return await this.db
+      .select()
+      .from(table)
+      .where(eq(table.tenant_id, tenantId))
+      .orderBy(desc(table.id));
   }
-
   /**
    * BUSCA ÚNICA (Para Edição)
    */
@@ -58,40 +50,26 @@ export class ImoveisService {
           updated_at,
           ...dadosRestantes
         } = dto;
+
+        // 1. CASTING DE TABELAS (Bypass de tipagem industrial)
         const tableImoveis = schema.imoveis as any;
+        const tableMidias = schema.midias as any;
         const tableAtributos = schema.imoveisAtributos as any;
 
-        // Higienização de Endereço (Sincronia com o seu Mapa v4.0)
-        const rua = endereco?.logradouro || '';
-        const num = endereco?.numero || 'SN';
-        const bairro = endereco?.bairro || '';
-        const cidade = endereco?.cidade || '';
-        const uf = endereco?.estado || '';
-        const enderecoString = `${rua}, ${num} - ${bairro}, ${cidade}/${uf}`;
+        // 2. CONSTRUÇÃO DO ENDEREÇO (Para o banco não dar erro 500)
+        const endStr = `${endereco?.logradouro || ''}, ${endereco?.numero || 'SN'} - ${endereco?.bairro || ''}, ${endereco?.cidade || ''}`;
 
         const payload = {
           ...dadosRestantes,
+          ...endereco, // Espalha cidade, bairro, logradouro na raiz
+          endereco_original: endStr,
           tenant_id: tenantId,
-          logradouro: rua,
-          numero: num,
-          bairro: bairro,
-          cidade: cidade,
-          estado: uf,
-          endereco_original: enderecoString,
-          unidade_id: dadosRestantes.unidade_id
-            ? Number(dadosRestantes.unidade_id)
-            : null,
-          preco_venda: dadosRestantes.preco_venda
-            ? dadosRestantes.preco_venda.toString()
-            : '0',
-          area_privativa: dadosRestantes.area_privativa
-            ? dadosRestantes.area_privativa.toString()
-            : '0',
           updated_at: new Date(),
         };
 
         let imovelId = id;
 
+        // 3. GRAVAÇÃO DO IMÓVEL (Master)
         if (id && id !== 'undefined') {
           await tx
             .update(tableImoveis)
@@ -105,22 +83,42 @@ export class ImoveisService {
           imovelId = novo.id;
         }
 
-        // VÍNCULO DE ATRIBUTOS (O "Cardápio" que você pediu)
+        // 4. GRAVAÇÃO DE ATRIBUTOS (O seu Cardápio)
         if (atributos && Array.isArray(atributos)) {
           await tx
             .delete(tableAtributos)
             .where(eq(tableAtributos.imovel_id, imovelId));
-          const inserts = atributos.map((attrId: any) => ({
+          const insertsAttr = atributos.map((aid: any) => ({
             imovel_id: imovelId,
-            atributo_id: Number(attrId),
+            atributo_id: Number(aid),
           }));
-          if (inserts.length > 0)
-            await tx.insert(tableAtributos).values(inserts);
+          if (insertsAttr.length > 0)
+            await tx.insert(tableAtributos).values(insertsAttr);
         }
 
+        // 5. GRAVAÇÃO DE MÍDIAS (CORREÇÃO DO PLURAL)
+        if (midias && Array.isArray(midias)) {
+          // Limpa rastro anterior
+          await tx
+            .delete(tableMidias)
+            .where(eq(tableMidias.imovel_id, imovelId));
+
+          const insertsMidia = midias.map((m: any, idx: number) => ({
+            imovel_id: imovelId,
+            url: m.url,
+            tipo: m.tipo || 'foto_interna',
+            is_capa: m.is_capa || idx === 0,
+          }));
+
+          // O TIRO DE MISERICÓRDIA NO ERRO: 'tableMidias' com S no final
+          if (insertsMidia.length > 0)
+            await tx.insert(tableMidias).values(insertsMidia);
+        }
+
+        console.log(`✅ [SISMOB] Imóvel #${imovelId} persistido com sucesso.`);
         return { id: imovelId, success: true };
       } catch (e: any) {
-        console.error('❌ [SISMOB DB ERROR]:', e.message);
+        console.error('❌ [DB ERROR]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
@@ -162,25 +160,19 @@ export class ImoveisService {
    * EXCLUSÃO COM LIMPEZA DE RASTRO
    */
   async remove(id: number, tenantId: string) {
-    try {
-      const tableImoveis = schema.imoveis as any;
-      const tableMidias = schema.midias as any;
-      const tableAtributos = schema.imoveisAtributos as any;
+    const tableImoveis = schema.imoveis as any;
+    const tableMidias = schema.midias as any;
+    const tableAtributos = schema.imoveisAtributos as any;
 
-      await this.db.delete(tableMidias).where(eq(tableMidias.imovel_id, id));
-      await this.db
-        .delete(tableAtributos)
-        .where(eq(tableAtributos.imovel_id, id));
+    await this.db.delete(tableMidias).where(eq(tableMidias.imovel_id, id));
+    await this.db
+      .delete(tableAtributos)
+      .where(eq(tableAtributos.imovel_id, id));
 
-      return await this.db
-        .delete(tableImoveis)
-        .where(
-          and(eq(tableImoveis.id, id), eq(tableImoveis.tenant_id, tenantId)),
-        );
-    } catch (e: any) {
-      throw new InternalServerErrorException(
-        'Erro ao excluir: verifique dependências.',
+    return await this.db
+      .delete(tableImoveis)
+      .where(
+        and(eq(tableImoveis.id, id), eq(tableImoveis.tenant_id, tenantId)),
       );
-    }
   }
 }
