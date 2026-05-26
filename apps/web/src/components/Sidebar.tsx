@@ -1,4 +1,3 @@
-//src/components/Sidebar.tsx
 "use client";
 import { useState, useEffect } from "react";
 import {
@@ -39,47 +38,36 @@ export default function Sidebar() {
   }, []);
   if (!mounted || !user) return null;
 
-  // --- LÓGICA DE PERMISSÕES BLINDADA (v2.1) ---
-  // Se for o seu e-mail, isLuis é TRUE independente de qualquer erro de banco
-  const isLuis = user?.papel == "0" || user?.email === "luis@flaience.com";
-  const isDono = user?.papel == "6";
-  const isGerente = user?.cargo === "gerente";
-  const isFinanceiro = user?.cargo === "financeiro";
+  // --- BYPASS DE SEGURANÇA MESTRE (Luis sempre vê tudo) ---
+  const isAdminReal = user?.email === "luis@flaience.com" || user?.papel == "0";
+  const podeVerFin =
+    isAdminReal || user?.cargo === "financeiro" || user?.cargo === "gerente";
+  const isGestor = isAdminReal || user?.cargo === "gerente";
 
-  // Quem pode ver as áreas restritas?
-  const podeVerFinanceiro = isLuis || isDono || isGerente || isFinanceiro;
-  const isGestor = isLuis || isDono || isGerente;
+  // 1. MAPEAMENTO DE TODOS OS GRUPOS
+  const menuGroups: any[] = [];
 
-  // 1. CONSTRUÇÃO DO MENU
-  const menuGroups: any[] = [
-    {
-      title: "HUB DO CORRETOR",
-      icon: Handshake,
-      group: "corretor",
-      items: [
-        { label: "Painel Geral", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Estoque de Imóveis", href: "/gestao/imoveis", icon: Home },
-        {
-          label: "Minhas Negociações",
-          href: "/gestao/negociacoes",
-          icon: Target,
-        },
-        {
-          label: "Proprietários",
-          href: "/gestao/proprietarios",
-          icon: UserCog,
-        },
-        { label: "Interessados (Leads)", href: "/gestao/leads", icon: Users },
-        {
-          label: "Clientes Compradores",
-          href: "/gestao/compradores",
-          icon: ShieldCheck,
-        },
-      ],
-    },
-  ];
+  // GRUPO: HUB DO CORRETOR (Sempre Visível)
+  menuGroups.push({
+    title: "HUB DO CORRETOR",
+    icon: Handshake,
+    group: "corretor",
+    items: [
+      { label: "Painel Geral", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Estoque de Imóveis", href: "/gestao/imoveis", icon: Home },
+      {
+        label: "Minhas Negociações",
+        href: "/gestao/negociacoes",
+        icon: Target,
+      },
+      { label: "Proprietários", href: "/gestao/proprietarios", icon: UserCog },
+      { label: "Interessados (Leads)", href: "/gestao/leads", icon: Users },
+      { label: "Compradores", href: "/gestao/compradores", icon: ShieldCheck },
+    ],
+  });
 
-  if (podeVerFinanceiro) {
+  // GRUPO: TESOURARIA
+  if (podeVerFin) {
     menuGroups.push({
       title: "TESOURARIA",
       icon: Landmark,
@@ -99,6 +87,7 @@ export default function Sidebar() {
     });
   }
 
+  // GRUPO: ADMINISTRAÇÃO
   if (isGestor) {
     menuGroups.push({
       title: "ADMINISTRAÇÃO",
@@ -121,28 +110,19 @@ export default function Sidebar() {
           href: "/gestao/atributos-itens",
           icon: Settings,
         },
-        {
-          label: "Formas de Pagto",
-          href: "/gestao/formas-pagamento",
-          icon: Receipt,
-        },
-        {
-          label: "Regras de Prazo",
-          href: "/gestao/condicoes-pagamento",
-          icon: BarChart3,
-        },
       ],
     });
   }
 
-  if (isLuis) {
+  // GRUPO: ADMIN FLAIENCE (EXCLUSIVO)
+  if (isAdminReal) {
     menuGroups.push({
       title: "ADMIN FLAIENCE",
       icon: ShieldCheck,
       group: "flaience",
       items: [
         {
-          label: "Gestão de Imobiliárias",
+          label: "Imobiliárias",
           href: "/gestao/imobiliarias",
           icon: Building2,
         },
@@ -160,9 +140,16 @@ export default function Sidebar() {
       style={{ width: isExpanded ? 280 : 84 }}
       className="fixed left-6 top-6 bottom-6 z-[999] bg-white shadow-2xl rounded-[2.5rem] flex flex-col p-4 transition-all duration-500 border border-slate-100 overflow-hidden"
     >
-      {/* LOGO DINÂMICA */}
+      {/* SELO DE VERSÃO (Para provar que o código mudou) */}
+      {isExpanded && (
+        <div className="absolute top-0 right-0 bg-brand text-white text-[8px] px-2 py-1 rounded-bl-xl font-black">
+          v2.2 STABLE
+        </div>
+      )}
+
+      {/* LOGO */}
       <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="bg-brand p-3 rounded-2xl text-white shadow-lg min-w-[48px] h-12 flex items-center justify-center overflow-hidden">
+        <div className="bg-brand p-3 rounded-2xl text-white shadow-lg min-w-[48px] h-12 flex items-center justify-center">
           {tenant?.url_logo ? (
             <img
               src={tenant.url_logo}
@@ -204,10 +191,16 @@ export default function Sidebar() {
                   </span>
                 )}
               </div>
+              {isExpanded && (
+                <ChevronDown
+                  size={14}
+                  className={openGroup === group.group ? "rotate-180" : ""}
+                />
+              )}
             </button>
 
             {isExpanded && openGroup === group.group && (
-              <div className="ml-4 flex flex-col gap-1 mt-2">
+              <div className="ml-6 flex flex-col gap-1 mt-2 animate-in slide-in-from-top-2 duration-300">
                 {group.items.map((item: any) => (
                   <Link
                     key={item.href}
@@ -227,25 +220,13 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* FOOTER COM INFO DE ACESSO */}
-      <div className="pt-4 border-t border-slate-50 space-y-2">
-        {isExpanded && (
-          <div className="px-4 py-2 bg-slate-50 rounded-xl mb-2">
-            <p className="text-[8px] font-black text-slate-400 uppercase">
-              Acesso: {user?.nome?.split(" ")[0]}
-            </p>
-            <p className="text-[8px] font-bold text-brand uppercase">
-              Nível: {user?.papel}
-            </p>
-          </div>
-        )}
+      {/* FOOTER */}
+      <div className="pt-4 border-t border-slate-50">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center justify-center p-3 text-slate-300 hover:text-brand"
         >
-          <ChevronDown
-            className={`transition-transform duration-500 ${isExpanded ? "rotate-90" : "-rotate-90"}`}
-          />
+          {isExpanded ? "RECOLHER" : ">>>"}
         </button>
         <button
           onClick={signOut}
@@ -253,9 +234,7 @@ export default function Sidebar() {
         >
           <LogOut size={22} />
           {isExpanded && (
-            <span className="font-bold text-sm uppercase font-black text-xs tracking-tighter">
-              Sair
-            </span>
+            <span className="font-bold text-xs uppercase font-black">Sair</span>
           )}
         </button>
       </div>
