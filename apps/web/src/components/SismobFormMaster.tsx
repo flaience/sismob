@@ -168,38 +168,23 @@ export default function SismobFormMaster({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. O TIRO DE MISERICÓRDIA NO FRONTEND
-    const tid = tenant?.id;
-
-    if (!tid) {
-      alert(
-        "❌ ERRO CRÍTICO: Imobiliária não identificada. Por favor, recarregue a página (F5).",
-      );
+    if (!tenant?.id && !endpoint.includes("saas")) {
+      alert("❌ ERRO CRÍTICO: Imobiliária não identificada.");
       return;
     }
-
-    // Criamos o pacote de dados garantindo que o ID está no topo
-    const payload = {
-      ...formData,
-      imobiliariaId: tid, // Enviamos para a API
-    };
-
-    console.log("🚀 [SISMOB] Payload saindo para a API:", payload);
 
     setLoading(true);
 
     try {
-      // 1. HIGIENIZAÇÃO DO ENDEREÇO (Garante a rota sem barra dupla)
-      // Se o endpoint vier "saas/onboarding", ele vira "/saas/onboarding"
+      // 1. HIGIENIZAÇÃO DO ENDEREÇO
       const cleanEndpoint = endpoint.startsWith("/")
         ? endpoint
         : `/${endpoint}`;
 
       // 2. MONTAGEM DA CARGA (PAYLOAD)
-      // Juntamos o que o Luis digitou com o ID da Imobiliária logada
       const dadosParaEnviar = {
         ...formData,
-        imobiliariaId: tenant?.id, // <--- VITAL para não dar erro de Tenant no banco
+        imobiliariaId: tenant?.id, // Injeta o ID da imobiliária logada
       };
 
       console.log(
@@ -207,32 +192,18 @@ export default function SismobFormMaster({
         dadosParaEnviar,
       );
 
-      // 3. O DISPARO REAL
+      // 3. O DISPARO REAL (USANDO A VARIÁVEL CORRETA)
       const res = await api.post(cleanEndpoint, dadosParaEnviar);
-
-      console.log("✅ [SISMOB] Sucesso na gravação:", res.data);
 
       alert("✅ Registro salvo com sucesso!");
       router.back();
     } catch (err: any) {
-      // 4. TRATAMENTO DE ERRO COM "RAIO-X"
       const status = err.response?.status;
       const msg = err.response?.data?.message || err.message;
-
-      console.error(`❌ [SISMOB ERROR] Falha no salvamento:`, { status, msg });
       alert(`⚠️ FALHA NO SERVIDOR (${status}):\n${msg}`);
     } finally {
       setLoading(false);
     }
-    // try {
-    //   await api.post(endpoint, payload);
-    //   router.back();
-    // } catch (err: any) {
-    //   const msg = err.response?.data?.message || "Erro desconhecido";
-    //   alert(`⚠️ FALHA NO SERVIDOR:\n${msg}`);
-    // } finally {
-    //   setLoading(false);
-    // }
   };
 
   return (
