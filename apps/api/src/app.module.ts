@@ -17,11 +17,10 @@ import { SaasModule } from './saas/saas.module';
     AuthModule,
     PessoasModule,
     ImoveisModule,
-    FilesModule, // <--- REGISTRADO
+    FilesModule,
     ConfiguracoesModule,
-
     FinanceiroModule,
-    SaasModule,
+    SaasModule, // <--- APENAS UMA VEZ
   ],
   controllers: [AppController],
 })

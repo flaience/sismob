@@ -1,22 +1,20 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Logger } from '@nestjs/common';
 import { SaasService } from './saas.service';
 
-@Controller('saas')
+@Controller('saas') // <--- ISSO AQUI É O QUE CRIA A ROTA /saas
 export class SaasController {
+  private readonly logger = new Logger(SaasController.name);
+
   constructor(private readonly saasService: SaasService) {}
 
-  @Get('dash')
-  async getDash() {
-    return this.saasService.getFinanceiroFlaience();
+  @Post('onboarding') // <--- ISSO CRIA /saas/onboarding
+  async createTenant(@Body() dto: any) {
+    this.logger.log(`🏭 Recebendo Onboarding para: ${dto.nomeEmpresa}`);
+    return this.saasService.onboarding(dto);
   }
 
   @Get('tenants')
   async listTenants() {
     return this.saasService.listarTenants();
-  }
-
-  @Post('onboarding')
-  async createTenant(@Body() dto: any) {
-    return this.saasService.onboarding(dto);
   }
 }

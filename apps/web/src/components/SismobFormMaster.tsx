@@ -187,15 +187,52 @@ export default function SismobFormMaster({
     console.log("🚀 [SISMOB] Payload saindo para a API:", payload);
 
     setLoading(true);
+
     try {
-      await api.post(endpoint, payload);
+      // 1. HIGIENIZAÇÃO DO ENDEREÇO (Garante a rota sem barra dupla)
+      // Se o endpoint vier "saas/onboarding", ele vira "/saas/onboarding"
+      const cleanEndpoint = endpoint.startsWith("/")
+        ? endpoint
+        : `/${endpoint}`;
+
+      // 2. MONTAGEM DA CARGA (PAYLOAD)
+      // Juntamos o que o Luis digitou com o ID da Imobiliária logada
+      const dadosParaEnviar = {
+        ...formData,
+        imobiliariaId: tenant?.id, // <--- VITAL para não dar erro de Tenant no banco
+      };
+
+      console.log(
+        `🏭 [SISMOB] Enviando para: ${cleanEndpoint}`,
+        dadosParaEnviar,
+      );
+
+      // 3. O DISPARO REAL
+      const res = await api.post(cleanEndpoint, dadosParaEnviar);
+
+      console.log("✅ [SISMOB] Sucesso na gravação:", res.data);
+
+      alert("✅ Registro salvo com sucesso!");
       router.back();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Erro desconhecido";
-      alert(`⚠️ FALHA NO SERVIDOR:\n${msg}`);
+      // 4. TRATAMENTO DE ERRO COM "RAIO-X"
+      const status = err.response?.status;
+      const msg = err.response?.data?.message || err.message;
+
+      console.error(`❌ [SISMOB ERROR] Falha no salvamento:`, { status, msg });
+      alert(`⚠️ FALHA NO SERVIDOR (${status}):\n${msg}`);
     } finally {
       setLoading(false);
     }
+    // try {
+    //   await api.post(endpoint, payload);
+    //   router.back();
+    // } catch (err: any) {
+    //   const msg = err.response?.data?.message || "Erro desconhecido";
+    //   alert(`⚠️ FALHA NO SERVIDOR:\n${msg}`);
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (

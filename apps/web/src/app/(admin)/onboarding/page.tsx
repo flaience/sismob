@@ -1,62 +1,26 @@
 "use client";
 import { Suspense } from "react";
 import SismobFormMaster from "@/components/SismobFormMaster";
+import { MAPA_SISMOB } from "../gestao/mapa-modulos"; // Beba da fonte do DNA
 
 function OnboardingContent() {
+  // 1. O SEGREDO DA AGILIDADE:
+  // Puxamos a configuração completa (com Logo, Nome Fantasia, Endereço, etc) do Mapa
+  const config = MAPA_SISMOB.imobiliarias;
+
+  if (!config)
+    return (
+      <div className="p-20 text-center font-black">
+        Módulo 'imobiliarias' não mapeado no sistema.
+      </div>
+    );
+
   return (
     <SismobFormMaster
-      title="Nova Imobiliária Cliente"
-      endpoint="/saas/onboarding" // Bate com o @Controller('saas') e @Post('onboarding')
-      sections={[
-        {
-          title: "Dados da Empresa (Faturamento)",
-          fields: [
-            {
-              name: "nomeEmpresa",
-              label: "Nome da Imobiliária",
-              type: "text",
-              required: true,
-              fullWidth: true,
-            },
-            {
-              name: "slug",
-              label: "Link de Acesso (Ex: silva-imoveis)",
-              type: "text",
-              required: true,
-            },
-            {
-              name: "email_financeiro",
-              label: "E-mail para Cobrança",
-              type: "text",
-              required: true,
-            },
-          ],
-        },
-        {
-          title: "Dados do Proprietário (Admin)",
-          fields: [
-            {
-              name: "nomeDono",
-              label: "Nome do Responsável",
-              type: "text",
-              required: true,
-            },
-            {
-              name: "email",
-              label: "E-mail de Login",
-              type: "text",
-              required: true,
-            },
-            {
-              name: "documento",
-              label: "CPF do Dono",
-              type: "text",
-              required: true,
-            },
-          ],
-        },
-      ]}
-      aiHelp="Este formulário cria o Tenant, a Matriz e o Usuário Mestre."
+      title={config.title}
+      endpoint={config.entity} // saas/onboarding
+      sections={config.sections} // Aqui vêm as 3 seções: Marca, Contato e Endereço
+      aiHelp={config.aiMetadata}
     />
   );
 }
@@ -65,8 +29,10 @@ export default function OnboardingPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-20 font-black animate-pulse">
-          Iniciando Esteira Industrial...
+        <div className="h-screen w-full flex items-center justify-center bg-white">
+          <div className="animate-pulse font-black text-indigo-600 uppercase tracking-widest">
+            Iniciando Esteira Industrial...
+          </div>
         </div>
       }
     >
