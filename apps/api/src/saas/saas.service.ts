@@ -18,40 +18,52 @@ export class SaasService {
    */
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
-      // 1. Cria a Imobiliária (Tenant)
-      const [tenant] = await tx
-        .insert(schema.tenants as any)
-        .values({
-          nome_conta: dto.nomeEmpresa,
-          slug: dto.slug,
-          email_financeiro: dto.email,
-          status: 'ativo',
-        })
-        .returning();
+      try {
+        // LOG DE SEGURANÇA: Vamos ver o que chegou do formulário
+        console.log('📦 [SISMOB] Dados recebidos no DTO:', JSON.stringify(dto));
 
-      // 2. MÁGICA INDUSTRIAL: Cria o Login no Supabase Auth
-      // Usamos a Admin API para definir a senha provisória na hora
-      const { data: authUser, error } =
-        await this.supabaseAdmin.auth.admin.createUser({
-          email: dto.email,
-          password: 'Mudar@123', // Senha padrão para o primeiro acesso
-          email_confirm: true,
-          user_metadata: { role: 'admin', tenantId: tenant.id },
+        // 1. GRAVAÇÃO DO TENANT (Mapeamento corrigido)
+        const [tenant] = await tx
+          .insert(schema.tenants as any)
+          .values({
+            // MUDANÇA AQUI: Pegamos as chaves exatas do MAPA_SISMOB
+            nome_conta: dto.nome_conta || dto.nomeEmpresa,
+            slug: dto.slug,
+            nome_fantasia: dto.nome_fantasia || dto.nome_conta,
+            url_logo: dto.url_logo || null,
+            email_financeiro: dto.email_financeiro || dto.email,
+            status: 'ativo',
+            version_schema: '1.0.1',
+          })
+          .returning();
+
+        // 2. GERAÇÃO DA MATRIZ
+        const [unidade] = await tx
+          .insert(schema.unidades as any)
+          .values({
+            tenant_id: tenant.id,
+            nome: 'MATRIZ - CENTRAL',
+            is_matriz: true,
+          })
+          .returning();
+
+        // 3. CRIAÇÃO DO DONO
+        await tx.insert(schema.pessoas as any).values({
+          tenant_id: tenant.id,
+          unidade_id: unidade.id,
+          nome: dto.nomeDono || dto.nome_conta, // Fallback se o nome do dono falhar
+          email: dto.email || dto.email_financeiro,
+          documento: dto.documento || '000.000.000-00',
+          papel: '6',
+          is_admin: true,
+          cargo: 'gerente_geral',
         });
 
-      if (error) throw new Error('Falha ao criar login: ' + error.message);
-
-      // 3. Cria o Perfil vinculado ao ID que o Supabase gerou
-      await tx.insert(schema.pessoas as any).values({
-        id: authUser.user.id, // VINCULO ESSENCIAL
-        tenant_id: tenant.id,
-        nome: dto.nomeDono,
-        email: dto.email,
-        papel: '6', // Dono
-        is_admin: true,
-      });
-
-      return { success: true, senhaProvisoria: 'Mudar@123' };
+        return { success: true, tenantId: tenant.id };
+      } catch (e: any) {
+        console.error('❌ [ONBOARDING FATAL]:', e.message);
+        throw new InternalServerErrorException(e.message);
+      }
     });
   }
 
