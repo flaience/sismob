@@ -16,6 +16,7 @@ export class SaasController {
 
   @Get('tenants')
   async listTenants() {
+    this.logger.log(`📡 Listando todas as imobiliárias para o Super-Admin`);
     return this.saasService.listarTenants();
   }
 }

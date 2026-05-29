@@ -656,11 +656,12 @@ export const MAPA_SISMOB: any = {
 
   imobiliarias: {
     title: "Minhas Imobiliárias",
-    entity: "saas/onboarding",
+    entity: "saas/tenants",
     columns: [
       { label: "Fantasia", key: "nome_fantasia" },
-      { label: "Slug", key: "slug" },
-      { label: "Cidade", key: "endereco.cidade" }, // Agora podemos mostrar a cidade no grid
+      { label: "WhatsApp", key: "telefone" }, // <--- MUITO MAIS PRÁTICO
+      { label: "E-mail Cobrança", key: "email_financeiro" },
+      { label: "CNPJ / Identificação", key: "nome_conta" }, // Usando nome_conta como Razão/CNPJ por enquantoAgora podemos mostrar a cidade no grid
     ],
     sections: [
       {
