@@ -655,13 +655,13 @@ export const MAPA_SISMOB: any = {
   // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
 
   imobiliarias: {
-    title: "Minhas Imobiliárias",
-    entity: "saas/tenants",
+    title: "Fábrica de Imobiliárias (Tenants)",
+    entity: "saas/tenants", // Bate com o @Controller('saas/tenants')
     columns: [
-      { label: "Fantasia", key: "nome_fantasia" },
-      { label: "WhatsApp", key: "telefone" }, // <--- MUITO MAIS PRÁTICO
+      { label: "Fantasia", key: "nome_fantasia" }, // <--- CORRIGIDO: Bate com o banco
+      { label: "WhatsApp", key: "telefone" }, // <--- CORRIGIDO: Bate com o banco
       { label: "E-mail Cobrança", key: "email_financeiro" },
-      { label: "CNPJ / Identificação", key: "nome_conta" }, // Usando nome_conta como Razão/CNPJ por enquantoAgora podemos mostrar a cidade no grid
+      { label: "CNPJ / Identificação", key: "nome_conta" },
     ],
     sections: [
       {
@@ -673,16 +673,15 @@ export const MAPA_SISMOB: any = {
             type: "text",
             required: true,
           },
-          // MUDANÇA: Agora usa o atalho de carregar imagem
           {
             name: "url_logo",
             label: "Logomarca da Imobiliária",
-            type: "image",
+            type: "image", // <--- Ativa o componente SismobUpload
             fullWidth: true,
           },
           {
             name: "nome_conta",
-            label: "Razão Social",
+            label: "Razão Social / CNPJ",
             type: "text",
             required: true,
             fullWidth: true,
@@ -704,10 +703,14 @@ export const MAPA_SISMOB: any = {
             type: "text",
             required: true,
           },
-          { name: "telefone", label: "Telefone de Suporte", type: "text" },
+          {
+            name: "telefone",
+            label: "Telefone de Suporte",
+            type: "text",
+          },
         ],
       },
-      // INCLUSÃO: Agora a imobiliária também recebe endereço completo
+      // INCLUSÃO: Reuso do endereço estruturado
       SECAO_ENDERECO,
     ],
   },

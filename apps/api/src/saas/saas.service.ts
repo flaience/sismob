@@ -4,150 +4,53 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, sql } from 'drizzle-orm';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { eq, and, sql } from 'drizzle-orm';
 
 @Injectable()
 export class SaasService {
-  private supabaseAdmin: SupabaseClient;
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   /**
-   * 1. ONBOARDING INDUSTRIAL v2.0
-   * Cria: Tenant + Unidade Matriz + Pessoa Admin + Endereço
+   * 1. BUSCA ÚNICA (Para carregar o formulário de edição)
+   * Resolve o erro de "No overload matches"
    */
-  async onboarding(dto: any) {
+  async buscarUmTenant(id: string) {
+    try {
+      const table = schema.tenants as any;
+      const res = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1);
+
+      return res[0] || null;
+    } catch (e: any) {
+      console.error('❌ [SISMOB] Erro ao buscar imobiliária:', e.message);
+      return null;
+    }
+  }
+
+  /**
+   * 2. EXCLUSÃO REAL (Com rastro industrial)
+   */
+  async removerTenant(id: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        // LOG DE SEGURANÇA: Vamos ver o que chegou do formulário
-        console.log('📦 [SISMOB] Dados recebidos no DTO:', JSON.stringify(dto));
-
-        // 1. GRAVAÇÃO DO TENANT (Mapeamento corrigido)
-        const [tenant] = await tx
-          .insert(schema.tenants as any)
-          .values({
-            // MUDANÇA AQUI: Pegamos as chaves exatas do MAPA_SISMOB
-            nome_conta: dto.nome_conta || dto.nomeEmpresa,
-            slug: dto.slug,
-            nome_fantasia: dto.nome_fantasia || dto.nome_conta,
-            url_logo: dto.url_logo || null,
-            email_financeiro: dto.email_financeiro || dto.email,
-            status: 'ativo',
-            version_schema: '1.0.1',
-          })
-          .returning();
-
-        // 2. GERAÇÃO DA MATRIZ
-        const [unidade] = await tx
-          .insert(schema.unidades as any)
-          .values({
-            tenant_id: tenant.id,
-            nome: 'MATRIZ - CENTRAL',
-            is_matriz: true,
-          })
-          .returning();
-
-        // 3. CRIAÇÃO DO DONO
-        await tx.insert(schema.pessoas as any).values({
-          tenant_id: tenant.id,
-          unidade_id: unidade.id,
-          nome: dto.nomeDono || dto.nome_conta, // Fallback se o nome do dono falhar
-          email: dto.email || dto.email_financeiro,
-          documento: dto.documento || '000.000.000-00',
-          papel: '6',
-          is_admin: true,
-          cargo: 'gerente_geral',
-        });
-
-        return { success: true, tenantId: tenant.id };
+        const table = schema.tenants as any;
+        // O Postgres fará o cascade automático nas tabelas filhas (unidades, pessoas, imóveis)
+        await tx.delete(table).where(eq(table.id, id));
+        return { success: true };
       } catch (e: any) {
-        console.error('❌ [ONBOARDING FATAL]:', e.message);
-        throw new InternalServerErrorException(e.message);
+        console.error('❌ [SISMOB] Erro ao excluir imobiliária:', e.message);
+        throw new InternalServerErrorException(
+          'Erro de integridade: Verifique se há dados vinculados.',
+        );
       }
     });
   }
 
   /**
-   * 2. COCKPIT FINANCEIRO FLAIENCE
-   * Usado pelo Luis (Super-Admin) para ver a saúde do SaaS
-   */
-  async getFinanceiroFlaience() {
-    try {
-      const table = schema.tenants as any;
-      const stats = await this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(table)
-        .where(eq(table.status, 'ativo'));
-
-      return {
-        imobiliariasAtivas: Number(stats[0].count),
-        faturamentoEstimado: Number(stats[0].count) * 299, // Regra de negócio: R$ 299/mês
-        timestamp: new Date(),
-      };
-    } catch (e) {
-      return { imobiliariasAtivas: 0, faturamentoEstimado: 0 };
-    }
-  }
-
-  // Adicione este método ao seu SaasService
-  async liberarAcessoImobiliaria(dto: any) {
-    return await this.db.transaction(async (tx: any) => {
-      // 1. Cria a Empresa (Tenant) com o CNPJ/Documento
-      const [tenant] = await tx
-        .insert(schema.tenants as any)
-        .values({
-          nome_conta: dto.nomeEmpresa,
-          slug: dto.slug,
-          email_financeiro: dto.email,
-          status: 'ativo', // Ativação imediata
-          documento_cnpj: dto.cnpj, // Campo para controle de licença
-        })
-        .returning();
-
-      // 2. Cria a Unidade Matriz
-      const [unidade] = await tx
-        .insert(schema.unidades as any)
-        .values({
-          tenant_id: tenant.id,
-          nome: 'MATRIZ',
-          is_matriz: true,
-        })
-        .returning();
-
-      // 3. MÁGICA INDUSTRIAL: Cria o Login no Supabase Auth via Service Role
-      // (Isso evita que o cliente precise confirmar e-mail para começar)
-      const { data: authUser, error } =
-        await this.supabaseAdmin.auth.admin.createUser({
-          email: dto.email,
-          password: dto.senhaProvisoria || 'Sismob@123',
-          email_confirm: true,
-          user_metadata: { tenantId: tenant.id, papel: '6' },
-        });
-
-      if (error)
-        throw new Error('Erro ao criar login no Supabase: ' + error.message);
-
-      // 4. Cria o Perfil na nossa tabela Pessoas (Papel 6 - Dono)
-      await tx.insert(schema.pessoas as any).values({
-        id: authUser.user.id, // O mesmo ID que o Supabase gerou
-        tenant_id: tenant.id,
-        unidade_id: unidade.id,
-        nome: dto.nomeDono,
-        email: dto.email,
-        documento: dto.documentoDono,
-        papel: '6',
-        is_admin: true,
-        cargo: 'diretor',
-      });
-
-      return {
-        success: true,
-        msg: 'Acesso liberado. Senha padrão: Sismob@123',
-      };
-    });
-  }
-  /**
-   * 3. LISTAGEM DE CLIENTES
+   * 3. LISTAGEM GLOBAL (Para o Cockpit do Luis)
    */
   async listarTenants() {
     try {
@@ -156,5 +59,75 @@ export class SaasService {
     } catch (e) {
       return [];
     }
+  }
+
+  /**
+   * 4. MOTOR DE ONBOARDING v2.0
+   * Cria: Empresa + Matriz + Admin + Endereço
+   */
+  async onboarding(dto: any) {
+    return await this.db.transaction(async (tx: any) => {
+      try {
+        const tableTenants = schema.tenants as any;
+        const tableUnidades = schema.unidades as any;
+        const tablePessoas = schema.pessoas as any;
+        const tableEnderecos = schema.enderecos as any;
+
+        // A. GRAVAÇÃO DO TENANT
+        const [tenant] = await tx
+          .insert(tableTenants)
+          .values({
+            nome_conta: dto.nome_conta || dto.nomeEmpresa,
+            nome_fantasia:
+              dto.nome_fantasia || dto.nome_conta || dto.nomeEmpresa,
+            url_logo: dto.url_logo || null,
+            slug: dto.slug,
+            email_financeiro: dto.email_financeiro || dto.email,
+            telefone: dto.telefone || null,
+            status: 'ativo',
+            version_schema: '1.0.1',
+          })
+          .returning();
+
+        // B. GERAÇÃO DA MATRIZ
+        const [unidade] = await tx
+          .insert(tableUnidades)
+          .values({
+            tenant_id: tenant.id,
+            nome: 'MATRIZ - CENTRAL',
+            is_matriz: true,
+          })
+          .returning();
+
+        // C. CRIAÇÃO DO ADMIN
+        const [pessoa] = await tx
+          .insert(tablePessoas)
+          .values({
+            tenant_id: tenant.id,
+            unidade_id: unidade.id,
+            nome: dto.nomeDono || dto.nome_conta,
+            email: dto.email || dto.email_financeiro,
+            documento: dto.documento || '000.000.000-00',
+            papel: '6', // Dono
+            is_admin: true,
+            cargo: 'ceo',
+            updated_at: new Date(),
+          })
+          .returning();
+
+        // D. GRAVAÇÃO DO ENDEREÇO
+        if (dto.endereco) {
+          await tx.insert(tableEnderecos).values({
+            pessoa_id: pessoa.id,
+            ...dto.endereco,
+          });
+        }
+
+        return { success: true, tenantId: tenant.id };
+      } catch (e: any) {
+        console.error('❌ [ONBOARDING FATAL]:', e.message);
+        throw new InternalServerErrorException(e.message);
+      }
+    });
   }
 }
