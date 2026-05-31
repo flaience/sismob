@@ -655,30 +655,25 @@ export const MAPA_SISMOB: any = {
   // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
 
   imobiliarias: {
-    title: "Fábrica de Imobiliárias (Tenants)",
-    entity: "saas/tenants", // Bate com o @Controller('saas/tenants')
+    title: "Gestão de Imobiliárias",
+    entity: "saas/tenants", // <--- Bate com o @Controller
     columns: [
-      { label: "Fantasia", key: "nome_fantasia" }, // <--- CORRIGIDO: Bate com o banco
-      { label: "WhatsApp", key: "telefone" }, // <--- CORRIGIDO: Bate com o banco
-      { label: "E-mail Cobrança", key: "email_financeiro" },
-      { label: "CNPJ / Identificação", key: "nome_conta" },
+      { label: "Nome Fantasia", key: "nome_fantasia" },
+      { label: "Razão Social", key: "nome_conta" },
+      { label: "WhatsApp", key: "telefone" },
+      { label: "E-mail", key: "email_financeiro" },
     ],
     sections: [
       {
-        title: "Identidade Visual e Marca",
+        title: "Identidade",
         fields: [
           {
             name: "nome_fantasia",
-            label: "Nome Fantasia (Aparece no Topo)",
+            label: "Nome Fantasia",
             type: "text",
             required: true,
           },
-          {
-            name: "url_logo",
-            label: "Logomarca da Imobiliária",
-            type: "image", // <--- Ativa o componente SismobUpload
-            fullWidth: true,
-          },
+          { name: "url_logo", label: "Logo URL", type: "image" },
           {
             name: "nome_conta",
             label: "Razão Social / CNPJ",
@@ -689,28 +684,18 @@ export const MAPA_SISMOB: any = {
         ],
       },
       {
-        title: "Contato e Acesso",
+        title: "Acesso e Contato",
         fields: [
-          {
-            name: "slug",
-            label: "Slug (Link único do site)",
-            type: "text",
-            required: true,
-          },
+          { name: "slug", label: "Slug/Link", type: "text", required: true },
           {
             name: "email_financeiro",
-            label: "E-mail de Cobrança",
+            label: "E-mail Financeiro",
             type: "text",
             required: true,
           },
-          {
-            name: "telefone",
-            label: "Telefone de Suporte",
-            type: "text",
-          },
+          { name: "telefone", label: "Telefone", type: "text" },
         ],
       },
-      // INCLUSÃO: Reuso do endereço estruturado
       SECAO_ENDERECO,
     ],
   },
