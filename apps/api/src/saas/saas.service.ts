@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 
 @Injectable()
 export class SaasService {
@@ -52,11 +52,12 @@ export class SaasService {
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        // DIAGNÓSTICO: O que o Luis digitou na tela?
-        console.log('📥 [SISMOB DTO]:', JSON.stringify(dto));
+        console.log(
+          '🏭 [SISMOB v170] MODO NUCLEAR: Gravando imobiliária via SQL Puro',
+        );
 
-        // 1. INSERÇÃO NUCLEAR NA TABELA TENANTS
-        // Usamos SQL puro para garantir que 'nome_fantasia', 'telefone' e 'url_logo' sejam gravados
+        // 1. INSERÇÃO COM SQL PURO (Bypass total do mapeador do Drizzle)
+        // Isso garante que 'nome_fantasia' e 'telefone' entrem no banco
         const resTenant = await tx.execute(sql`
           INSERT INTO tenants (nome_conta, nome_fantasia, url_logo, slug, email_financeiro, telefone, status, version_schema, updated_at)
           VALUES (
@@ -75,7 +76,7 @@ export class SaasService {
 
         const tenantId = resTenant.rows[0].id;
 
-        // 2. GERAÇÃO DA MATRIZ
+        // 2. GERAÇÃO DA MATRIZ (Usa o ID que acabamos de pegar)
         const [unidade] = await tx
           .insert(schema.unidades as any)
           .values({
@@ -85,7 +86,7 @@ export class SaasService {
           })
           .returning();
 
-        // 3. CRIAÇÃO DO ADMIN (Vínculo Real)
+        // 3. CRIAÇÃO DO PROPRIETÁRIO (ADMIN)
         const [pessoa] = await tx
           .insert(schema.pessoas as any)
           .values({
@@ -101,27 +102,24 @@ export class SaasService {
           })
           .returning();
 
-        // 4. GRAVAÇÃO DO ENDEREÇO (O que você sentiu falta)
-        if (dto.endereco && (dto.endereco.cep || dto.endereco.logradouro)) {
+        // 4. GRAVAÇÃO DO ENDEREÇO
+        if (dto.endereco) {
           await tx.insert(schema.enderecos as any).values({
             pessoa_id: pessoa.id,
-            cep: dto.endereco.cep || '00000-000',
-            logradouro: dto.endereco.logradouro || 'Não informado',
-            numero: dto.endereco.numero || 'SN',
-            bairro: dto.endereco.bairro || 'N/A',
-            cidade: dto.endereco.cidade || 'N/A',
-            estado: dto.endereco.estado || '??',
+            ...dto.endereco,
           });
-          console.log('🏠 Endereço da imobiliária gravado!');
         }
 
         return { success: true, tenantId };
       } catch (e: any) {
-        console.error('❌ [ERRO NUCLEAR]:', e.message);
+        console.error('❌ [SISMOB FATAL]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
   }
+
+  // LISTAGEM COM SELECT * (Garante que Fantasia apareça no Grid)
+
   /**
    * 4. EXCLUSÃO REAL
    */
