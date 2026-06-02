@@ -17,9 +17,17 @@ export class SaasService {
   // 1. LISTAGEM (Para o Grid)
   async listarTenants() {
     try {
-      const table = schema.tenants as any;
-      // O .select() sem argumentos traz TODAS as colunas existentes no banco
-      return await this.db.select().from(table).orderBy(desc(table.created_at));
+      // O SEGREDO: SQL Puro garante que 'nome_fantasia' e 'telefone' cheguem à tela
+      const res = await this.db.execute(
+        sql`SELECT * FROM tenants ORDER BY created_at DESC`,
+      );
+
+      // O driver 'postgres.js' retorna os dados diretamente ou em .rows
+      const data = res.rows || res;
+      console.log(
+        `📡 [SISMOB] Grid carregado com ${data.length} imobiliárias.`,
+      );
+      return data;
     } catch (e) {
       return [];
     }
@@ -28,19 +36,18 @@ export class SaasService {
   // 2. BUSCA ÚNICA (Para carregar o formulário de alteração)
   async buscarUmTenant(id: string) {
     try {
-      const table = schema.tenants as any;
-      const res = await this.db
-        .select()
-        .from(table)
-        .where(eq(table.id, id))
-        .limit(1);
+      console.log(`🔍 [SISMOB] Buscando imobiliária ID: ${id}`);
 
-      // MÁGICA INDUSTRIAL: Se vier lista, pega o primeiro. Se não, null.
-      const data = Array.isArray(res) ? res[0] : res;
+      const res = await this.db.execute(
+        sql`SELECT * FROM tenants WHERE id = ${id} LIMIT 1`,
+      );
+      const rows = res.rows || res;
 
-      console.log('🔍 [SISMOB] Carregando para edição:', data?.nome_fantasia);
-      return data || null;
-    } catch (e) {
+      if (!rows || rows.length === 0) return null;
+
+      // Retorna o objeto puro (sem colchetes) para o formulário
+      return rows[0];
+    } catch (e: any) {
       console.error('❌ Erro ao buscar imobiliária:', e.message);
       return null;
     }
