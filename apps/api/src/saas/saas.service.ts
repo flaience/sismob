@@ -52,13 +52,10 @@ export class SaasService {
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        console.log(
-          '🏭 [SISMOB v170] MODO NUCLEAR: Gravando imobiliária via SQL Puro',
-        );
+        console.log('🔥 [SISMOB v180] MODO NUCLEAR ATIVO');
 
-        // 1. INSERÇÃO COM SQL PURO (Bypass total do mapeador do Drizzle)
-        // Isso garante que 'nome_fantasia' e 'telefone' entrem no banco
-        const resTenant = await tx.execute(sql`
+        // 1. INSERÇÃO VIA SQL PURO (Garante que Fantasia e Telefone entrem)
+        const query = sql`
           INSERT INTO tenants (nome_conta, nome_fantasia, url_logo, slug, email_financeiro, telefone, status, version_schema, updated_at)
           VALUES (
             ${dto.nome_conta || dto.nomeEmpresa}, 
@@ -72,26 +69,25 @@ export class SaasService {
             NOW()
           )
           RETURNING id;
-        `);
+        `;
 
-        const tenantId = resTenant.rows[0].id;
+        const result = await tx.execute(query);
 
-        // 2. GERAÇÃO DA MATRIZ (Usa o ID que acabamos de pegar)
-        const [unidade] = await tx
-          .insert(schema.unidades as any)
-          .values({
-            tenant_id: tenantId,
-            nome: 'MATRIZ - CENTRAL',
-            is_matriz: true,
-          })
-          .returning();
+        // O SEGREDO DO ERRO ANTERIOR: O retorno no Postgres.js é direto o array
+        const tenantId = result[0].id;
 
-        // 3. CRIAÇÃO DO PROPRIETÁRIO (ADMIN)
+        // 2. GERAÇÃO DA MATRIZ
+        await tx.insert(schema.unidades as any).values({
+          tenant_id: tenantId,
+          nome: 'MATRIZ - CENTRAL',
+          is_matriz: true,
+        });
+
+        // 3. CRIAÇÃO DO ADMIN
         const [pessoa] = await tx
           .insert(schema.pessoas as any)
           .values({
             tenant_id: tenantId,
-            unidade_id: unidade.id,
             nome: dto.nomeDono || dto.nome_fantasia,
             email: dto.email || dto.email_financeiro,
             documento: dto.documento || '000.000.000-00',
@@ -112,12 +108,11 @@ export class SaasService {
 
         return { success: true, tenantId };
       } catch (e: any) {
-        console.error('❌ [SISMOB FATAL]:', e.message);
+        console.error('❌ [SISMOB FATAL v180]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
   }
-
   // LISTAGEM COM SELECT * (Garante que Fantasia apareça no Grid)
 
   /**

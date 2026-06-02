@@ -25,6 +25,7 @@ function OnboardingContent() {
 }
 
 export default function OnboardingPage() {
+  const config = MAPA_SISMOB.imobiliarias; // <--- AGORA ELE LÊ OS 10 CAMPOS DO MAPA!
   return (
     <Suspense
       fallback={
