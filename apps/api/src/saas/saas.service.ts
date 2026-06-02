@@ -52,52 +52,73 @@ export class SaasService {
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        const tableTenants = schema.tenants as any;
-        const tableUnidades = schema.unidades as any;
-        const tablePessoas = schema.pessoas as any;
+        // DIAGNÓSTICO: O que o Luis digitou na tela?
+        console.log('📥 [SISMOB DTO]:', JSON.stringify(dto));
 
-        // 1. GRAVAÇÃO DO TENANT (Imobiliária)
-        const [tenant] = await tx
-          .insert(tableTenants)
-          .values({
-            nome_conta: dto.nome_conta || dto.nomeEmpresa,
-            nome_fantasia: dto.nome_fantasia || dto.nome_conta,
-            url_logo: dto.url_logo || null,
-            slug: dto.slug,
-            email_financeiro: dto.email_financeiro || dto.email,
-            telefone: dto.telefone || null,
-            status: 'ativo',
-            version_schema: '1.0.1',
-          })
-          .returning();
+        // 1. INSERÇÃO NUCLEAR NA TABELA TENANTS
+        // Usamos SQL puro para garantir que 'nome_fantasia', 'telefone' e 'url_logo' sejam gravados
+        const resTenant = await tx.execute(sql`
+          INSERT INTO tenants (nome_conta, nome_fantasia, url_logo, slug, email_financeiro, telefone, status, version_schema, updated_at)
+          VALUES (
+            ${dto.nome_conta || dto.nomeEmpresa}, 
+            ${dto.nome_fantasia}, 
+            ${dto.url_logo || null}, 
+            ${dto.slug}, 
+            ${dto.email_financeiro}, 
+            ${dto.telefone}, 
+            'ativo', 
+            '1.0.1', 
+            NOW()
+          )
+          RETURNING id;
+        `);
+
+        const tenantId = resTenant.rows[0].id;
 
         // 2. GERAÇÃO DA MATRIZ
         const [unidade] = await tx
-          .insert(tableUnidades)
+          .insert(schema.unidades as any)
           .values({
-            tenant_id: tenant.id,
+            tenant_id: tenantId,
             nome: 'MATRIZ - CENTRAL',
             is_matriz: true,
           })
           .returning();
 
-        // 3. CRIAÇÃO DO PROPRIETÁRIO (Admin)
-        await tx.insert(tablePessoas).values({
-          tenant_id: tenant.id,
-          unidade_id: unidade.id,
-          nome: dto.nomeDono || dto.nome_fantasia,
-          email: dto.email || dto.email_financeiro,
-          documento: dto.documento || '000.000.000-00',
-          papel: '6',
-          is_admin: true,
-          cargo: 'ceo',
-          updated_at: new Date(),
-        });
+        // 3. CRIAÇÃO DO ADMIN (Vínculo Real)
+        const [pessoa] = await tx
+          .insert(schema.pessoas as any)
+          .values({
+            tenant_id: tenantId,
+            unidade_id: unidade.id,
+            nome: dto.nomeDono || dto.nome_fantasia,
+            email: dto.email || dto.email_financeiro,
+            documento: dto.documento || '000.000.000-00',
+            papel: '6',
+            is_admin: true,
+            cargo: 'ceo',
+            updated_at: new Date(),
+          })
+          .returning();
 
-        return { success: true, tenantId: tenant.id };
+        // 4. GRAVAÇÃO DO ENDEREÇO (O que você sentiu falta)
+        if (dto.endereco && (dto.endereco.cep || dto.endereco.logradouro)) {
+          await tx.insert(schema.enderecos as any).values({
+            pessoa_id: pessoa.id,
+            cep: dto.endereco.cep || '00000-000',
+            logradouro: dto.endereco.logradouro || 'Não informado',
+            numero: dto.endereco.numero || 'SN',
+            bairro: dto.endereco.bairro || 'N/A',
+            cidade: dto.endereco.cidade || 'N/A',
+            estado: dto.endereco.estado || '??',
+          });
+          console.log('🏠 Endereço da imobiliária gravado!');
+        }
+
+        return { success: true, tenantId };
       } catch (e: any) {
-        console.error('❌ [ONBOARDING ERROR]:', e.message);
-        throw new InternalServerErrorException(`Erro no Banco: ${e.message}`);
+        console.error('❌ [ERRO NUCLEAR]:', e.message);
+        throw new InternalServerErrorException(e.message);
       }
     });
   }
