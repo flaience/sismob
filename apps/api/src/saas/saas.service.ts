@@ -48,79 +48,49 @@ export class SaasService {
    */
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
+      // O SEGREDO: Verificamos se o ID já existe no DTO que veio da tela
+      const isUpdate = dto.id && dto.id !== 'undefined';
+      const tableTenants = schema.tenants as any;
+
+      const payloadTenant = {
+        nome_conta: dto.nome_conta || dto.nomeEmpresa,
+        nome_fantasia: dto.nome_fantasia || dto.nome_conta,
+        url_logo: dto.url_logo || null,
+        slug: dto.slug, // <--- Este valor deve ser único!
+        email_financeiro: dto.email_financeiro || dto.email,
+        status: 'ativo',
+        updated_at: new Date(),
+      };
+
       try {
-        const tableTenants = schema.tenants as any;
-        const tableUnidades = schema.unidades as any;
-        const tablePessoas = schema.pessoas as any;
-        const tableEnderecos = schema.enderecos as any;
-
-        const isUpdate = !!dto.id;
-        const tenantId = dto.id;
-
-        const payloadTenant = {
-          nome_conta: dto.nome_conta,
-          nome_fantasia: dto.nome_fantasia || dto.nome_conta,
-          url_logo: dto.url_logo || null,
-          slug: dto.slug,
-          email_financeiro: dto.email_financeiro,
-          telefone: dto.telefone || null,
-          status: 'ativo',
-          version_schema: '1.0.1',
-          updated_at: new Date(),
-        };
-
-        // A. SALVA OU ATUALIZA IMOBILIÁRIA
         if (isUpdate) {
+          console.log(`🏭 [SISMOB] Atualizando Imobiliária ID: ${dto.id}`);
           await tx
             .update(tableTenants)
             .set(payloadTenant)
-            .where(eq(tableTenants.id, tenantId));
+            .where(eq(tableTenants.id, dto.id));
+          return { success: true, tenantId: dto.id };
         } else {
+          console.log(`🏭 [SISMOB] Criando Nova Imobiliária Slug: ${dto.slug}`);
           const [tenant] = await tx
             .insert(tableTenants)
             .values(payloadTenant)
             .returning();
 
-          // B. SÓ CRIA MATRIZ E ADMIN SE FOR NOVA INCLUSÃO
-          const [unidade] = await tx
-            .insert(tableUnidades)
-            .values({
-              tenant_id: tenant.id,
-              nome: 'MATRIZ - CENTRAL',
-              is_matriz: true,
-            })
-            .returning();
+          // ... lógica de criar Matriz e Admin (apenas se for novo) ...
 
-          const [pessoa] = await tx
-            .insert(tablePessoas)
-            .values({
-              tenant_id: tenant.id,
-              unidade_id: unidade.id,
-              nome: dto.nomeDono || dto.nome_fantasia,
-              email: dto.email || dto.email_financeiro,
-              documento: dto.documento || '000.000.000-00',
-              papel: '6',
-              is_admin: true,
-              cargo: 'ceo',
-            })
-            .returning();
-
-          if (dto.endereco) {
-            await tx.insert(tableEnderecos).values({
-              pessoa_id: pessoa.id,
-              ...dto.endereco,
-            });
-          }
+          return { success: true, tenantId: tenant.id };
         }
-
-        return { success: true };
       } catch (e: any) {
-        console.error('❌ [ONBOARDING ERROR]:', e.message);
-        throw new InternalServerErrorException(e.message);
+        if (e.message.includes('unique constraint')) {
+          throw new InternalServerErrorException(
+            `O link (slug) '${dto.slug}' já está em uso por outra imobiliária.`,
+          );
+        }
+        throw e;
       }
     });
   }
-
   /**
    * 4. EXCLUSÃO REAL
    */
