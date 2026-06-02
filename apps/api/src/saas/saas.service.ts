@@ -50,31 +50,28 @@ export class SaasService {
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        console.log('🏭 [SISMOB v170] Iniciando Injeção SQL Direta...');
+        const tableTenants = schema.tenants as any;
+        const tableUnidades = schema.unidades as any;
+        const tablePessoas = schema.pessoas as any;
 
-        // 1. GRAVAÇÃO DO TENANT (MODO NUCLEAR - Bypass de Schema)
-        // Usamos SQL puro para garantir que o Postgres receba 'nome_fantasia' e 'telefone'
-        const resTenant = await tx.execute(sql`
-          INSERT INTO tenants (nome_conta, nome_fantasia, url_logo, slug, email_financeiro, telefone, status, version_schema, updated_at)
-          VALUES (
-            ${dto.nome_conta || dto.nomeEmpresa}, 
-            ${dto.nome_fantasia || dto.nome_conta}, 
-            ${dto.url_logo || null}, 
-            ${dto.slug}, 
-            ${dto.email_financeiro || dto.email}, 
-            ${dto.telefone || null}, 
-            'ativo', 
-            '1.0.1', 
-            NOW()
-          )
-          RETURNING id, slug;
-        `);
-
-        const tenant = resTenant.rows[0];
+        // 1. GRAVAÇÃO DO TENANT (Imobiliária)
+        const [tenant] = await tx
+          .insert(tableTenants)
+          .values({
+            nome_conta: dto.nome_conta || dto.nomeEmpresa,
+            nome_fantasia: dto.nome_fantasia || dto.nome_conta,
+            url_logo: dto.url_logo || null,
+            slug: dto.slug,
+            email_financeiro: dto.email_financeiro || dto.email,
+            telefone: dto.telefone || null,
+            status: 'ativo',
+            version_schema: '1.0.1',
+          })
+          .returning();
 
         // 2. GERAÇÃO DA MATRIZ
         const [unidade] = await tx
-          .insert(schema.unidades as any)
+          .insert(tableUnidades)
           .values({
             tenant_id: tenant.id,
             nome: 'MATRIZ - CENTRAL',
@@ -82,39 +79,23 @@ export class SaasService {
           })
           .returning();
 
-        // 3. CRIAÇÃO DO ADMIN (PROPRIETÁRIO)
-        const [pessoa] = await tx
-          .insert(schema.pessoas as any)
-          .values({
-            tenant_id: tenant.id,
-            unidade_id: unidade.id,
-            nome: dto.nomeDono || dto.nome_fantasia,
-            email: dto.email || dto.email_financeiro,
-            documento: dto.documento || '000.000.000-00',
-            papel: '6',
-            is_admin: true,
-            cargo: 'ceo',
-            updated_at: new Date(),
-          })
-          .returning();
+        // 3. CRIAÇÃO DO PROPRIETÁRIO (Admin)
+        await tx.insert(tablePessoas).values({
+          tenant_id: tenant.id,
+          unidade_id: unidade.id,
+          nome: dto.nomeDono || dto.nome_fantasia,
+          email: dto.email || dto.email_financeiro,
+          documento: dto.documento || '000.000.000-00',
+          papel: '6',
+          is_admin: true,
+          cargo: 'ceo',
+          updated_at: new Date(),
+        });
 
-        // 4. GRAVAÇÃO DO ENDEREÇO
-        if (dto.endereco) {
-          await tx.insert(schema.enderecos as any).values({
-            pessoa_id: pessoa.id,
-            ...dto.endereco,
-          });
-        }
-
-        console.log(
-          `✅ [SISMOB] Sucesso! Imobiliária ${tenant.slug} gravada com todos os campos.`,
-        );
         return { success: true, tenantId: tenant.id };
       } catch (e: any) {
-        console.error('❌ [ONBOARDING FATAL v170]:', e.message);
-        throw new InternalServerErrorException(
-          `Falha na gravação industrial: ${e.message}`,
-        );
+        console.error('❌ [ONBOARDING ERROR]:', e.message);
+        throw new InternalServerErrorException(`Erro no Banco: ${e.message}`);
       }
     });
   }
