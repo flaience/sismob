@@ -94,14 +94,16 @@ export default function SismobFormMaster({
     if (!tenant?.id) return;
 
     // 1. CARGA DE DADOS PARA EDIÇÃO
-    if (idEdicao) {
+    // Dentro do useEffect do SismobFormMaster.tsx:
+    if (idEdicao && tenant?.id) {
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
         .then((res) => {
-          const data = Array.isArray(res.data) ? res.data[0] : res.data;
-          setFormData(data || {});
+          // Resolve o problema de receber [ {data} ] em vez de {data}
+          const cleanData = Array.isArray(res.data) ? res.data[0] : res.data;
+          setFormData(cleanData || {});
         });
     }
 

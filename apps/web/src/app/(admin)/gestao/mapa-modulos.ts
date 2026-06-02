@@ -654,18 +654,20 @@ export const MAPA_SISMOB: any = {
 
   // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
 
+  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
+
   imobiliarias: {
     title: "Gestão de Imobiliárias",
-    entity: "saas/tenants", // <--- Bate com o @Controller
+    entity: "saas/tenants",
     columns: [
-      { label: "Nome Fantasia", key: "nome_fantasia" },
-      { label: "Razão Social", key: "nome_conta" },
-      { label: "WhatsApp", key: "telefone" },
+      { label: "Fantasia", key: "nome_fantasia" }, // <--- IDÊNTICO AO BANCO
+      { label: "WhatsApp", key: "telefone" }, // <--- IDÊNTICO AO BANCO
       { label: "E-mail", key: "email_financeiro" },
+      { label: "Razão Social", key: "nome_conta" },
     ],
     sections: [
       {
-        title: "Identidade",
+        title: "Identidade Visual",
         fields: [
           {
             name: "nome_fantasia",
@@ -693,7 +695,13 @@ export const MAPA_SISMOB: any = {
             type: "text",
             required: true,
           },
-          { name: "telefone", label: "Telefone", type: "text" },
+          // MUDANÇA: 'name' deve ser 'telefone' para o banco aceitar
+          {
+            name: "telefone",
+            label: "WhatsApp de Suporte",
+            type: "text",
+            required: true,
+          },
         ],
       },
       SECAO_ENDERECO,

@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, sql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 @Injectable()
 export class SaasService {
@@ -14,35 +14,37 @@ export class SaasService {
    * 1. LISTAGEM GLOBAL (Para o Luis)
    */
   // 1. LISTAGEM DO GRID (Mata o erro de campo vazio no Grid)
+  // 1. LISTAGEM (Para o Grid)
   async listarTenants() {
     try {
-      // O SEGREDO: Usamos SQL puro para o Drizzle não filtrar colunas "novas"
-      const res = await this.db.execute(
-        sql`SELECT * FROM tenants ORDER BY created_at DESC`,
-      );
-      return res.rows || res;
+      const table = schema.tenants as any;
+      // O .select() sem argumentos traz TODAS as colunas existentes no banco
+      return await this.db.select().from(table).orderBy(desc(table.created_at));
     } catch (e) {
       return [];
     }
   }
 
-  // 2. BUSCA ÚNICA (Mata o erro de formulário de edição vazio)
+  // 2. BUSCA ÚNICA (Para carregar o formulário de alteração)
   async buscarUmTenant(id: string) {
     try {
-      const res = await this.db.execute(
-        sql`SELECT * FROM tenants WHERE id = ${id} LIMIT 1`,
-      );
-      const data = res.rows || res;
+      const table = schema.tenants as any;
+      const res = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1);
 
-      if (data.length === 0) return null;
+      // MÁGICA INDUSTRIAL: Se vier lista, pega o primeiro. Se não, null.
+      const data = Array.isArray(res) ? res[0] : res;
 
-      // Retorna o objeto completo para o formulário
-      return data[0];
+      console.log('🔍 [SISMOB] Carregando para edição:', data?.nome_fantasia);
+      return data || null;
     } catch (e) {
+      console.error('❌ Erro ao buscar imobiliária:', e.message);
       return null;
     }
   }
-
   /**
    * 3. MOTOR DE ONBOARDING v2.0
    * Cria: Empresa + Matriz + Admin + Endereço
