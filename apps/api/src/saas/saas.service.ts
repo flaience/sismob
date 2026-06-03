@@ -36,19 +36,41 @@ export class SaasService {
   // 2. BUSCA ÚNICA (Para carregar o formulário de alteração)
   async buscarUmTenant(id: string) {
     try {
-      console.log(`🔍 [SISMOB] Buscando imobiliária ID: ${id}`);
+      console.log(`🔍 [SISMOB] Buscando imobiliária e endereço: ${id}`);
 
-      const res = await this.db.execute(
-        sql`SELECT * FROM tenants WHERE id = ${id} LIMIT 1`,
-      );
+      // SQL NUCLEAR COM JOIN: Busca Imobiliária + Endereço do Dono (Papel 6)
+      const res = await this.db.execute(sql`
+        SELECT 
+          t.*,
+          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        FROM tenants t
+        LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
+        LEFT JOIN enderecos e ON e.pessoa_id = p.id
+        WHERE t.id = ${id}
+        LIMIT 1
+      `);
+
       const rows = res.rows || res;
-
       if (!rows || rows.length === 0) return null;
 
-      // Retorna o objeto puro (sem colchetes) para o formulário
-      return rows[0];
+      const row = rows[0];
+
+      // FORMATAÇÃO INDUSTRIAL:
+      // Pegamos as colunas soltas e colocamos dentro do objeto 'endereco'
+      // que o seu SismobFormMaster espera.
+      return {
+        ...row,
+        endereco: {
+          cep: row.cep || '',
+          logradouro: row.logradouro || '',
+          numero: row.numero || '',
+          bairro: row.bairro || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
+        },
+      };
     } catch (e: any) {
-      console.error('❌ Erro ao buscar imobiliária:', e.message);
+      console.error('❌ Erro ao buscar imobiliária completa:', e.message);
       return null;
     }
   }
