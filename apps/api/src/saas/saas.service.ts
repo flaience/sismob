@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 @Injectable()
 export class SaasService {
@@ -29,6 +29,7 @@ export class SaasService {
       );
       return data;
     } catch (e) {
+      console.error('❌ Erro ao listar tenants:', e);
       return [];
     }
   }
@@ -81,63 +82,79 @@ export class SaasService {
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        console.log('🔥 [SISMOB v180] MODO NUCLEAR ATIVO');
+        const isUpdate = dto.id && dto.id !== 'undefined';
+        let tenantId = dto.id;
 
-        // 1. INSERÇÃO VIA SQL PURO (Garante que Fantasia e Telefone entrem)
-        const query = sql`
-          INSERT INTO tenants (nome_conta, nome_fantasia, url_logo, slug, email_financeiro, telefone, status, version_schema, updated_at)
-          VALUES (
-            ${dto.nome_conta || dto.nomeEmpresa}, 
-            ${dto.nome_fantasia}, 
-            ${dto.url_logo || null}, 
-            ${dto.slug}, 
-            ${dto.email_financeiro}, 
-            ${dto.telefone}, 
-            'ativo', 
-            '1.0.1', 
-            NOW()
-          )
-          RETURNING id;
-        `;
+        const tablePessoas = schema.pessoas as any;
+        const tableEnderecos = schema.enderecos as any;
+        const tableUnidades = schema.unidades as any;
 
-        const result = await tx.execute(query);
+        if (isUpdate) {
+          // UPDATE NUCLEAR
+          await tx.execute(sql`
+            UPDATE tenants SET 
+              nome_conta = ${dto.nome_conta}, nome_fantasia = ${dto.nome_fantasia},
+              url_logo = ${dto.url_logo || null}, slug = ${dto.slug},
+              email_financeiro = ${dto.email_financeiro}, telefone = ${dto.telefone},
+              updated_at = NOW()
+            WHERE id = ${tenantId}
+          `);
+        } else {
+          // INSERT NUCLEAR
+          const resTenant = await tx.execute(sql`
+            INSERT INTO tenants (nome_conta, nome_fantasia, url_logo, slug, email_financeiro, telefone, status, version_schema, updated_at)
+            VALUES (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.url_logo || null}, ${dto.slug}, ${dto.email_financeiro}, ${dto.telefone}, 'ativo', '1.0.1', NOW())
+            RETURNING id;
+          `);
+          tenantId = resTenant[0].id;
 
-        // O SEGREDO DO ERRO ANTERIOR: O retorno no Postgres.js é direto o array
-        const tenantId = result[0].id;
+          // Cria Matriz e Admin
+          const [unidade] = await tx
+            .insert(tableUnidades)
+            .values({
+              tenant_id: tenantId,
+              nome: 'MATRIZ - CENTRAL',
+              is_matriz: true,
+            })
+            .returning();
 
-        // 2. GERAÇÃO DA MATRIZ
-        await tx.insert(schema.unidades as any).values({
-          tenant_id: tenantId,
-          nome: 'MATRIZ - CENTRAL',
-          is_matriz: true,
-        });
-
-        // 3. CRIAÇÃO DO ADMIN
-        const [pessoa] = await tx
-          .insert(schema.pessoas as any)
-          .values({
+          await tx.insert(tablePessoas).values({
             tenant_id: tenantId,
+            unidade_id: unidade.id,
             nome: dto.nomeDono || dto.nome_fantasia,
-            email: dto.email || dto.email_financeiro,
+            email: dto.email,
             documento: dto.documento || '000.000.000-00',
             papel: '6',
             is_admin: true,
             cargo: 'ceo',
             updated_at: new Date(),
-          })
-          .returning();
-
-        // 4. GRAVAÇÃO DO ENDEREÇO
-        if (dto.endereco) {
-          await tx.insert(schema.enderecos as any).values({
-            pessoa_id: pessoa.id,
-            ...dto.endereco,
           });
         }
 
+        // 4. SYNC DE ENDEREÇO
+        if (dto.endereco) {
+          const [admin] = await tx
+            .select()
+            .from(tablePessoas)
+            .where(
+              and(
+                eq(tablePessoas.tenant_id, tenantId),
+                eq(tablePessoas.papel, '6'),
+              ),
+            )
+            .limit(1);
+
+          if (admin) {
+            await tx
+              .delete(tableEnderecos)
+              .where(eq(tableEnderecos.pessoa_id, admin.id));
+            await tx
+              .insert(tableEnderecos)
+              .values({ pessoa_id: admin.id, ...dto.endereco });
+          }
+        }
         return { success: true, tenantId };
       } catch (e: any) {
-        console.error('❌ [SISMOB FATAL v180]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
