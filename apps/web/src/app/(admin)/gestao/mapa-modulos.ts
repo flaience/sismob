@@ -688,14 +688,19 @@ export const MAPA_SISMOB: any = {
       {
         title: "Acesso e Contato",
         fields: [
+          {
+            name: "nomeDono",
+            label: "Nome do Proprietário",
+            type: "text",
+            required: true,
+          }, // <--- ADICIONADO
           { name: "slug", label: "Slug/Link", type: "text", required: true },
           {
             name: "email_financeiro",
-            label: "E-mail Financeiro",
+            label: "E-mail de Acesso e Cobrança",
             type: "text",
             required: true,
           },
-          // MUDANÇA: 'name' deve ser 'telefone' para o banco aceitar
           {
             name: "telefone",
             label: "WhatsApp de Suporte",

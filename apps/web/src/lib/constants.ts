@@ -10,11 +10,14 @@ export const PAPEIS = {
 };
 
 export const PAPEIS_LABELS = {
-  [PAPEIS.EQUIPE]: "Colaborador",
-  [PAPEIS.INTERESSADO]: "Interessado",
-  [PAPEIS.PROPRIETARIO]: "Proprietário",
-  [PAPEIS.INQUILINO]: "Inquilino",
-  [PAPEIS.IMOBILIARIA]: "Imobiliária",
-  [PAPEIS.CONTA_SAAS]: "flaience - Conta SaaS",
+  [PAPEIS.EQUIPE]: "Colaborador / Corretor",
+  [PAPEIS.INTERESSADO]: "Interessado (Lead)",
+  [PAPEIS.PROPRIETARIO]: "Proprietário do Imóvel",
+  [PAPEIS.INQUILINO]: "Inquilino / Locatário",
+  [PAPEIS.IMOBILIARIA]: "Unidade de Negócio",
+
+  // MUDANÇA SUGERIDA:
+  [PAPEIS.CONTA_SAAS]: "Gestor da Conta (Dono)", // <--- Mais claro
+
   [PAPEIS.CLIENTE_COMPRADOR]: "Cliente Comprador",
 };

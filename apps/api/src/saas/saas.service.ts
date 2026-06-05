@@ -121,8 +121,14 @@ export class SaasService {
           await tx.insert(tablePessoas).values({
             tenant_id: tenantId,
             unidade_id: unidade.id,
-            nome: dto.nomeDono || dto.nome_fantasia,
-            email: dto.email,
+
+            // Se o formulário não tem 'nomeDono', usamos o 'nome_fantasia'
+            nome: dto.nomeDono || dto.nome_fantasia || dto.nome_conta,
+
+            // O TIRO DE MISERICÓRDIA:
+            // O formulário envia 'email_financeiro', então o DTO tem que ler 'email_financeiro'
+            email: dto.email_financeiro,
+
             documento: dto.documento || '000.000.000-00',
             papel: '6',
             is_admin: true,
