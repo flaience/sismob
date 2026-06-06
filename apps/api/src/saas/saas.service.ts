@@ -37,12 +37,15 @@ export class SaasService {
   // 2. BUSCA ÚNICA (Para carregar o formulário de alteração)
   async buscarUmTenant(id: string) {
     try {
-      console.log(`🔍 [SISMOB] Buscando imobiliária e endereço: ${id}`);
+      console.log(`🔍 [SISMOB] Buscando imobiliária e nome do dono: ${id}`);
 
-      // SQL NUCLEAR COM JOIN: Busca Imobiliária + Endereço do Dono (Papel 6)
+      // SQL COM JOIN TRIPLO: Traz Empresa + Dono + Endereço
       const res = await this.db.execute(sql`
         SELECT 
           t.*,
+          p.nome as "nomeDono",
+          p.email as "email",
+          p.documento as "documento",
           e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
         FROM tenants t
         LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
@@ -53,14 +56,12 @@ export class SaasService {
 
       const rows = res.rows || res;
       if (!rows || rows.length === 0) return null;
-
       const row = rows[0];
 
-      // FORMATAÇÃO INDUSTRIAL:
-      // Pegamos as colunas soltas e colocamos dentro do objeto 'endereco'
-      // que o seu SismobFormMaster espera.
+      // Formatamos o objeto para o SismobFormMaster ler perfeitamente
       return {
         ...row,
+        nomeDono: row.nomeDono || '', // <--- AQUI O NOME APARECERÁ NA TELA!
         endereco: {
           cep: row.cep || '',
           logradouro: row.logradouro || '',
@@ -70,8 +71,7 @@ export class SaasService {
           estado: row.estado || '',
         },
       };
-    } catch (e: any) {
-      console.error('❌ Erro ao buscar imobiliária completa:', e.message);
+    } catch (e) {
       return null;
     }
   }
@@ -88,9 +88,8 @@ export class SaasService {
         const tablePessoas = schema.pessoas as any;
         const tableEnderecos = schema.enderecos as any;
         const tableUnidades = schema.unidades as any;
-
         if (isUpdate) {
-          // UPDATE NUCLEAR
+          // A. Atualiza a Empresa
           await tx.execute(sql`
             UPDATE tenants SET 
               nome_conta = ${dto.nome_conta}, nome_fantasia = ${dto.nome_fantasia},
@@ -99,6 +98,18 @@ export class SaasService {
               updated_at = NOW()
             WHERE id = ${tenantId}
           `);
+
+          // B. Atualiza o Nome do Dono na tabela Pessoas (Papel 6)
+          const tablePessoas = schema.pessoas as any;
+          await tx
+            .update(tablePessoas)
+            .set({ nome: dto.nomeDono, email: dto.email_financeiro })
+            .where(
+              and(
+                eq(tablePessoas.tenant_id, tenantId),
+                eq(tablePessoas.papel, '6'),
+              ),
+            );
         } else {
           // INSERT NUCLEAR
           const resTenant = await tx.execute(sql`
