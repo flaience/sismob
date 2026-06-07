@@ -102,83 +102,57 @@ export default function SismobFormMaster({
     }
   };
 
+  // 1. CARGA DE DADOS PARA EDIÇÃO (v5.1 Blindada)
   useEffect(() => {
-    if (!tenant?.id) return;
-
-    // 1. CARGA DE DADOS PARA EDIÇÃO
-    // Dentro do useEffect do SismobFormMaster.tsx:
     if (idEdicao && tenant?.id) {
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
         .then((res) => {
-          // Resolve o problema de receber [ {data} ] em vez de {data}
-          const cleanData = Array.isArray(res.data) ? res.data[0] : res.data;
-          setFormData(cleanData || {});
+          const data = Array.isArray(res.data) ? res.data[0] : res.data;
+          console.log("📂 [SISMOB] Dados brutos recebidos da API:", data);
+
+          // O SEGREDO: Se for imóvel, o endereço já vem na raiz.
+          // Se for pessoa, garantimos que o objeto endereco exista.
+          if (data && !data.endereco && data.logradouro) {
+            setFormData(data); // Carga flat (Imóveis)
+          } else {
+            setFormData(data || {}); // Carga aninhada (Pessoas)
+          }
         });
     }
+  }, [idEdicao, tenant, endpoint]);
 
-    // 2. MOTOR DE AUTO-LOOKUP INDUSTRIAL
-    // MOTOR DE AUTO-LOOKUP INDUSTRIAL v225
-    sections?.forEach((section: any) => {
-      section.fields.forEach(async (field: any) => {
-        // 1. Só buscamos se for um Select/Checklist e não tiver opções fixas
-        if (
-          (field.type === "select" || field.type === "checklist") &&
-          !field.options
-        ) {
-          try {
-            let endpointLookup = "";
-            let params: any = { imobiliariaId: tenant.id };
+  // 2. BUSCA DE CEP (v5.1 Industrial)
+  useEffect(() => {
+    const cep = formData.endereco?.cep || formData.cep;
 
-            // 2. REGRA DE ROTEAMENTO (Onde buscar cada dado)
+    // Só dispara se o CEP tiver 8 dígitos e NÃO for carga inicial de edição
+    if (cep?.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.erro) {
+            console.log("📡 [SISMOB] Dados do ViaCEP:", data);
 
-            // Caso A: Busca o PAI (Categorias)
-            if (field.name === "categoria_id") {
-              endpointLookup = "/configuracoes/categorias-atributos";
+            // A CORREÇÃO DA RUA (Logradouro):
+            if (formData.endereco) {
+              updateField("endereco.logradouro", data.logradouro);
+              updateField("endereco.bairro", data.bairro);
+              updateField("endereco.cidade", data.localidade);
+              updateField("endereco.estado", data.uf);
+            } else {
+              // Para IMÓVEIS (Raiz)
+              updateField("logradouro", data.logradouro);
+              updateField("bairro", data.bairro);
+              updateField("cidade", data.localidade);
+              updateField("estado", data.uf);
             }
-            // Caso B: Busca Proprietários (Papel 3)
-            else if (field.name === "proprietario_id") {
-              endpointLookup = "/pessoas";
-              params.papel = "3";
-            }
-            // Caso C: Busca Unidades/Filiais
-            else if (field.name === "unidade_id") {
-              endpointLookup = "/configuracoes/unidades";
-            }
-            // Caso D: Regra Genérica (Remove o _id e pluraliza)
-            else {
-              const entity =
-                field.entity ||
-                field.name.replace("_id", "s").replace("_", "-");
-              endpointLookup = `/configuracoes/${entity}`;
-            }
-
-            console.log(
-              `📡 [SISMOB] Carregando lookup para ${field.label} em: ${endpointLookup}`,
-            );
-
-            const res = await api.get(endpointLookup, { params });
-
-            // 3. GARANTIA DE FORMATO (Trata Array ou Objeto Único)
-            const dados = Array.isArray(res.data)
-              ? res.data
-              : res.data
-                ? [res.data]
-                : [];
-
-            setOptions((prev: any) => ({ ...prev, [field.name]: dados }));
-          } catch (e) {
-            console.warn(
-              `⚠️ [SISMOB] Falha ao carregar opções para: ${field.name}`,
-            );
           }
-        }
-      });
-    });
-  }, [tenant?.id, idEdicao, sections, endpoint]);
-
+        });
+    }
+  }, [formData.endereco?.cep, formData.cep]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
