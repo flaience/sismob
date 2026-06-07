@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, ilike, lte, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class ImoveisService {
@@ -12,8 +12,51 @@ export class ImoveisService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   /**
-   * 1. BUSCA ÚNICA COMPLETA (v1.30)
-   * Resolve o erro de 'No overload matches' nas tabelas de detalhes
+   * 1. BUSCA PARA O PORTAL (O que causou o erro de build)
+   * Filtra por Cidade, Tipo, Preço e Cardápio de Atributos
+   */
+  async buscarPortal(tenantId: string, query: any) {
+    try {
+      const table = schema.imoveis as any;
+      const tableLink = schema.imoveisAtributos as any;
+
+      // Filtros básicos de visibilidade
+      let conds = [
+        eq(table.tenant_id, tenantId),
+        eq(table.status, 'disponivel'),
+      ];
+
+      if (query.tipo) conds.push(eq(table.tipo, query.tipo));
+      if (query.cidade) conds.push(ilike(table.cidade, `%${query.cidade}%`));
+      if (query.precoMax)
+        conds.push(lte(table.preco_venda, query.precoMax.toString()));
+
+      // Filtro avançado por Atributos (Cardápio)
+      if (
+        query.atributos &&
+        Array.isArray(query.atributos) &&
+        query.atributos.length > 0
+      ) {
+        const subQuery = this.db
+          .select({ id: tableLink.imovel_id })
+          .from(tableLink)
+          .where(inArray(tableLink.atributo_id, query.atributos.map(Number)));
+
+        conds.push(inArray(table.id, subQuery));
+      }
+
+      return await this.db
+        .select()
+        .from(table)
+        .where(and(...conds));
+    } catch (e: any) {
+      console.error('❌ [SISMOB] Erro na busca do portal:', e.message);
+      return [];
+    }
+  }
+
+  /**
+   * 2. BUSCA ÚNICA COMPLETA (Edição)
    */
   async findOne(id: number, tenantId: string) {
     try {
@@ -21,7 +64,6 @@ export class ImoveisService {
       const tableMidias = schema.midias as any;
       const tableAtributos = schema.imoveisAtributos as any;
 
-      // A. Busca o Imóvel
       const results = await this.db
         .select()
         .from(tableImoveis)
@@ -33,32 +75,27 @@ export class ImoveisService {
       if (results.length === 0) return null;
       const imovel = results[0];
 
-      // B. Busca as Mídias vinculadas (Aqui o erro morre)
       const midias = await this.db
         .select()
         .from(tableMidias)
         .where(eq(tableMidias.imovel_id, id));
-
-      // C. Busca os Atributos vinculados (Aqui o erro morre)
       const atributos = await this.db
         .select()
         .from(tableAtributos)
         .where(eq(tableAtributos.imovel_id, id));
 
-      // Retorna o objeto unificado para o Frontend
       return {
         ...imovel,
         midias: midias || [],
         atributos: atributos.map((a: any) => a.atributo_id),
       };
     } catch (e: any) {
-      console.error('❌ [SISMOB] Erro ao carregar imóvel:', e.message);
       return null;
     }
   }
 
   /**
-   * 2. MOTOR DE UPSERT ATÔMICO
+   * 3. MOTOR DE UPSERT ATÔMICO
    */
   async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
@@ -72,12 +109,11 @@ export class ImoveisService {
           updated_at,
           ...dadosRestantes
         } = dto;
-
         const tableImoveis = schema.imoveis as any;
         const tableMidias = schema.midias as any;
         const tableAtributos = schema.imoveisAtributos as any;
 
-        // Montagem do endereço industrial (conforme v5.1)
+        // Sincronia de Endereço Raiz
         const rua = endereco?.logradouro || dadosRestantes.logradouro || '';
         const num = endereco?.numero || dadosRestantes.numero || 'SN';
         const bairro = endereco?.bairro || dadosRestantes.bairro || '';
@@ -86,17 +122,13 @@ export class ImoveisService {
 
         const payload = {
           ...dadosRestantes,
-          logradouro: rua,
-          numero: num,
-          bairro: bairro,
-          cidade: cidade,
+          ...endereco,
           endereco_original: endStr,
           tenant_id: tenantId,
           updated_at: new Date(),
         };
 
         let imovelId = id;
-
         if (id && id !== 'undefined') {
           await tx
             .update(tableImoveis)
@@ -110,32 +142,29 @@ export class ImoveisService {
           imovelId = novo.id;
         }
 
-        // SALVA ATRIBUTOS (O seu Cardápio)
-        if (atributos && Array.isArray(atributos)) {
+        if (atributos) {
           await tx
             .delete(tableAtributos)
             .where(eq(tableAtributos.imovel_id, imovelId));
-          const inserts = atributos.map((aid: any) => ({
+          const insAttr = atributos.map((aid: any) => ({
             imovel_id: imovelId,
             atributo_id: Number(aid),
           }));
-          if (inserts.length > 0)
-            await tx.insert(tableAtributos).values(inserts);
+          if (insAttr.length > 0)
+            await tx.insert(tableAtributos).values(insAttr);
         }
 
-        // SALVA MÍDIAS
-        if (midias && Array.isArray(midias)) {
+        if (midias) {
           await tx
             .delete(tableMidias)
             .where(eq(tableMidias.imovel_id, imovelId));
-          const inserts = midias.map((m: any, idx: number) => ({
+          const insMid = midias.map((m: any) => ({
             imovel_id: imovelId,
             url: m.url,
-            tipo: m.tipo || 'foto_interna',
-            is_capa: m.is_capa || idx === 0,
-            ordem: idx,
+            tipo: m.tipo,
+            is_capa: m.is_capa,
           }));
-          if (inserts.length > 0) await tx.insert(tableMidias).values(inserts);
+          if (insMid.length > 0) await tx.insert(tableMidias).values(insMid);
         }
 
         return { id: imovelId, success: true };
@@ -146,7 +175,7 @@ export class ImoveisService {
   }
 
   /**
-   * 3. LISTAGEM DO GRID
+   * 4. LISTAGEM INDUSTRIAL (Grid)
    */
   async findAll(tenantId: string) {
     const table = schema.imoveis as any;
@@ -158,7 +187,7 @@ export class ImoveisService {
   }
 
   /**
-   * 4. EXCLUSÃO REAL
+   * 5. EXCLUSÃO REAL
    */
   async remove(id: number, tenantId: string) {
     const tableImoveis = schema.imoveis as any;
