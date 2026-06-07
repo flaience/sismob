@@ -69,7 +69,43 @@ export const MAPA_SISMOB: any = {
       SECAO_ENDERECO,
     ],
   },
+  // apps/web/src/app/(admin)/gestao/mapa-modulos.ts
 
+  "gestao-flaience": {
+    title: "Controle de Fábrica (SaaS)",
+    entity: "saas/tenants",
+    columns: [
+      { label: "Imobiliária", key: "nome_fantasia" },
+      { label: "Status", key: "status" },
+      { label: "Versão", key: "version_schema" },
+    ],
+    sections: [
+      {
+        title: "Status da Licença",
+        fields: [
+          {
+            name: "nome_conta",
+            label: "Razão Social",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "status",
+            label: "Situação do Acesso",
+            type: "select",
+            options: [
+              { label: "✅ Ativo", value: "ativo" },
+              { label: "⏳ Trial", value: "trial" },
+              { label: "🚫 Suspenso", value: "suspenso" },
+            ],
+          },
+          { name: "data_vencimento", label: "Próxima Renovação", type: "date" },
+        ],
+      },
+    ],
+    aiMetadata:
+      "Luis, este é o controle mestre. Se você suspender uma imobiliária aqui, o Agente MCP bloqueará o acesso de todos os corretores dela instantaneamente.",
+  },
   // --- CRM COMERCIAL ---
   leads: {
     title: "Interessados (Leads)",
@@ -244,7 +280,7 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "tipo",
-            label: "Tipo",
+            label: "Tipo de Imóvel",
             type: "select",
             required: true,
             options: [
@@ -309,7 +345,7 @@ export const MAPA_SISMOB: any = {
       {
         title: "Acessórios e Comodidades (Cardápio)",
         fields: [
-          // O SEGREDO: Agora é um checklist que busca do 'cardápio' de atributos
+          // O SEGREDO DO "CARDÁPIO": O corretor marca os itens pré-cadastrados
           {
             name: "atributos",
             label: "Selecione o que o imóvel possui",
@@ -321,6 +357,7 @@ export const MAPA_SISMOB: any = {
       {
         title: "Galeria de Mídias Profissional",
         fields: [
+          // Componente industrial: Capa e 360 no mesmo lugar
           {
             name: "midias",
             label: "Fotos (Capa e 360° são marcadas no atalho)",
@@ -336,7 +373,7 @@ export const MAPA_SISMOB: any = {
       },
     ],
     aiMetadata:
-      "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos. O campo 'atributos' deve ser usado para destacar o valor do imóvel.",
+      "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos. O preenchimento da descrição rica ajuda o RAG a gerar argumentos de venda por voz.",
   },
 
   // 1. O PAI: Categorias (Ex: Lazer, Estrutura)
