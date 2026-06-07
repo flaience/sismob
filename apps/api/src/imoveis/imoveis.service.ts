@@ -26,15 +26,45 @@ export class ImoveisService {
    * BUSCA ÚNICA (Para Edição)
    */
   async findOne(id: number, tenantId: string) {
-    const table = schema.imoveis as any;
-    const results = await this.db
-      .select()
-      .from(table)
-      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
-      .limit(1);
-    return results[0] || null;
-  }
+    try {
+      const table = schema.imoveis as any;
+      const tableMidias = schema.midias as any;
+      const tableAttr = schema.imoveisAtributos as any;
 
+      // 1. BUSCA O IMÓVEL (Master)
+      const results = await this.db
+        .select()
+        .from(table)
+        .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
+        .limit(1);
+
+      if (results.length === 0) return null;
+      const imovel = results[0];
+
+      // 2. BUSCA AS MÍDIAS (Fotos e 360)
+      const midias = await this.db
+        .select()
+        .from(tableMidias)
+        .where(eq(tableMidias.imovel_id, id));
+
+      // 3. BUSCA OS ATRIBUTOS (Pega apenas os IDs para o Cardápio)
+      const atributosMarcados = await this.db
+        .select({ id: tableAttr.atributo_id })
+        .from(tableAttr)
+        .where(eq(tableAttr.imovel_id, id));
+
+      // 4. MONTAGEM DO OBJETO COMPLETO PARA O FORMULÁRIO
+      return {
+        ...imovel,
+        midias: midias || [],
+        // Transforma a lista de objetos em um vetor simples de IDs [1, 5, 8]
+        atributos: atributosMarcados.map((a: any) => a.id),
+      };
+    } catch (e: any) {
+      console.error('❌ [SISMOB] Erro ao carregar imóvel completo:', e.message);
+      return null;
+    }
+  }
   /**
    * MOTOR DE GRAVAÇÃO ATÔMICA (Imóvel + Atributos + Endereço)
    */

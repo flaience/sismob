@@ -51,23 +51,35 @@ export default function SismobFormMaster({
   // 2. SINCRONIA DE IDENTIDADE:
   // Garante que se você mudar de "Leads" para "Proprietários", o formulário
   // receba o novo 'papel' imediatamente sem precisar recarregar.
+  // MOTOR DE BUSCA AUTOMÁTICA DE CEP (v5.0 Industrial)
   useEffect(() => {
-    if (initialData) {
-      setFormData((prev: any) => ({
-        ...prev,
-        ...initialData,
-        // Preserva o endereço se o usuário já começou a digitar
-        endereco: prev.endereco || {
-          cep: "",
-          logradouro: "",
-          numero: "",
-          bairro: "",
-          cidade: "",
-          estado: "",
-        },
-      }));
+    // Detecta CEP tanto na raiz quanto aninhado
+    const cep = formData.endereco?.cep || formData.cep;
+
+    if (cep?.length === 8) {
+      console.log(`📡 [SISMOB] Consultando ViaCEP: ${cep}`);
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.erro) {
+            // Se o formulário tiver a seção 'endereco' (Pessoas)
+            if (formData.endereco) {
+              updateField("endereco.logradouro", data.logradouro);
+              updateField("endereco.bairro", data.bairro);
+              updateField("endereco.cidade", data.localidade);
+              updateField("endereco.estado", data.uf);
+            }
+            // Se for campos na raiz (Imóveis)
+            else {
+              updateField("logradouro", data.logradouro);
+              updateField("bairro", data.bairro);
+              updateField("cidade", data.localidade);
+              updateField("estado", data.uf);
+            }
+          }
+        });
     }
-  }, [initialData]);
+  }, [formData.endereco?.cep, formData.cep]);
 
   // 3. ATUALIZADOR INDUSTRIAL DE CAMPOS (Suporta 'endereco.cep')
   const updateField = (name: string, val: any) => {
