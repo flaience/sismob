@@ -6,12 +6,13 @@ import {
 import * as schema from '@sismob/database';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { buscarEnderecoVinculado } from '../common/utils/address-resolver';
+
 @Injectable()
 export class SaasService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
   /**
-   * 1. LISTAGEM GLOBAL (Grid de Imobiliárias)
+   * 1. LISTAGEM GLOBAL (Para o Luis)
    */
   async listarTenants() {
     try {
@@ -23,26 +24,23 @@ export class SaasService {
   }
 
   /**
-   * 2. BUSCA ÚNICA COM ENDEREÇO (Para Edição)
-   * Resolve o erro de Overload usando Join e Casting
+   * 2. BUSCA ÚNICA (Para o formulário de alteração)
+   * Usa o seu Resolutor de Endereço Universal
    */
   async buscarUmTenant(id: string) {
     try {
-      // 1. MAPEAMENTO LOCAL (Mata o erro de Overload TS)
       const tableTenants = schema.tenants as any;
       const tablePessoas = schema.pessoas as any;
 
-      // 2. BUSCA A IMOBILIÁRIA
+      // Busca a Imobiliária
       const [tenant] = await this.db
         .select()
         .from(tableTenants)
         .where(eq(tableTenants.id, id))
         .limit(1);
-
       if (!tenant) return null;
 
-      // 3. BUSCA O DONO (Papel 6) PARA PEGAR O ENDEREÇO
-      // Aqui usamos o casting local para o eq() não dar erro
+      // Busca o Dono para pegar o endereço e o nome real
       const [dono] = await this.db
         .select()
         .from(tablePessoas)
@@ -52,17 +50,16 @@ export class SaasService {
       return {
         ...tenant,
         nomeDono: dono?.nome || '',
-        // 4. CHAMADA DA SUA FUNÇÃO UNIVERSAL (REUSO TOTAL)
+        // REUSO INDUSTRIAL: Chama sua função universal
         endereco: dono ? await buscarEnderecoVinculado(this.db, dono.id) : null,
       };
     } catch (e) {
-      console.error('Erro ao buscar imobiliária:', e);
       return null;
     }
   }
 
   /**
-   * 3. MOTOR DE ONBOARDING (Inclusão e Alteração)
+   * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
    */
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
@@ -88,13 +85,12 @@ export class SaasService {
         };
 
         if (isUpdate) {
-          // A. Atualiza a Empresa
+          // ATUALIZAÇÃO
           await tx
             .update(tableTenants)
             .set(payloadTenant)
             .where(eq(tableTenants.id, tenantId));
 
-          // B. Atualiza o Nome do Dono (Busca pelo papel 6)
           await tx
             .update(tablePessoas)
             .set({ nome: dto.nomeDono, email: dto.email_financeiro })
@@ -105,7 +101,7 @@ export class SaasService {
               ),
             );
         } else {
-          // C. Inclusão de Nova Imobiliária
+          // INCLUSÃO
           const [tenant] = await tx
             .insert(tableTenants)
             .values(payloadTenant)
@@ -146,5 +142,21 @@ export class SaasService {
         throw new InternalServerErrorException(e.message);
       }
     });
+  }
+
+  /**
+   * 4. EXCLUSÃO (O QUE FALTAVA)
+   * Resolve o erro TS2339 no Controller
+   */
+  async removerTenant(id: string) {
+    try {
+      const table = schema.tenants as any;
+      // O banco fará o delete em cascata se configurado no schema
+      return await this.db.delete(table).where(eq(table.id, id));
+    } catch (e: any) {
+      throw new InternalServerErrorException(
+        'Existem registros vinculados a esta imobiliária.',
+      );
+    }
   }
 }
