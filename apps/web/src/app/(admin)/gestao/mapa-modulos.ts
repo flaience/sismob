@@ -280,7 +280,7 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "tipo",
-            label: "Tipo de Imóvel",
+            label: "Tipo",
             type: "select",
             required: true,
             options: [
@@ -345,7 +345,6 @@ export const MAPA_SISMOB: any = {
       {
         title: "Acessórios e Comodidades (Cardápio)",
         fields: [
-          // O SEGREDO DO "CARDÁPIO": O corretor marca os itens pré-cadastrados
           {
             name: "atributos",
             label: "Selecione o que o imóvel possui",
@@ -357,7 +356,6 @@ export const MAPA_SISMOB: any = {
       {
         title: "Galeria de Mídias Profissional",
         fields: [
-          // Componente industrial: Capa e 360 no mesmo lugar
           {
             name: "midias",
             label: "Fotos (Capa e 360° são marcadas no atalho)",
@@ -373,9 +371,8 @@ export const MAPA_SISMOB: any = {
       },
     ],
     aiMetadata:
-      "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos. O preenchimento da descrição rica ajuda o RAG a gerar argumentos de venda por voz.",
+      "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos e vistorias automáticas.",
   },
-
   // 1. O PAI: Categorias (Ex: Lazer, Estrutura)
   "categorias-atributos": {
     title: "Categorias de Itens",

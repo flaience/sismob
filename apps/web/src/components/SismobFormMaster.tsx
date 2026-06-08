@@ -53,29 +53,19 @@ export default function SismobFormMaster({
   // receba o novo 'papel' imediatamente sem precisar recarregar.
   // MOTOR DE BUSCA AUTOMÁTICA DE CEP (v5.0 Industrial)
   useEffect(() => {
-    // Detecta CEP tanto na raiz quanto aninhado
-    const cep = formData.endereco?.cep || formData.cep;
+    if (!tenant?.id) return;
 
-    if (cep?.length === 8) {
-      console.log(`📡 [SISMOB] Consultando ViaCEP: ${cep}`);
-      fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((res) => res.json())
+    // A. Busca de CEP
+    const cepValue = formData.cep; // Nos imóveis o CEP está na raiz
+    if (cepValue?.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cepValue}/json/`)
+        .then((r) => r.json())
         .then((data) => {
           if (!data.erro) {
-            // Se o formulário tiver a seção 'endereco' (Pessoas)
-            if (formData.endereco) {
-              updateField("endereco.logradouro", data.logradouro);
-              updateField("endereco.bairro", data.bairro);
-              updateField("endereco.cidade", data.localidade);
-              updateField("endereco.estado", data.uf);
-            }
-            // Se for campos na raiz (Imóveis)
-            else {
-              updateField("logradouro", data.logradouro);
-              updateField("bairro", data.bairro);
-              updateField("cidade", data.localidade);
-              updateField("estado", data.uf);
-            }
+            updateField("logradouro", data.logradouro); // <--- AQUI A RUA APARECE
+            updateField("bairro", data.bairro);
+            updateField("cidade", data.localidade);
+            updateField("estado", data.uf);
           }
         });
     }
@@ -102,27 +92,73 @@ export default function SismobFormMaster({
     }
   };
 
-  // 1. CARGA DE DADOS PARA EDIÇÃO (v5.1 Blindada)
   useEffect(() => {
-    if (idEdicao && tenant?.id) {
+    if (!tenant?.id) return;
+
+    // 1. CARGA DE DADOS PARA EDIÇÃO (Mata o erro de campos vazios na alteração)
+    if (idEdicao) {
+      console.log(`📡 [SISMOB] Carregando registro ID: ${idEdicao}`);
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
         .then((res) => {
           const data = Array.isArray(res.data) ? res.data[0] : res.data;
-          console.log("📂 [SISMOB] Dados brutos recebidos da API:", data);
 
-          // O SEGREDO: Se for imóvel, o endereço já vem na raiz.
-          // Se for pessoa, garantimos que o objeto endereco exista.
-          if (data && !data.endereco && data.logradouro) {
-            setFormData(data); // Carga flat (Imóveis)
-          } else {
-            setFormData(data || {}); // Carga aninhada (Pessoas)
-          }
+          // Lógica Industrial: Se os dados do endereço vierem na raiz (Imóveis),
+          // ou em objeto (Pessoas), o setFormData aceita ambos.
+          setFormData(data || {});
         });
     }
-  }, [idEdicao, tenant, endpoint]);
+
+    // 2. MOTOR DE AUTO-LOOKUP (Preenche os combos de Proprietários, Filiais, etc.)
+    // Aqui usamos o forEach para varrer o seu MAPA_SISMOB e carregar os dados
+    sections?.forEach((section: any) => {
+      section.fields?.forEach(async (field: any) => {
+        // Só buscamos se for Select ou Checklist e não tiver opções fixas no JSON
+        if (
+          (field.type === "select" || field.type === "checklist") &&
+          !field.options
+        ) {
+          try {
+            let urlLookup = "";
+            let params: any = { imobiliariaId: tenant.id };
+
+            // REGRA DE OURO: Roteamento Inteligente de Lookups
+            if (field.name === "unidade_id") {
+              urlLookup = "/configuracoes/unidades";
+            } else if (field.name === "proprietario_id") {
+              urlLookup = "/pessoas";
+              params.papel = "3"; // Filtra apenas donos de imóveis
+            } else if (
+              field.name === "atributos" ||
+              field.entity === "atributos"
+            ) {
+              urlLookup = "/configuracoes/atributos";
+            } else {
+              // Regra Genérica: banco_id vira /configuracoes/bancos
+              const slug =
+                field.entity ||
+                field.name.replace("_id", "s").replace("_", "-");
+              urlLookup = `/configuracoes/${slug}`;
+            }
+
+            const res = await api.get(urlLookup, { params });
+            const dados = Array.isArray(res.data)
+              ? res.data
+              : res.data
+                ? [res.data]
+                : [];
+
+            // Guarda a lista no estado de opções do formulário
+            setOptions((prev: any) => ({ ...prev, [field.name]: dados }));
+          } catch (e) {
+            console.warn(`⚠️ [SISMOB] Falha ao carregar lookup: ${field.name}`);
+          }
+        }
+      });
+    });
+  }, [tenant?.id, idEdicao, sections, endpoint]);
 
   // 2. BUSCA DE CEP (v5.1 Industrial)
   // O formulário agora é "cego": ele só recebe o objeto e preenche.
