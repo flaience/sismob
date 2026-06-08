@@ -125,34 +125,36 @@ export default function SismobFormMaster({
   }, [idEdicao, tenant, endpoint]);
 
   // 2. BUSCA DE CEP (v5.1 Industrial)
+  // O formulário agora é "cego": ele só recebe o objeto e preenche.
+  // Se o backend enviar 'endereco: { ... }', o motor de camadas que fizemos:
+  // updateField("endereco.logradouro", ...) vai funcionar em 100% dos casos.
+
   useEffect(() => {
-    const cep = formData.endereco?.cep || formData.cep;
+    if (idEdicao && tenant?.id) {
+      api
+        .get(`${endpoint}/${idEdicao}`, {
+          params: { imobiliariaId: tenant.id },
+        })
+        .then((res) => {
+          const data = Array.isArray(res.data) ? res.data[0] : res.data;
 
-    // Só dispara se o CEP tiver 8 dígitos e NÃO for carga inicial de edição
-    if (cep?.length === 8) {
-      fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.erro) {
-            console.log("📡 [SISMOB] Dados do ViaCEP:", data);
-
-            // A CORREÇÃO DA RUA (Logradouro):
-            if (formData.endereco) {
-              updateField("endereco.logradouro", data.logradouro);
-              updateField("endereco.bairro", data.bairro);
-              updateField("endereco.cidade", data.localidade);
-              updateField("endereco.estado", data.uf);
-            } else {
-              // Para IMÓVEIS (Raiz)
-              updateField("logradouro", data.logradouro);
-              updateField("bairro", data.bairro);
-              updateField("cidade", data.localidade);
-              updateField("estado", data.uf);
-            }
+          // PADRONIZAÇÃO INDUSTRIAL:
+          // Se for Imóvel (dados na raiz), nós "envelopamos" para o formulário ler
+          if (data && data.logradouro && !data.endereco) {
+            data.endereco = {
+              cep: data.cep,
+              logradouro: data.logradouro,
+              numero: data.numero,
+              bairro: data.bairro,
+              cidade: data.cidade,
+              estado: data.estado,
+            };
           }
+          setFormData(data);
         });
     }
-  }, [formData.endereco?.cep, formData.cep]);
+  }, [idEdicao, tenant]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
