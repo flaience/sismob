@@ -143,7 +143,17 @@ export class SaasService {
       }
     });
   }
+  async findOne(id: number, tenantId: string) {
+    const table = schema.imoveis as any;
+    const results = await this.db
+      .select()
+      .from(table)
+      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
+      .limit(1);
 
+    // O .select() sem parâmetros traz logradouro, bairro, cidade, etc.
+    return results[0] || null;
+  }
   /**
    * 4. EXCLUSÃO (O QUE FALTAVA)
    * Resolve o erro TS2339 no Controller
