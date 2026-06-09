@@ -256,14 +256,12 @@ export const MAPA_SISMOB: any = {
     entity: "imoveis",
     columns: [
       { label: "Título", key: "titulo" },
-      { label: "Bairro", key: "bairro" },
-      { label: "Cidade", key: "cidade" },
-      { label: "Valor Venda", key: "preco_venda" },
+      { label: "Preço", key: "preco_venda" },
       { label: "Status", key: "status" },
     ],
     sections: [
       {
-        title: "Apresentação e Anúncio",
+        title: "Apresentação e Unidade",
         fields: [
           {
             name: "titulo",
@@ -273,34 +271,6 @@ export const MAPA_SISMOB: any = {
             fullWidth: true,
           },
           {
-            name: "descricao",
-            label: "Descrição Detalhada para IA",
-            type: "text",
-            fullWidth: true,
-          },
-          {
-            name: "tipo",
-            label: "Tipo",
-            type: "select",
-            required: true,
-            options: [
-              { label: "Casa", value: "casa" },
-              { label: "Apartamento", value: "apto" },
-              { label: "Terreno", value: "terreno" },
-              { label: "Cobertura", value: "cobertura" },
-            ],
-          },
-          {
-            name: "status",
-            label: "Situação Atual",
-            type: "select",
-            options: [
-              { label: "Disponível", value: "disponivel" },
-              { label: "Vendido", value: "vendido" },
-              { label: "Locado", value: "locado" },
-            ],
-          },
-          {
             name: "proprietario_id",
             label: "Proprietário (Dono)",
             type: "select",
@@ -308,19 +278,29 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "unidade_id",
-            label: "Unidade Responsável",
+            label: "Filial Responsável",
             type: "select",
             required: true,
+          },
+          {
+            name: "status",
+            label: "Situação",
+            type: "select",
+            options: [
+              { label: "Disponível", value: "disponivel" },
+              { label: "Vendido", value: "vendido" },
+            ],
           },
         ],
       },
       {
-        title: "Localização Estruturada",
+        title: "Localização",
         fields: [
           { name: "cep", label: "CEP", type: "text" },
+          // ATENÇÃO: Nomes na RAIZ (sem ponto), idênticos ao seu schema.ts
           {
             name: "logradouro",
-            label: "Rua/Avenida",
+            label: "Rua / Avenida",
             type: "text",
             fullWidth: true,
           },

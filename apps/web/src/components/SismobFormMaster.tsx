@@ -1,3 +1,4 @@
+//src/components/SismobFormMaster.tsx
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -53,24 +54,71 @@ export default function SismobFormMaster({
   // receba o novo 'papel' imediatamente sem precisar recarregar.
   // MOTOR DE BUSCA AUTOMÁTICA DE CEP (v5.0 Industrial)
   useEffect(() => {
-    if (!tenant?.id) return;
-
-    // A. Busca de CEP
-    const cepValue = formData.cep; // Nos imóveis o CEP está na raiz
-    if (cepValue?.length === 8) {
-      fetch(`https://viacep.com.br/ws/${cepValue}/json/`)
-        .then((r) => r.json())
+    const cep = formData.endereco?.cep || formData.cep;
+    if (cep?.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((res) => res.json())
         .then((data) => {
           if (!data.erro) {
-            updateField("logradouro", data.logradouro); // <--- AQUI A RUA APARECE
-            updateField("bairro", data.bairro);
-            updateField("cidade", data.localidade);
-            updateField("estado", data.uf);
+            // Se o formulário usa 'endereco.cep', preenche aninhado (Pessoas)
+            if (formData.endereco || endpoint.includes("pessoas")) {
+              updateField("endereco.logradouro", data.logradouro);
+              updateField("endereco.bairro", data.bairro);
+              updateField("endereco.cidade", data.localidade);
+              updateField("endereco.estado", data.uf);
+            } else {
+              // Se o formulário for plano (Imóveis/Bancos)
+              updateField("logradouro", data.logradouro);
+              updateField("bairro", data.bairro);
+              updateField("cidade", data.localidade);
+              updateField("estado", data.uf);
+            }
           }
         });
     }
   }, [formData.endereco?.cep, formData.cep]);
 
+  // 2. CARGA DE DADOS E LOOKUPS (O que faltava no seu código)
+  useEffect(() => {
+    if (!tenant?.id) return;
+
+    // A. Carrega Edição
+    if (idEdicao) {
+      api
+        .get(`${endpoint}/${idEdicao}`, {
+          params: { imobiliariaId: tenant.id },
+        })
+        .then((res) =>
+          setFormData(Array.isArray(res.data) ? res.data[0] : res.data),
+        );
+    }
+
+    // B. Carrega os Combos (Proprietários, Unidades, etc)
+    sections?.forEach((section: any) => {
+      section.fields?.forEach(async (field: any) => {
+        if (
+          (field.type === "select" || field.type === "checklist") &&
+          !field.options
+        ) {
+          try {
+            let url =
+              field.name === "unidade_id"
+                ? "/configuracoes/unidades"
+                : field.name === "proprietario_id"
+                  ? "/pessoas?papel=3"
+                  : `/configuracoes/${field.name.replace("_id", "s")}`;
+
+            const res = await api.get(url, {
+              params: { imobiliariaId: tenant.id },
+            });
+            setOptions((prev: any) => ({ ...prev, [field.name]: res.data }));
+          } catch (e) {
+            console.warn("Erro lookup:", field.name);
+          }
+        }
+      });
+    });
+  }, [tenant?.id, idEdicao, sections]); // Adicionada dependências para agilidade
   // 3. ATUALIZADOR INDUSTRIAL DE CAMPOS (Suporta 'endereco.cep')
   const updateField = (name: string, val: any) => {
     // 1. Mantém a sua lógica de limpar o erro visual
