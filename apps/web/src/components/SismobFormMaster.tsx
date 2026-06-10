@@ -82,18 +82,34 @@ export default function SismobFormMaster({
   useEffect(() => {
     if (!tenant?.id) return;
 
-    // A. Carrega Edição
+    // --- PARTE A: CARGA DE DADOS PARA EDIÇÃO ---
     if (idEdicao) {
+      console.log(
+        `📡 [SISMOB] Buscando dados para edição: ${endpoint}/${idEdicao}`,
+      );
+      setLoading(true);
+
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
-        .then((res) =>
-          setFormData(Array.isArray(res.data) ? res.data[0] : res.data),
-        );
+        .then((res) => {
+          // MÁGICA INDUSTRIAL: Aceita o dado mesmo que venha em lista [ { ... } ]
+          const data = Array.isArray(res.data) ? res.data[0] : res.data;
+
+          console.log("📂 [SISMOB] Dados recebidos da API:", data);
+
+          if (data) {
+            // Injeta os dados no formulário (Incluindo o objeto 'endereco' que o Service nuclear agora envia)
+            setFormData(data);
+          }
+        })
+        .catch((err) => console.error("❌ Erro ao carregar registro:", err))
+        .finally(() => setLoading(false));
     }
 
-    // B. Carrega os Combos (Proprietários, Unidades, etc)
+    // --- PARTE B: CARGA DOS COMBOS (Lookups Automáticos) ---
+    // Varrermos o mapa para preencher selects de Proprietários, Filiais, etc.
     sections?.forEach((section: any) => {
       section.fields?.forEach(async (field: any) => {
         if (
@@ -101,24 +117,49 @@ export default function SismobFormMaster({
           !field.options
         ) {
           try {
-            let url =
-              field.name === "unidade_id"
-                ? "/configuracoes/unidades"
-                : field.name === "proprietario_id"
-                  ? "/pessoas?papel=3"
-                  : `/configuracoes/${field.name.replace("_id", "s")}`;
+            let urlLookup = "";
+            let paramsLookup: any = { imobiliariaId: tenant.id };
 
-            const res = await api.get(url, {
-              params: { imobiliariaId: tenant.id },
-            });
-            setOptions((prev: any) => ({ ...prev, [field.name]: res.data }));
+            // REGRAS DE ROTEAMENTO DE LOOKUP
+            if (field.name === "unidade_id") {
+              urlLookup = "/configuracoes/unidades";
+            } else if (field.name === "proprietario_id") {
+              urlLookup = "/pessoas";
+              paramsLookup.papel = "3"; // Filtra apenas Donos de Imóveis
+            } else if (
+              field.name === "atributos" ||
+              field.entity === "atributos"
+            ) {
+              urlLookup = "/configuracoes/atributos";
+            } else {
+              // Regra Genérica: banco_id -> /configuracoes/bancos
+              const entity =
+                field.entity ||
+                field.name.replace("_id", "s").replace("_", "-");
+              urlLookup = `/configuracoes/${entity}`;
+            }
+
+            const res = await api.get(urlLookup, { params: paramsLookup });
+            const listaValores = Array.isArray(res.data)
+              ? res.data
+              : res.data
+                ? [res.data]
+                : [];
+
+            // Alimenta o estado de opções global do formulário
+            setOptions((prev: any) => ({
+              ...prev,
+              [field.name]: listaValores,
+            }));
           } catch (e) {
-            console.warn("Erro lookup:", field.name);
+            console.warn(
+              `⚠️ [SISMOB] Falha ao carregar opções para: ${field.name}`,
+            );
           }
         }
       });
     });
-  }, [tenant?.id, idEdicao, sections]); // Adicionada dependências para agilidade
+  }, [tenant?.id, idEdicao, sections, endpoint]); // Re-executa se o tenant ou o ID mudar
   // 3. ATUALIZADOR INDUSTRIAL DE CAMPOS (Suporta 'endereco.cep')
   const updateField = (name: string, val: any) => {
     // 1. Mantém a sua lógica de limpar o erro visual

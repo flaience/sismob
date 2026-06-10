@@ -58,27 +58,43 @@ export class ImoveisService {
    */
   async findOne(id: number, tenantId: string) {
     try {
-      const tableImoveis = schema.imoveis as any;
-      const tableEnderecos = schema.enderecos as any;
+      console.log(`📡 [SISMOB v2.0] Buscando Imóvel Completo ID: ${id}`);
 
-      // BUSCA COM JOIN: Imóvel + Endereço
-      const results = await this.db
-        .select()
-        .from(tableImoveis)
-        .leftJoin(tableEnderecos, eq(tableEnderecos.imovel_id, tableImoveis.id))
-        .where(
-          and(eq(tableImoveis.id, id), eq(tableImoveis.tenant_id, tenantId)),
-        )
-        .limit(1);
+      // O TIRO DE MISERICÓRDIA: SQL Puro com LEFT JOIN
+      // Buscamos o Imóvel e o Endereço de uma vez só, sem filtros do Drizzle
+      const res = await this.db.execute(sql`
+        SELECT 
+          i.*,
+          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        FROM imoveis i
+        LEFT JOIN enderecos e ON e.imovel_id = i.id
+        WHERE i.id = ${id} AND i.tenant_id = ${tenantId}
+        LIMIT 1
+      `);
 
-      if (results.length === 0) return null;
+      const rows = res.rows || res;
+      if (!rows || rows.length === 0) {
+        console.warn(`⚠️ [SISMOB] Nenhum dado encontrado para o ID ${id}`);
+        return null;
+      }
 
-      const row = results[0];
+      const row = rows[0];
+
+      // Formatação Industrial: Reconstruímos o objeto para o SismobFormMaster ler
       return {
-        ...row.imoveis,
-        endereco: row.enderecos || { cep: '', logradouro: '' },
+        ...row,
+        // Agrupamos os campos de endereço no objeto que o seu Mapa espera
+        endereco: {
+          cep: row.cep || '',
+          logradouro: row.logradouro || '',
+          numero: row.numero || '',
+          bairro: row.bairro || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
+        },
       };
-    } catch (e) {
+    } catch (e: any) {
+      console.error('❌ [SISMOB FATAL]: Erro na busca nuclear:', e.message);
       return null;
     }
   }
