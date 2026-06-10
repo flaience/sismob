@@ -256,12 +256,13 @@ export const MAPA_SISMOB: any = {
     entity: "imoveis",
     columns: [
       { label: "Título", key: "titulo" },
-      { label: "Preço", key: "preco_venda" },
+      { label: "Tipo", key: "tipo" }, // Agora vai aparecer no Grid
+      { label: "Valor", key: "preco_venda" },
       { label: "Status", key: "status" },
     ],
     sections: [
       {
-        title: "Apresentação e Unidade",
+        title: "Apresentação e Tipo de Imóvel",
         fields: [
           {
             name: "titulo",
@@ -271,6 +272,40 @@ export const MAPA_SISMOB: any = {
             fullWidth: true,
           },
           {
+            name: "descricao",
+            label: "Descrição Detalhada",
+            type: "text",
+            fullWidth: true,
+          },
+
+          // 🚀 O CAMPO QUE FALTAVA (O TIRO DE MISERICÓRDIA NO ERRO 500)
+          {
+            name: "tipo",
+            label: "Tipo de Imóvel",
+            type: "select",
+            required: true,
+            options: [
+              { label: "Casa", value: "casa" },
+              { label: "Apartamento", value: "apto" },
+              { label: "Terreno / Lote", value: "terreno" },
+              { label: "Chácara / Sítio", value: "chacara" },
+              { label: "Cobertura", value: "cobertura" },
+              { label: "Sala Comercial", value: "sala" },
+            ],
+          },
+
+          {
+            name: "status",
+            label: "Situação Atual",
+            type: "select",
+            required: true,
+            options: [
+              { label: "Disponível", value: "disponivel" },
+              { label: "Vendido", value: "vendido" },
+              { label: "Locado", value: "locado" },
+            ],
+          },
+          {
             name: "proprietario_id",
             label: "Proprietário (Dono)",
             type: "select",
@@ -278,36 +313,26 @@ export const MAPA_SISMOB: any = {
           },
           {
             name: "unidade_id",
-            label: "Filial Responsável",
+            label: "Unidade Responsável",
             type: "select",
             required: true,
-          },
-          {
-            name: "status",
-            label: "Situação",
-            type: "select",
-            options: [
-              { label: "Disponível", value: "disponivel" },
-              { label: "Vendido", value: "vendido" },
-            ],
           },
         ],
       },
       {
         title: "Localização",
         fields: [
-          { name: "cep", label: "CEP", type: "text" },
-          // ATENÇÃO: Nomes na RAIZ (sem ponto), idênticos ao seu schema.ts
+          { name: "endereco.cep", label: "CEP", type: "text" },
           {
-            name: "logradouro",
+            name: "endereco.logradouro",
             label: "Rua / Avenida",
             type: "text",
             fullWidth: true,
           },
-          { name: "numero", label: "Nº", type: "text" },
-          { name: "bairro", label: "Bairro", type: "text" },
-          { name: "cidade", label: "Cidade", type: "text" },
-          { name: "estado", label: "UF", type: "text" },
+          { name: "endereco.numero", label: "Nº", type: "text" },
+          { name: "endereco.bairro", label: "Bairro", type: "text" },
+          { name: "endereco.cidade", label: "Cidade", type: "text" },
+          { name: "endereco.estado", label: "UF", type: "text" },
         ],
       },
       {
@@ -323,27 +348,23 @@ export const MAPA_SISMOB: any = {
         ],
       },
       {
-        title: "Acessórios e Comodidades (Cardápio)",
+        title: "Acessórios (Cardápio)",
         fields: [
           {
             name: "atributos",
-            label: "Selecione o que o imóvel possui",
+            label: "Marque os diferenciais",
             type: "checklist",
             entity: "atributos",
           },
         ],
       },
       {
-        title: "Galeria de Mídias Profissional",
+        title: "Mídia Profissional",
         fields: [
-          {
-            name: "midias",
-            label: "Fotos (Capa e 360° são marcadas no atalho)",
-            type: "gallery",
-          },
+          { name: "midias", label: "Galeria de Fotos", type: "gallery" },
           {
             name: "video_url",
-            label: "Link do Vídeo Externo (YouTube/Drone)",
+            label: "Link Vídeo (YouTube)",
             type: "text",
             fullWidth: true,
           },
@@ -351,7 +372,7 @@ export const MAPA_SISMOB: any = {
       },
     ],
     aiMetadata:
-      "Imóveis com endereço estruturado e acessórios marcados permitem que a IA faça filtros cirúrgicos e vistorias automáticas.",
+      "Imóveis sem 'Tipo' definido não aparecem nos filtros do portal. Garanta o preenchimento para que a IA consiga recomendar para os leads certos.",
   },
   // 1. O PAI: Categorias (Ex: Lazer, Estrutura)
   "categorias-atributos": {

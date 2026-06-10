@@ -114,54 +114,98 @@ export class ImoveisService {
   async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
+        // 1. EXTRAÇÃO E LIMPEZA
         const {
           id,
           atributos,
-          midias,
-          endereco,
+          midias, // Array de objetos {url, tipo, is_capa}
+          endereco, // Objeto vindo da SECAO_ENDERECO {logradouro, numero, etc}
           created_at,
           updated_at,
           ...limpo
         } = dto;
-        const table = schema.imoveis as any;
-        const tableLink = schema.imoveisAtributos as any;
 
-        const rua = endereco?.logradouro || limpo.logradouro || '';
-        const num = endereco?.numero || limpo.numero || 'SN';
-        const bairro = endereco?.bairro || limpo.bairro || '';
+        const tableImoveis = schema.imoveis as any;
+        const tableLinkAtributos = schema.imoveisAtributos as any;
+        const tableMidias = schema.midias as any;
 
+        // 2. MONTAGEM DO PAYLOAD (Aplainando o endereço para a raiz da tabela)
         const payload = {
           ...limpo,
-          ...endereco,
           tenant_id: tenantId,
-          endereco_original: `${rua}, ${num} - ${bairro}`,
+          // Mapeia os campos do objeto 'endereco' para as colunas da tabela
+          cep: endereco?.cep || limpo.cep || '',
+          logradouro: endereco?.logradouro || limpo.logradouro || '',
+          numero: endereco?.numero || limpo.numero || 'SN',
+          bairro: endereco?.bairro || limpo.bairro || '',
+          cidade: endereco?.cidade || limpo.cidade || '',
+          estado: endereco?.estado || limpo.estado || '',
+          // Campo obrigatório que une tudo
+          endereco_original: `${endereco?.logradouro || limpo.logradouro || ''}, ${endereco?.numero || 'SN'} - ${endereco?.bairro || ''}`,
+
+          // Conversão de valores técnicos
           unidade_id: limpo.unidade_id ? Number(limpo.unidade_id) : null,
-          preco_venda: limpo.preco_venda?.toString() || '0',
-          area_privativa: limpo.area_privativa?.toString() || '0',
+          preco_venda: limpo.preco_venda ? limpo.preco_venda.toString() : '0',
+          area_privativa: limpo.area_privativa
+            ? limpo.area_privativa.toString()
+            : '0',
           updated_at: new Date(),
         };
 
         let imovelId = id;
+
+        // 3. SALVA O IMÓVEL (Master)
         if (id && id !== 'undefined') {
-          await tx.update(table).set(payload).where(eq(table.id, id));
+          await tx
+            .update(tableImoveis)
+            .set(payload)
+            .where(eq(tableImoveis.id, id));
         } else {
-          const [novo] = await tx.insert(table).values(payload).returning();
+          const [novo] = await tx
+            .insert(tableImoveis)
+            .values(payload)
+            .returning();
           imovelId = novo.id;
         }
 
+        // 4. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
         if (atributos && Array.isArray(atributos)) {
-          await tx.delete(tableLink).where(eq(tableLink.imovel_id, imovelId));
-          const ins = atributos.map((aid: any) => ({
+          await tx
+            .delete(tableLinkAtributos)
+            .where(eq(tableLinkAtributos.imovel_id, imovelId));
+          const insAttr = atributos.map((aid: any) => ({
             imovel_id: imovelId,
             atributo_id: Number(aid),
           }));
-          if (ins.length > 0) await tx.insert(tableLink).values(ins);
+          if (insAttr.length > 0)
+            await tx.insert(tableLinkAtributos).values(insAttr);
+        }
+
+        // 5. GRAVAÇÃO DE MÍDIAS (O que faltava no seu código!)
+        if (midias && Array.isArray(midias)) {
+          // Limpa mídias antigas para não duplicar na edição
+          await tx
+            .delete(tableMidias)
+            .where(eq(tableMidias.imovel_id, imovelId));
+
+          const insMidias = midias.map((m: any, idx: number) => ({
+            imovel_id: imovelId,
+            url: m.url,
+            tipo: m.tipo || 'foto_interna',
+            is_capa: m.is_capa || idx === 0,
+            ordem: idx,
+          }));
+
+          if (insMidias.length > 0)
+            await tx.insert(tableMidias).values(insMidias);
         }
 
         return { id: imovelId, success: true };
       } catch (e: any) {
-        console.error('❌ [SISMOB] Falha na gravação do imóvel:', e.message);
-        throw new InternalServerErrorException(e.message);
+        console.error('❌ [SISMOB DB FATAL]:', e.message);
+        throw new InternalServerErrorException(
+          `Falha industrial: ${e.message}`,
+        );
       }
     });
   }
