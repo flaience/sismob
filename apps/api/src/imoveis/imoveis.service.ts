@@ -58,14 +58,11 @@ export class ImoveisService {
    */
   async findOne(id: number, tenantId: string) {
     try {
-      console.log(`📡 [SISMOB v2.0] Buscando Imóvel Completo ID: ${id}`);
+      console.log(`📡 [SISMOB v2.1] Buscando Imóvel Completo ID: ${id}`);
 
-      // O TIRO DE MISERICÓRDIA: SQL Puro com LEFT JOIN
-      // Buscamos o Imóvel e o Endereço de uma vez só, sem filtros do Drizzle
+      // A. Busca Imóvel + Endereço (SQL Puro para bypass de cache)
       const res = await this.db.execute(sql`
-        SELECT 
-          i.*,
-          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        SELECT i.*, e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
         FROM imoveis i
         LEFT JOIN enderecos e ON e.imovel_id = i.id
         WHERE i.id = ${id} AND i.tenant_id = ${tenantId}
@@ -73,17 +70,29 @@ export class ImoveisService {
       `);
 
       const rows = res.rows || res;
-      if (!rows || rows.length === 0) {
-        console.warn(`⚠️ [SISMOB] Nenhum dado encontrado para o ID ${id}`);
-        return null;
-      }
-
+      if (!rows || rows.length === 0) return null;
       const row = rows[0];
 
-      // Formatação Industrial: Reconstruímos o objeto para o SismobFormMaster ler
+      // B. Busca Mídias vinculadas (O que tinha "sumido")
+      const tableMidias = schema.midias as any;
+      const midias = await this.db
+        .select()
+        .from(tableMidias)
+        .where(eq(tableMidias.imovel_id, id));
+
+      // C. Busca Atributos vinculados (O que tinha "sumido")
+      const tableAttr = schema.imoveisAtributos as any;
+      const atributos = await this.db
+        .select()
+        .from(tableAttr)
+        .where(eq(tableAttr.imovel_id, id));
+
+      // D. MONTAGEM FINAL DO OBJETO
       return {
         ...row,
-        // Agrupamos os campos de endereço no objeto que o seu Mapa espera
+        midias: midias || [],
+        atributos: atributos.map((a: any) => a.atributo_id),
+        // Envelopa o endereço para o formulário ler endereco.logradouro
         endereco: {
           cep: row.cep || '',
           logradouro: row.logradouro || '',
@@ -94,7 +103,7 @@ export class ImoveisService {
         },
       };
     } catch (e: any) {
-      console.error('❌ [SISMOB FATAL]: Erro na busca nuclear:', e.message);
+      console.error('❌ [SISMOB] Erro na carga total:', e.message);
       return null;
     }
   }

@@ -53,21 +53,29 @@ export default function SismobFormMaster({
   // Garante que se você mudar de "Leads" para "Proprietários", o formulário
   // receba o novo 'papel' imediatamente sem precisar recarregar.
   // MOTOR DE BUSCA AUTOMÁTICA DE CEP (v5.0 Industrial)
+  // 2. MOTOR DE CEP INTELIGENTE (v2.1)
   useEffect(() => {
+    // Tenta pegar o CEP de dentro do objeto ou da raiz
     const cep = formData.endereco?.cep || formData.cep;
+
     if (cep?.length === 8) {
+      console.log("📡 [SISMOB] Consultando ViaCEP para:", cep);
       fetch(`https://viacep.com.br/ws/${cep}/json/`)
         .then((res) => res.json())
         .then((data) => {
           if (!data.erro) {
-            // Se o formulário usa 'endereco.cep', preenche aninhado (Pessoas)
-            if (formData.endereco || endpoint.includes("pessoas")) {
+            // DECISÃO DE TRILHO:
+            // Se o formulário já tem o objeto 'endereco' iniciado (Pessoas/Imobiliárias)
+            if (
+              formData.endereco &&
+              Object.keys(formData.endereco).length > 0
+            ) {
               updateField("endereco.logradouro", data.logradouro);
               updateField("endereco.bairro", data.bairro);
               updateField("endereco.cidade", data.localidade);
               updateField("endereco.estado", data.uf);
             } else {
-              // Se o formulário for plano (Imóveis/Bancos)
+              // Se for o caso de campos na RAIZ (Imóveis/Bancos)
               updateField("logradouro", data.logradouro);
               updateField("bairro", data.bairro);
               updateField("cidade", data.localidade);
@@ -162,25 +170,21 @@ export default function SismobFormMaster({
   }, [tenant?.id, idEdicao, sections, endpoint]); // Re-executa se o tenant ou o ID mudar
   // 3. ATUALIZADOR INDUSTRIAL DE CAMPOS (Suporta 'endereco.cep')
   const updateField = (name: string, val: any) => {
-    // 1. Mantém a sua lógica de limpar o erro visual
     setErrors((prev) => prev.filter((f) => f !== name));
 
-    // 2. LÓGICA DE CAMADA (Suporte a endereco.cep, endereco.logradouro, etc.)
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
       setFormData((prev: any) => ({
         ...prev,
         [parent]: {
-          ...(prev[parent] || {}), // Preserva o que já foi digitado no endereço
-          [child]: val, // Atualiza apenas o campo específico (ex: cep)
+          ...(prev[parent] || {}), // Mantém o que já existia (ex: não apaga o CEP ao digitar a rua)
+          [child]: val,
         },
       }));
     } else {
-      // 3. LÓGICA SIMPLES (Para campos como 'nome', 'email', 'papel')
       setFormData((prev: any) => ({ ...prev, [name]: val }));
     }
   };
-
   useEffect(() => {
     if (!tenant?.id) return;
 
