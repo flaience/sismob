@@ -120,6 +120,9 @@ export const enderecos = pgTable("enderecos", {
   pessoa_id: uuid("pessoa_id").references(() => pessoas.id, {
     onDelete: "cascade",
   }),
+  imovel_id: integer("imovel_id").references(() => imoveis.id, {
+    onDelete: "cascade",
+  }),
   cep: varchar("cep", { length: 10 }).notNull(),
   logradouro: varchar("logradouro", { length: 255 }).notNull(),
   numero: varchar("numero", { length: 20 }).notNull(),

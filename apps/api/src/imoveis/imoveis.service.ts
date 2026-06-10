@@ -59,51 +59,26 @@ export class ImoveisService {
   async findOne(id: number, tenantId: string) {
     try {
       const tableImoveis = schema.imoveis as any;
-      const tableMidias = schema.midias as any;
-      const tableAttr = schema.imoveisAtributos as any;
+      const tableEnderecos = schema.enderecos as any;
 
-      // A. Busca o Imóvel
+      // BUSCA COM JOIN: Imóvel + Endereço
       const results = await this.db
         .select()
         .from(tableImoveis)
+        .leftJoin(tableEnderecos, eq(tableEnderecos.imovel_id, tableImoveis.id))
         .where(
           and(eq(tableImoveis.id, id), eq(tableImoveis.tenant_id, tenantId)),
         )
         .limit(1);
 
+      if (results.length === 0) return null;
+
       const row = results[0];
-      if (!row) return null;
-
-      // B. Busca Mídias (O erro morre aqui)
-      const midias = await this.db
-        .select()
-        .from(tableMidias)
-        .where(eq(tableMidias.imovel_id, id));
-
-      // C. Busca Atributos (O erro morre aqui)
-      const atributos = await this.db
-        .select()
-        .from(tableAttr)
-        .where(eq(tableAttr.imovel_id, id));
-
       return {
-        ...row,
-        midias: midias || [],
-        atributos: atributos.map((a: any) => a.atributo_id),
-        endereco: {
-          cep: row.cep || '',
-          logradouro: row.logradouro || '',
-          numero: row.numero || '',
-          bairro: row.bairro || '',
-          cidade: row.cidade || '',
-          estado: row.estado || '',
-        },
+        ...row.imoveis,
+        endereco: row.enderecos || { cep: '', logradouro: '' },
       };
-    } catch (e: any) {
-      console.error(
-        '❌ [SISMOB] Erro ao carregar detalhe do imóvel:',
-        e.message,
-      );
+    } catch (e) {
       return null;
     }
   }
@@ -114,37 +89,33 @@ export class ImoveisService {
   async upsert(dto: any, files: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        // 1. EXTRAÇÃO E LIMPEZA
+        // 1. EXTRAÇÃO E LIMPEZA (Puxando o objeto 'endereco' do seu Mapa)
         const {
           id,
           atributos,
-          midias, // Array de objetos {url, tipo, is_capa}
-          endereco, // Objeto vindo da SECAO_ENDERECO {logradouro, numero, etc}
+          midias,
+          endereco, // Objeto {cep, logradouro, numero, bairro, cidade, estado}
           created_at,
           updated_at,
           ...limpo
         } = dto;
 
         const tableImoveis = schema.imoveis as any;
+        const tableEnderecos = schema.enderecos as any;
         const tableLinkAtributos = schema.imoveisAtributos as any;
         const tableMidias = schema.midias as any;
 
-        // 2. MONTAGEM DO PAYLOAD (Aplainando o endereço para a raiz da tabela)
-        const payload = {
+        // 2. MONTAGEM DO PAYLOAD DO IMÓVEL (Master)
+        // Mantemos uma cópia do endereço original aqui para busca rápida (Pilar Agilidade)
+        const enderecoTexto = `${endereco?.logradouro || ''}, ${endereco?.numero || 'SN'} - ${endereco?.bairro || ''}`;
+
+        const payloadImovel = {
           ...limpo,
           tenant_id: tenantId,
-          // Mapeia os campos do objeto 'endereco' para as colunas da tabela
-          cep: endereco?.cep || limpo.cep || '',
-          logradouro: endereco?.logradouro || limpo.logradouro || '',
-          numero: endereco?.numero || limpo.numero || 'SN',
-          bairro: endereco?.bairro || limpo.bairro || '',
-          cidade: endereco?.cidade || limpo.cidade || '',
-          estado: endereco?.estado || limpo.estado || '',
-          // Campo obrigatório que une tudo
-          endereco_original: `${endereco?.logradouro || limpo.logradouro || ''}, ${endereco?.numero || 'SN'} - ${endereco?.bairro || ''}`,
-
-          // Conversão de valores técnicos
+          endereco_original: enderecoTexto,
+          tipo: limpo.tipo, // Resolve o erro 500 do campo 'tipo'
           unidade_id: limpo.unidade_id ? Number(limpo.unidade_id) : null,
+          proprietario_id: limpo.proprietario_id || null,
           preco_venda: limpo.preco_venda ? limpo.preco_venda.toString() : '0',
           area_privativa: limpo.area_privativa
             ? limpo.area_privativa.toString()
@@ -154,21 +125,44 @@ export class ImoveisService {
 
         let imovelId = id;
 
-        // 3. SALVA O IMÓVEL (Master)
+        // 3. PERSISTÊNCIA DO IMÓVEL (Gera o ID para as tabelas filhas)
         if (id && id !== 'undefined') {
           await tx
             .update(tableImoveis)
-            .set(payload)
+            .set(payloadImovel)
             .where(eq(tableImoveis.id, id));
         } else {
           const [novo] = await tx
             .insert(tableImoveis)
-            .values(payload)
+            .values(payloadImovel)
             .returning();
           imovelId = novo.id;
         }
 
-        // 4. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
+        // 4. GRAVAÇÃO DO ENDEREÇO NA TABELA 'ENDERECOS' (O que você solicitou!)
+        if (endereco && (endereco.cep || endereco.logradouro)) {
+          console.log(
+            `🏠 [SISMOB] Sincronizando endereço na tabela vinculada para o imóvel: ${imovelId}`,
+          );
+
+          // Limpa endereço anterior para não duplicar
+          await tx
+            .delete(tableEnderecos)
+            .where(eq(tableEnderecos.imovel_id, imovelId));
+
+          // Insere o novo vínculo
+          await tx.insert(tableEnderecos).values({
+            imovel_id: imovelId,
+            cep: endereco.cep || '00000-000',
+            logradouro: endereco.logradouro || 'Não informado',
+            numero: endereco.numero || 'SN',
+            bairro: endereco.bairro || 'Não informado',
+            cidade: endereco.cidade || 'Não informado',
+            estado: endereco.estado || '??',
+          });
+        }
+
+        // 5. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
         if (atributos && Array.isArray(atributos)) {
           await tx
             .delete(tableLinkAtributos)
@@ -181,13 +175,11 @@ export class ImoveisService {
             await tx.insert(tableLinkAtributos).values(insAttr);
         }
 
-        // 5. GRAVAÇÃO DE MÍDIAS (O que faltava no seu código!)
+        // 6. GRAVAÇÃO DE MÍDIAS (Galeria)
         if (midias && Array.isArray(midias)) {
-          // Limpa mídias antigas para não duplicar na edição
           await tx
             .delete(tableMidias)
             .where(eq(tableMidias.imovel_id, imovelId));
-
           const insMidias = midias.map((m: any, idx: number) => ({
             imovel_id: imovelId,
             url: m.url,
@@ -195,7 +187,6 @@ export class ImoveisService {
             is_capa: m.is_capa || idx === 0,
             ordem: idx,
           }));
-
           if (insMidias.length > 0)
             await tx.insert(tableMidias).values(insMidias);
         }
@@ -204,12 +195,11 @@ export class ImoveisService {
       } catch (e: any) {
         console.error('❌ [SISMOB DB FATAL]:', e.message);
         throw new InternalServerErrorException(
-          `Falha industrial: ${e.message}`,
+          `Falha na gravação industrial: ${e.message}`,
         );
       }
     });
   }
-
   /**
    * 4. LISTAGEM DO GRID
    */
