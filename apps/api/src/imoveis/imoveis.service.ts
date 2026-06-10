@@ -140,28 +140,36 @@ export class ImoveisService {
         }
 
         // 4. GRAVAÇÃO DO ENDEREÇO NA TABELA 'ENDERECOS' (O que você solicitou!)
+        // 4. GRAVAÇÃO DO ENDEREÇO NA TABELA 'ENDERECOS' (v1.70 Nuclear)
         if (endereco && (endereco.cep || endereco.logradouro)) {
           console.log(
-            `🏠 [SISMOB] Sincronizando endereço na tabela vinculada para o imóvel: ${imovelId}`,
+            `🏠 [SISMOB v1.70] Injetando endereço para imóvel: ${imovelId}`,
           );
 
-          // Limpa endereço anterior para não duplicar
-          await tx
-            .delete(tableEnderecos)
-            .where(eq(tableEnderecos.imovel_id, imovelId));
+          // O TIRO DE MISERICÓRDIA: Usamos SQL puro no DELETE e no INSERT
+          // para o Drizzle não apagar a coluna 'imovel_id'
 
-          // Insere o novo vínculo
-          await tx.insert(tableEnderecos).values({
-            imovel_id: imovelId,
-            cep: endereco.cep || '00000-000',
-            logradouro: endereco.logradouro || 'Não informado',
-            numero: endereco.numero || 'SN',
-            bairro: endereco.bairro || 'Não informado',
-            cidade: endereco.cidade || 'Não informado',
-            estado: endereco.estado || '??',
-          });
+          // A. Limpa rastro anterior (Bypass de Schema)
+          await tx.execute(sql`
+    DELETE FROM enderecos WHERE imovel_id = ${imovelId}
+  `);
+
+          // B. Insere o novo vínculo (Bypass de Schema)
+          await tx.execute(sql`
+    INSERT INTO enderecos (imovel_id, cep, logradouro, numero, bairro, cidade, estado)
+    VALUES (
+      ${imovelId}, 
+      ${endereco.cep || '00000-000'}, 
+      ${endereco.logradouro || 'Não informado'}, 
+      ${endereco.numero || 'SN'}, 
+      ${endereco.bairro || 'N/A'}, 
+      ${endereco.cidade || 'N/A'}, 
+      ${endereco.estado || '??'}
+    )
+  `);
+
+          console.log(`✅ [SISMOB] Endereço fixado na tabela vinculada.`);
         }
-
         // 5. GRAVAÇÃO DO CARDÁPIO DE ATRIBUTOS (Relacional)
         if (atributos && Array.isArray(atributos)) {
           await tx
