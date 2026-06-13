@@ -1,211 +1,79 @@
 import {
   Injectable,
-  InternalServerErrorException,
   Inject,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and, ilike, or } from 'drizzle-orm';
+import { eq, and, ilike } from 'drizzle-orm';
+import {
+  persistirEnderecoLego,
+  removerEnderecoLego,
+} from '../common/utils/address-factory';
 
 @Injectable()
 export class PessoasService {
-  // 1. Usamos 'any' no banco para evitar conflito de versão do Drizzle entre pacotes
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
-  // 2. Busca por ID Único (Resolvendo erro do Controller)
-  // apps/api/src/pessoas/pessoas.service.ts
+  async findByRole(papel: string, tenantId: string, search?: string) {
+    const p = schema.pessoas as any;
+    const e = schema.enderecos as any;
+    let conds = [eq(p.papel, papel), eq(p.tenant_id, tenantId)];
+    if (search) conds.push(ilike(p.nome, `%${search}%`));
 
-  // Procure o método findOne e substitua por este:
-  // 1. BUSCA ÚNICA (Blindada)
-  async findOne(id: string, tenantId: string) {
-    if (!id || id === 'undefined' || !tenantId || tenantId === 'undefined')
-      return null;
-
-    try {
-      const tablePessoas = schema.pessoas as any;
-      const tableEnderecos = schema.enderecos as any;
-
-      // 1. BUSCA COM JOIN (Une Pessoa + Endereço em um único tiro)
-      const results = await this.db
-        .select()
-        .from(tablePessoas)
-        .leftJoin(tableEnderecos, eq(tableEnderecos.pessoa_id, tablePessoas.id))
-        .where(
-          and(eq(tablePessoas.id, id), eq(tablePessoas.tenant_id, tenantId)),
-        )
-        .limit(1);
-
-      if (results.length === 0) return null;
-
-      // 2. FORMATAÇÃO INDUSTRIAL: Transforma o resultado do Join em um objeto único
-      // O Drizzle retorna { pessoas: {...}, enderecos: {...} }
-      // Nós transformamos em { ...pessoas, endereco: {...} } para o Frontend ler fácil
-      const registro = results[0];
-      return {
-        ...registro.pessoas,
-        endereco: registro.enderecos || {
-          cep: '',
-          logradouro: '',
-          numero: '',
-          bairro: '',
-          cidade: '',
-          estado: '',
-        },
-      };
-    } catch (error: any) {
-      console.error(
-        '❌ [SISMOB] Erro ao carregar perfil completo:',
-        error.message,
-      );
-      return null;
-    }
+    return await this.db
+      .select()
+      .from(p)
+      .leftJoin(e, eq(p.endereco_id, e.id))
+      .where(and(...conds));
   }
-  // 3. Salvar (Inclusão e Alteração) - RECEBE 2 ARGUMENTOS
+
+  async findOne(id: string, tenantId: string) {
+    const p = schema.pessoas as any;
+    const e = schema.enderecos as any;
+    const res = await this.db
+      .select()
+      .from(p)
+      .leftJoin(e, eq(p.endereco_id, e.id))
+      .where(and(eq(p.id, id), eq(p.tenant_id, tenantId)))
+      .limit(1);
+
+    if (!res[0]) return null;
+    return { ...res[0].pessoas, endereco: res[0].enderecos };
+  }
+
   async save(dto: any, tenantId: string) {
     return await this.db.transaction(async (tx: any) => {
-      try {
-        // 1. LIMPEZA E EXTRAÇÃO
-        // Extraímos os campos que o banco gera sozinho ou que trataremos manualmente
-        const { id, endereco, created_at, updated_at, ...dadosRestantes } = dto;
+      const { id, endereco, ...dados } = dto;
+      const pTable = schema.pessoas as any;
 
-        const tablePessoas = schema.pessoas as any;
-        const tableEnderecos = schema.enderecos as any;
-        const tableUnidades = schema.unidades as any;
+      const enderecoId = await persistirEnderecoLego(
+        tx,
+        endereco,
+        dto.endereco_id,
+      );
+      const payload = {
+        ...dados,
+        tenant_id: tenantId,
+        endereco_id: enderecoId,
+        updated_at: new Date(),
+      };
 
-        // 2. RESOLVE UNIDADE_ID (Garante que nunca seja null para não quebrar a FK)
-        let unidadeIdFinal = dadosRestantes.unidade_id
-          ? Number(dadosRestantes.unidade_id)
-          : null;
-        if (!unidadeIdFinal) {
-          const matriz = await tx
-            .select()
-            .from(tableUnidades)
-            .where(
-              and(
-                eq(tableUnidades.tenant_id, tenantId),
-                eq(tableUnidades.is_matriz, true),
-              ),
-            )
-            .limit(1);
-          unidadeIdFinal = matriz[0]?.id || null;
-        }
-
-        // 3. MONTAGEM DO PAYLOAD BLINDADO
-        const payloadPessoa = {
-          ...dadosRestantes, // Espalha nome, email, telefone, etc.
-          tenant_id: tenantId,
-          unidade_id: unidadeIdFinal,
-
-          // 1. BLINDAGEM DE DOCUMENTO: Se não vier, gera um ID de Lead para não travar o banco
-          documento: dadosRestantes.documento || `DOC-${Date.now()}`,
-
-          // 2. BLINDAGEM DE PAPEL: OBRIGATÓRIO!
-          // Ele vem do frontend via initialData. Se falhar, assume '2' (Lead)
-          papel: String(dadosRestantes.papel || '2'),
-
-          // 3. BLINDAGEM DE TIPO: Garante que seja 'f' ou 'j'
-          tipo:
-            dadosRestantes.tipo === 'f' || dadosRestantes.tipo === 'j'
-              ? dadosRestantes.tipo
-              : 'f',
-
-          updated_at: new Date(),
-        };
-
-        let pessoaId = id;
-
-        // 4. PERSISTÊNCIA NO BANCO
-        if (id && id !== 'undefined') {
-          console.log(`🏭 [SISMOB] Atualizando Registro: ${id}`);
-          await tx
-            .update(tablePessoas)
-            .set(payloadPessoa)
-            .where(eq(tablePessoas.id, id));
-        } else {
-          console.log(`🏭 [SISMOB] Criando Novo Registro em ${tenantId}`);
-          const [nova] = await tx
-            .insert(tablePessoas)
-            .values(payloadPessoa)
-            .returning();
-          pessoaId = nova.id;
-        }
-
-        // 5. GRAVAÇÃO DO ENDEREÇO (Detail)
-        if (endereco && (endereco.cep || endereco.logradouro)) {
-          // Limpa rastro anterior
-          await tx
-            .delete(tableEnderecos)
-            .where(eq(tableEnderecos.pessoa_id, pessoaId));
-
-          // Insere novo endereço com valores default para campos obrigatórios do banco
-          await tx.insert(tableEnderecos).values({
-            ...endereco,
-            pessoa_id: pessoaId,
-            numero: endereco.numero || 'SN',
-            bairro: endereco.bairro || 'N/A',
-            cidade: endereco.cidade || 'N/A',
-            estado: endereco.estado || '??',
-          });
-        }
-
-        return { id: pessoaId, success: true };
-      } catch (e: any) {
-        console.error('❌ [DB FATAL]:', e.message);
-        throw new InternalServerErrorException(
-          `Falha industrial no banco: ${e.message}`,
-        );
+      if (id && id !== 'undefined') {
+        await tx.update(pTable).set(payload).where(eq(pTable.id, id));
+        return { id, success: true };
+      } else {
+        const [nova] = await tx.insert(pTable).values(payload).returning();
+        return { id: nova.id, success: true };
       }
     });
   }
 
-  // 4. Identificação por Host
-  async findImobiliariaByHost(host: string) {
-    // Proteção contra host vazio
-    if (!host || host === 'undefined') return null;
-
-    try {
-      const table = schema.tenants as any;
-      const results = await this.db
-        .select()
-        .from(table)
-        .where(
-          or(
-            eq(table.dominio_customizado, host),
-            eq(table.slug, host.split('.')[0]),
-          ),
-        )
-        .limit(1);
-
-      return results.length > 0 ? results[0] : null;
-    } catch (e) {
-      return null;
-    }
-  }
-  // 5. Busca por Papel
-  async findByRole(papel: string, tenantId: string, search?: string) {
-    try {
-      const table = schema.pessoas as any;
-      let conds = [eq(table.papel, papel), eq(table.tenant_id, tenantId)];
-
-      // FILTRO DE BUSCA INDUSTRIAL
-      if (search && search !== 'undefined') {
-        conds.push(ilike(table.nome, `%${search}%`));
-      }
-
-      return await this.db
-        .select()
-        .from(table)
-        .where(and(...conds));
-    } catch (error: any) {
-      console.error('❌ [SISMOB] Erro ao filtrar:', error.message);
-      return [];
-    }
-  }
-
-  // 6. Remover
   async remove(id: string, tenantId: string) {
-    const table = schema.pessoas as any;
-    return await this.db
-      .delete(table)
-      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)));
+    return await this.db.transaction(async (tx: any) => {
+      const pTable = schema.pessoas as any;
+      const [reg] = await tx.select().from(pTable).where(eq(pTable.id, id));
+      if (reg?.endereco_id) await removerEnderecoLego(tx, reg.endereco_id);
+      return await tx.delete(pTable).where(eq(pTable.id, id));
+    });
   }
 }

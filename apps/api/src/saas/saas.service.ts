@@ -4,58 +4,53 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, sql, or } from 'drizzle-orm';
 import { buscarEnderecoVinculado } from '../common/utils/address-resolver';
+import { persistirEnderecoLego } from '../common/utils/address-factory';
 
 @Injectable()
 export class SaasService {
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
 
+  async buscarPorHost(host: string) {
+    if (!host || host === 'undefined') return null;
+    const table = schema.tenants as any;
+    const res = await this.db
+      .select()
+      .from(table)
+      .where(
+        or(
+          eq(table.dominio_customizado, host),
+          eq(table.slug, host.split('.')[0]),
+        ),
+      )
+      .limit(1);
+    return res[0] || null;
+  }
+
   /**
    * 1. LISTAGEM GLOBAL (Para o Luis)
    */
   async listarTenants() {
-    try {
-      const table = schema.tenants as any;
-      return await this.db.select().from(table).orderBy(desc(table.created_at));
-    } catch (e) {
-      return [];
-    }
+    const table = schema.tenants as any;
+    return await this.db.select().from(table);
   }
 
   /**
    * 2. BUSCA ÚNICA (Para o formulário de alteração)
    * Usa o seu Resolutor de Endereço Universal
    */
+
   async buscarUmTenant(id: string) {
-    try {
-      const tableTenants = schema.tenants as any;
-      const tablePessoas = schema.pessoas as any;
-
-      // Busca a Imobiliária
-      const [tenant] = await this.db
-        .select()
-        .from(tableTenants)
-        .where(eq(tableTenants.id, id))
-        .limit(1);
-      if (!tenant) return null;
-
-      // Busca o Dono para pegar o endereço e o nome real
-      const [dono] = await this.db
-        .select()
-        .from(tablePessoas)
-        .where(and(eq(tablePessoas.tenant_id, id), eq(tablePessoas.papel, '6')))
-        .limit(1);
-
-      return {
-        ...tenant,
-        nomeDono: dono?.nome || '',
-        // REUSO INDUSTRIAL: Chama sua função universal
-        endereco: dono ? await buscarEnderecoVinculado(this.db, dono.id) : null,
-      };
-    } catch (e) {
-      return null;
-    }
+    // Agora a busca é simples: pega o tenant e o seu endereço lego
+    const res = await this.db.execute(sql`
+      SELECT t.*, e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+      FROM tenants t
+      LEFT JOIN enderecos e ON e.id = t.endereco_id
+      WHERE t.id = ${id}
+    `);
+    const row = res.rows[0];
+    return { ...row, endereco: { ...row } }; // O FormMaster vai ler 'endereco.logradouro'
   }
 
   /**
@@ -66,11 +61,16 @@ export class SaasService {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined';
         const tenantId = dto.id;
-
         const tableTenants = schema.tenants as any;
         const tablePessoas = schema.pessoas as any;
-        const tableEnderecos = schema.enderecos as any;
         const tableUnidades = schema.unidades as any;
+
+        // 1. ENDEREÇO LEGO (Gravamos antes para ter o ID)
+        const enderecoId = await persistirEnderecoLego(
+          tx,
+          dto.endereco,
+          dto.endereco_id,
+        );
 
         const payloadTenant = {
           nome_conta: dto.nome_conta,
@@ -79,18 +79,18 @@ export class SaasService {
           slug: dto.slug,
           email_financeiro: dto.email_financeiro,
           telefone: dto.telefone || null,
+          endereco_id: enderecoId, // <--- VINCULO LEGO
           status: 'ativo',
           version_schema: '1.0.1',
           updated_at: new Date(),
         };
 
         if (isUpdate) {
-          // ATUALIZAÇÃO
           await tx
             .update(tableTenants)
             .set(payloadTenant)
             .where(eq(tableTenants.id, tenantId));
-
+          // Atualiza dados do dono
           await tx
             .update(tablePessoas)
             .set({ nome: dto.nomeDono, email: dto.email_financeiro })
@@ -101,12 +101,10 @@ export class SaasService {
               ),
             );
         } else {
-          // INCLUSÃO
           const [tenant] = await tx
             .insert(tableTenants)
             .values(payloadTenant)
             .returning();
-
           const [unidade] = await tx
             .insert(tableUnidades)
             .values({
@@ -116,26 +114,17 @@ export class SaasService {
             })
             .returning();
 
-          const [pessoa] = await tx
-            .insert(tablePessoas)
-            .values({
-              tenant_id: tenant.id,
-              unidade_id: unidade.id,
-              nome: dto.nomeDono || dto.nome_fantasia,
-              email: dto.email_financeiro,
-              documento: dto.documento || '000.000.000-00',
-              papel: '6',
-              is_admin: true,
-              cargo: 'ceo',
-            })
-            .returning();
-
-          if (dto.endereco) {
-            await tx.insert(tableEnderecos).values({
-              pessoa_id: pessoa.id,
-              ...dto.endereco,
-            });
-          }
+          await tx.insert(tablePessoas).values({
+            tenant_id: tenant.id,
+            unidade_id: unidade.id,
+            nome: dto.nomeDono || dto.nome_fantasia,
+            email: dto.email_financeiro,
+            documento: dto.documento || '000.000.000-00',
+            papel: '6',
+            is_admin: true,
+            cargo: 'ceo',
+            endereco_id: enderecoId, // Dono compartilha o endereço da sede
+          });
         }
         return { success: true };
       } catch (e: any) {

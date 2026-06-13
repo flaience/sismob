@@ -62,6 +62,7 @@ export const tipoMov = pgEnum("tipo_mov", ["c", "d"]);
 // ==========================================
 export const tenants = pgTable("tenants", {
   id: uuid("id").defaultRandom().primaryKey(),
+  endereco_id: integer("endereco_id").references(() => enderecos.id), // <--- O VINCULO
   nome_conta: varchar("nome_conta", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 100 }).unique().notNull(),
   dominio_customizado: varchar("dominio_customizado", { length: 255 }).unique(),
@@ -97,6 +98,7 @@ export const pessoas = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" })
       .notNull(),
     unidade_id: integer("unidade_id").references(() => unidades.id),
+    endereco_id: integer("endereco_id").references(() => enderecos.id), // <--- O VINCULO
     tipo: tipoFisicaJuridica("tipo").default("f"),
     papel: papelPessoa("papel").notNull(),
     nome: varchar("nome", { length: 255 }).notNull(),
@@ -117,20 +119,13 @@ export const pessoas = pgTable(
 
 export const enderecos = pgTable("enderecos", {
   id: serial("id").primaryKey(),
-  pessoa_id: uuid("pessoa_id").references(() => pessoas.id, {
-    onDelete: "cascade",
-  }),
-  imovel_id: integer("imovel_id").references(() => imoveis.id, {
-    onDelete: "cascade",
-  }),
-  cep: varchar("cep", { length: 10 }).notNull(),
-  logradouro: varchar("logradouro", { length: 255 }).notNull(),
-  numero: varchar("numero", { length: 20 }).notNull(),
-  bairro: varchar("bairro", { length: 100 }).notNull(),
-  cidade: varchar("cidade", { length: 100 }).notNull(),
-  estado: varchar("estado", { length: 2 }).notNull(),
+  cep: varchar("cep", { length: 10 }),
+  logradouro: varchar("logradouro", { length: 255 }),
+  numero: varchar("numero", { length: 20 }),
+  bairro: varchar("bairro", { length: 100 }),
+  cidade: varchar("cidade", { length: 100 }),
+  estado: varchar("estado", { length: 2 }),
 });
-
 // ==========================================
 // 4. IMÓVEIS E MÍDIAS
 // ==========================================
@@ -140,18 +135,10 @@ export const imoveis = pgTable("imoveis", {
     .references(() => tenants.id, { onDelete: "cascade" })
     .notNull(),
   unidade_id: integer("unidade_id").references(() => unidades.id),
+  endereco_id: integer("endereco_id").references(() => enderecos.id),
   titulo: varchar("titulo", { length: 255 }).notNull(),
   descricao: text("descricao"),
   tipo: varchar("tipo", { length: 50 }).notNull(),
-
-  // ENDEREÇO ESTRUTURADO (Separado como nas Pessoas)
-  cep: varchar("cep", { length: 10 }),
-  logradouro: varchar("logradouro", { length: 255 }),
-  numero: varchar("numero", { length: 20 }),
-  bairro: varchar("bairro", { length: 100 }),
-  cidade: varchar("cidade", { length: 100 }),
-  estado: varchar("estado", { length: 2 }),
-
   preco_venda: decimal("preco_venda", { precision: 12, scale: 2 }),
   preco_aluguel: decimal("preco_aluguel", { precision: 12, scale: 2 }),
   area_privativa: decimal("area_privativa", { precision: 10, scale: 2 }),
