@@ -1,15 +1,12 @@
-//src/pessoas/pessoas.module.ts
 import { Module } from '@nestjs/common';
 import { PessoasController } from './pessoas.controller';
 import { PessoasService } from './pessoas.service';
-import { AuthModule } from '../auth/auth.module'; // <--- Adicione este import
-import { SaasModule } from '../saas/saas.module';
+import { SaasModule } from '../saas/saas.module'; // Importação do módulo vizinho
 
-// linha teste
 @Module({
-  imports: [AuthModule, SaasModule], // <--- IMPORTANTE: Adicione o AuthModule aqui
+  // AQUI ESTÁ A CONEXÃO: Importamos o SaasModule inteiro
+  imports: [SaasModule],
   controllers: [PessoasController],
   providers: [PessoasService],
-  exports: [PessoasService],
 })
 export class PessoasModule {}
