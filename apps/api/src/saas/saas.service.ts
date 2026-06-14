@@ -42,15 +42,44 @@ export class SaasService {
    */
 
   async buscarUmTenant(id: string) {
-    // Agora a busca é simples: pega o tenant e o seu endereço lego
-    const res = await this.db.execute(sql`
-      SELECT t.*, e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
-      FROM tenants t
-      LEFT JOIN enderecos e ON e.id = t.endereco_id
-      WHERE t.id = ${id}
-    `);
-    const row = res.rows[0];
-    return { ...row, endereco: { ...row } }; // O FormMaster vai ler 'endereco.logradouro'
+    try {
+      const tableTenants = schema.tenants as any;
+      const tablePessoas = schema.pessoas as any;
+      const tableEnderecos = schema.enderecos as any;
+
+      // SQL INDUSTRIAL: Une Empresa + Dono + Endereço Lego
+      const res = await this.db.execute(sql`
+        SELECT 
+          t.*,
+          p.nome as "nomeDono",
+          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        FROM tenants t
+        LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
+        LEFT JOIN enderecos e ON e.id = t.endereco_id
+        WHERE t.id = ${id}
+        LIMIT 1
+      `);
+
+      const rows = res.rows || res;
+      if (!rows || rows.length === 0) return null;
+      const row = rows[0];
+
+      // Formata para o SismobFormMaster ler 'nomeDono' e 'endereco.logradouro'
+      return {
+        ...row,
+        nomeDono: row.nomeDono || '',
+        endereco: {
+          cep: row.cep || '',
+          logradouro: row.logradouro || '',
+          numero: row.numero || '',
+          bairro: row.bairro || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
+        },
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   /**

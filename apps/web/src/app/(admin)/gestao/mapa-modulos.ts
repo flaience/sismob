@@ -693,24 +693,29 @@ export const MAPA_SISMOB: any = {
 
   imobiliarias: {
     title: "Gestão de Imobiliárias",
-    entity: "saas/tenants",
+    entity: "saas/tenants", // URL mapeada no seu SaasController
     columns: [
-      { label: "Fantasia", key: "nome_fantasia" }, // <--- IDÊNTICO AO BANCO
-      { label: "WhatsApp", key: "telefone" }, // <--- IDÊNTICO AO BANCO
-      { label: "E-mail", key: "email_financeiro" },
+      { label: "Fantasia", key: "nome_fantasia" },
+      { label: "WhatsApp", key: "telefone" },
+      { label: "E-mail Cobrança", key: "email_financeiro" },
       { label: "Razão Social", key: "nome_conta" },
     ],
     sections: [
       {
-        title: "Identidade Visual",
+        title: "1. Identidade Visual e Marca",
         fields: [
           {
             name: "nome_fantasia",
-            label: "Nome Fantasia",
+            label: "Nome Fantasia (Ex: Silva Imóveis)",
             type: "text",
             required: true,
           },
-          { name: "url_logo", label: "Logo URL", type: "image" },
+          {
+            name: "url_logo",
+            label: "Logomarca (URL)",
+            type: "image",
+            fullWidth: true,
+          },
           {
             name: "nome_conta",
             label: "Razão Social / CNPJ",
@@ -721,15 +726,14 @@ export const MAPA_SISMOB: any = {
         ],
       },
       {
-        title: "Acesso e Contato",
+        title: "2. Responsável e Acesso",
         fields: [
           {
             name: "nomeDono",
             label: "Nome do Proprietário",
             type: "text",
             required: true,
-          }, // <--- ADICIONADO
-          { name: "slug", label: "Slug/Link", type: "text", required: true },
+          },
           {
             name: "email_financeiro",
             label: "E-mail de Acesso e Cobrança",
@@ -742,9 +746,18 @@ export const MAPA_SISMOB: any = {
             type: "text",
             required: true,
           },
+          {
+            name: "slug",
+            label: "Link/URL única (ex: silva)",
+            type: "text",
+            required: true,
+          },
         ],
       },
+      // 3. SEÇÃO DE ENDEREÇO (Reuso do Lego)
       SECAO_ENDERECO,
     ],
+    aiMetadata:
+      "Luis, este módulo gerencia seus clientes. O Agente MCP usa o 'nomeDono' e 'telefone' para suporte proativo.",
   },
 };
