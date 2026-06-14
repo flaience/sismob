@@ -695,10 +695,10 @@ export const MAPA_SISMOB: any = {
     title: "Gestão de Imobiliárias",
     entity: "saas/tenants", // URL que bate com o SaasController
     columns: [
-      { label: "Fantasia", key: "nome_fantasia" }, // <--- Bate com a coluna do banco
-      { label: "WhatsApp", key: "telefone" }, // <--- Bate com a coluna do banco
-      { label: "E-mail Cobrança", key: "email_financeiro" },
-      { label: "Razão Social", key: "nome_conta" },
+      { label: "Fantasia", key: "nome_fantasia" },
+      { label: "WhatsApp", key: "telefone" },
+      { label: "E-mail", key: "email_financeiro" },
+      { label: "CNPJ / Razão", key: "nome_conta" }, // O banco usa nome_conta como identificador
     ],
     sections: [
       {

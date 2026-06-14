@@ -188,70 +188,51 @@ export default function SismobFormMaster({
   useEffect(() => {
     if (!tenant?.id) return;
 
-    // 1. CARGA DE DADOS PARA EDIÇÃO (Mata o erro de campos vazios na alteração)
     if (idEdicao) {
-      console.log(`📡 [SISMOB] Carregando registro ID: ${idEdicao}`);
+      // 2. MODO EDIÇÃO: Busca dados reais
+      setLoading(true);
       api
         .get(`${endpoint}/${idEdicao}`, {
           params: { imobiliariaId: tenant.id },
         })
         .then((res) => {
           const data = Array.isArray(res.data) ? res.data[0] : res.data;
-
-          // Lógica Industrial: Se os dados do endereço vierem na raiz (Imóveis),
-          // ou em objeto (Pessoas), o setFormData aceita ambos.
           setFormData(data || {});
-        });
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // 3. MODO INCLUSÃO: Reseta o formulário e injeta apenas o que for inicial (ex: papel)
+      setFormData(initialData || {});
     }
 
-    // 2. MOTOR DE AUTO-LOOKUP (Preenche os combos de Proprietários, Filiais, etc.)
-    // Aqui usamos o forEach para varrer o seu MAPA_SISMOB e carregar os dados
+    // CARGA DE LOOKUPS (Proprietários, Unidades, etc)
     sections?.forEach((section: any) => {
       section.fields?.forEach(async (field: any) => {
-        // Só buscamos se for Select ou Checklist e não tiver opções fixas no JSON
         if (
           (field.type === "select" || field.type === "checklist") &&
           !field.options
         ) {
           try {
-            let urlLookup = "";
-            let params: any = { imobiliariaId: tenant.id };
-
-            // REGRA DE OURO: Roteamento Inteligente de Lookups
-            if (field.name === "unidade_id") {
-              urlLookup = "/configuracoes/unidades";
-            } else if (field.name === "proprietario_id") {
-              urlLookup = "/pessoas";
-              params.papel = "3"; // Filtra apenas donos de imóveis
-            } else if (
-              field.name === "atributos" ||
-              field.entity === "atributos"
-            ) {
-              urlLookup = "/configuracoes/atributos";
-            } else {
-              // Regra Genérica: banco_id vira /configuracoes/bancos
-              const slug =
-                field.entity ||
-                field.name.replace("_id", "s").replace("_", "-");
-              urlLookup = `/configuracoes/${slug}`;
-            }
-
-            const res = await api.get(urlLookup, { params });
-            const dados = Array.isArray(res.data)
-              ? res.data
-              : res.data
-                ? [res.data]
-                : [];
-
-            // Guarda a lista no estado de opções do formulário
-            setOptions((prev: any) => ({ ...prev, [field.name]: dados }));
+            const slug =
+              field.name === "unidade_id"
+                ? "unidades"
+                : field.name.replace("_id", "s");
+            // Regra especial para proprietários
+            const url =
+              field.name === "proprietario_id"
+                ? "/pessoas?papel=3"
+                : `/configuracoes/${slug}`;
+            const res = await api.get(url, {
+              params: { imobiliariaId: tenant.id },
+            });
+            setOptions((prev: any) => ({ ...prev, [field.name]: res.data }));
           } catch (e) {
-            console.warn(`⚠️ [SISMOB] Falha ao carregar lookup: ${field.name}`);
+            console.error("Falha no lookup", field.name);
           }
         }
       });
     });
-  }, [tenant?.id, idEdicao, sections, endpoint]);
+  }, [idEdicao, tenant?.id]); // Reseta o form toda vez que o ID da URL mudar
 
   // 2. BUSCA DE CEP (v5.1 Industrial)
   // O formulário agora é "cego": ele só recebe o objeto e preenche.

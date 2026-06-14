@@ -32,8 +32,15 @@ export class SaasService {
    * 1. LISTAGEM GLOBAL (Para o Luis)
    */
   async listarTenants() {
-    const table = schema.tenants as any;
-    return await this.db.select().from(table);
+    try {
+      // O SELECT * via SQL puro ignora qualquer erro de versão de schema
+      const res = await this.db.execute(
+        sql`SELECT * FROM tenants ORDER BY created_at DESC`,
+      );
+      return res.rows || res;
+    } catch (e) {
+      return [];
+    }
   }
 
   /**
@@ -43,41 +50,30 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     try {
-      // SQL INDUSTRIAL: Traz o Tenant e tenta buscar o responsável (Papel 0 ou 6)
       const res = await this.db.execute(sql`
-        SELECT 
-          t.*,
-          p.nome as "nomeDono",
-          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        SELECT t.*, p.nome as "nomeDono", p.documento as "cpfDono"
         FROM tenants t
-        LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
-        LEFT JOIN enderecos e ON e.id = t.endereco_id
+        LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
         WHERE t.id = ${id}
-        ORDER BY p.papel ASC -- Prioriza o Super-Admin se houver os dois
         LIMIT 1
       `);
-
       const rows = res.rows || res;
       if (!rows || rows.length === 0) return null;
+
       const row = rows[0];
+      // Buscamos o endereço lego vinculado
+      const [end] = await this.db.execute(
+        sql`SELECT * FROM enderecos WHERE id = ${row.endereco_id}`,
+      );
 
       return {
         ...row,
-        // Garante que o objeto endereco exista para o SismobFormMaster não crashar
-        endereco: {
-          cep: row.cep || '',
-          logradouro: row.logradouro || '',
-          numero: row.numero || '',
-          bairro: row.bairro || '',
-          cidade: row.cidade || '',
-          estado: row.estado || '',
-        },
+        endereco: end || {},
       };
     } catch (e) {
       return null;
     }
   }
-
   /**
    * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
    */
