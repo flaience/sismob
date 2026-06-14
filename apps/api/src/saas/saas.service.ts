@@ -43,20 +43,17 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     try {
-      const tableTenants = schema.tenants as any;
-      const tablePessoas = schema.pessoas as any;
-      const tableEnderecos = schema.enderecos as any;
-
-      // SQL INDUSTRIAL: Une Empresa + Dono + Endereço Lego
+      // SQL INDUSTRIAL: Traz o Tenant e tenta buscar o responsável (Papel 0 ou 6)
       const res = await this.db.execute(sql`
         SELECT 
           t.*,
           p.nome as "nomeDono",
           e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
         FROM tenants t
-        LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
+        LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
         LEFT JOIN enderecos e ON e.id = t.endereco_id
         WHERE t.id = ${id}
+        ORDER BY p.papel ASC -- Prioriza o Super-Admin se houver os dois
         LIMIT 1
       `);
 
@@ -64,10 +61,9 @@ export class SaasService {
       if (!rows || rows.length === 0) return null;
       const row = rows[0];
 
-      // Formata para o SismobFormMaster ler 'nomeDono' e 'endereco.logradouro'
       return {
         ...row,
-        nomeDono: row.nomeDono || '',
+        // Garante que o objeto endereco exista para o SismobFormMaster não crashar
         endereco: {
           cep: row.cep || '',
           logradouro: row.logradouro || '',

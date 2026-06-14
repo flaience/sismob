@@ -693,10 +693,10 @@ export const MAPA_SISMOB: any = {
 
   imobiliarias: {
     title: "Gestão de Imobiliárias",
-    entity: "saas/tenants", // URL mapeada no seu SaasController
+    entity: "saas/tenants", // URL que bate com o SaasController
     columns: [
-      { label: "Fantasia", key: "nome_fantasia" },
-      { label: "WhatsApp", key: "telefone" },
+      { label: "Fantasia", key: "nome_fantasia" }, // <--- Bate com a coluna do banco
+      { label: "WhatsApp", key: "telefone" }, // <--- Bate com a coluna do banco
       { label: "E-mail Cobrança", key: "email_financeiro" },
       { label: "Razão Social", key: "nome_conta" },
     ],
@@ -706,14 +706,14 @@ export const MAPA_SISMOB: any = {
         fields: [
           {
             name: "nome_fantasia",
-            label: "Nome Fantasia (Ex: Silva Imóveis)",
+            label: "Nome Fantasia (Aparece no Topo)",
             type: "text",
             required: true,
           },
           {
             name: "url_logo",
             label: "Logomarca (URL)",
-            type: "image",
+            type: "image", // Ativa o SismobUpload
             fullWidth: true,
           },
           {
@@ -754,10 +754,10 @@ export const MAPA_SISMOB: any = {
           },
         ],
       },
-      // 3. SEÇÃO DE ENDEREÇO (Reuso do Lego)
+      // 3. SEÇÃO DE ENDEREÇO (Reuso do Lego Industrial)
       SECAO_ENDERECO,
     ],
     aiMetadata:
-      "Luis, este módulo gerencia seus clientes. O Agente MCP usa o 'nomeDono' e 'telefone' para suporte proativo.",
+      "Luis, este módulo gerencia seus clientes. O Agente MCP usa o 'nomeDono' e 'telefone' para suporte proativo e faturamento.",
   },
 };
