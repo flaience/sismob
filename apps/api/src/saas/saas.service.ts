@@ -50,61 +50,39 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     try {
-      console.log(`🔎 [SISMOB DEBUG] Iniciando busca para o ID: ${id}`);
+      const tableTenants = schema.tenants as any;
+      const tableEnderecos = schema.enderecos as any;
 
-      // 1. Busca o Tenant (A Empresa)
-      const resTenant = await this.db.execute(
-        sql`SELECT * FROM tenants WHERE id = ${id} LIMIT 1`,
-      );
-      const tenant = resTenant.rows?.[0] || resTenant[0];
+      // 1. BUSCA COM JOIN: Tenant + Endereço Lego
+      const res = await this.db
+        .select()
+        .from(tableTenants)
+        .leftJoin(
+          tableEnderecos,
+          eq(tableTenants.endereco_id, tableEnderecos.id),
+        )
+        .where(eq(tableTenants.id, id))
+        .limit(1);
 
-      if (!tenant) {
-        console.error(
-          `❌ [SISMOB DEBUG] Tenant não encontrado no banco para o ID: ${id}`,
-        );
-        return null;
-      }
+      if (!res[0]) return null;
 
-      console.log(`✅ [SISMOB DEBUG] Tenant localizado: ${tenant.nome_conta}`);
+      const { tenants, enderecos } = res[0];
 
-      // 2. Busca o Dono (Papel 6 ou 0)
-      const resDono = await this.db.execute(sql`
-        SELECT id, nome, email, documento FROM pessoas 
-        WHERE tenant_id = ${id} AND (papel = '6' OR papel = '0') 
-        LIMIT 1
-      `);
-      const dono = resDono.rows?.[0] || resDono[0];
-
-      // 3. Busca o Endereço (Vinculado ao Dono)
-      let endereco = {
-        cep: '',
-        logradouro: '',
-        numero: '',
-        bairro: '',
-        cidade: '',
-        estado: '',
+      // 2. FORMATAÇÃO INDUSTRIAL:
+      // Envelopamos o endereço para o formulário reconhecer 'endereco.logradouro'
+      return {
+        ...tenants,
+        endereco: enderecos || {
+          cep: '',
+          logradouro: '',
+          numero: '',
+          bairro: '',
+          cidade: '',
+          estado: '',
+        },
       };
-      if (dono?.id) {
-        const resEnd = await this.db.execute(
-          sql`SELECT * FROM enderecos WHERE pessoa_id = ${dono.id} LIMIT 1`,
-        );
-        const endData = resEnd.rows?.[0] || resEnd[0];
-        if (endData) endereco = endData;
-      }
-
-      // 4. MONTAGEM DO PACOTE FINAL
-      const result = {
-        ...tenant,
-        nomeDono: dono?.nome || '',
-        email: dono?.email || tenant.email_financeiro,
-        documento: dono?.documento || '',
-        endereco: endereco,
-      };
-
-      console.log(`📦 [SISMOB DEBUG] Objeto de retorno montado com sucesso.`);
-      return result;
     } catch (e: any) {
-      console.error(`❌ [SISMOB DEBUG] Erro fatal na busca:`, e.message);
+      console.error('❌ [SISMOB] Erro ao carregar imobiliária:', e.message);
       return null;
     }
   }
