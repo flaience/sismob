@@ -50,39 +50,56 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     try {
-      const tableTenants = schema.tenants as any;
-      const tableEnderecos = schema.enderecos as any;
+      console.log(`🔎 [SISMOB DEBUG] Buscando imobiliária ID: ${id}`);
 
-      // 1. BUSCA COM JOIN: Tenant + Endereço Lego
-      const res = await this.db
-        .select()
-        .from(tableTenants)
-        .leftJoin(
-          tableEnderecos,
-          eq(tableTenants.endereco_id, tableEnderecos.id),
-        )
-        .where(eq(tableTenants.id, id))
-        .limit(1);
+      // SQL RESILIENTE: Usamos LEFT JOIN para não perder o registro se o dono/endereço sumirem
+      const res = await this.db.execute(sql`
+        SELECT 
+          t.*,
+          p.nome as "nomeDono",
+          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        FROM tenants t
+        LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
+        LEFT JOIN enderecos e ON e.id = t.endereco_id
+        WHERE t.id = ${id}
+        LIMIT 1
+      `);
 
-      if (!res[0]) return null;
+      const rows = res.rows || res;
+      if (!rows || rows.length === 0) {
+        console.error(
+          `❌ [SISMOB DEBUG] Registro não encontrado no banco para o ID: ${id}`,
+        );
+        return null;
+      }
 
-      const { tenants, enderecos } = res[0];
+      const row = rows[0];
 
-      // 2. FORMATAÇÃO INDUSTRIAL:
-      // Envelopamos o endereço para o formulário reconhecer 'endereco.logradouro'
-      return {
-        ...tenants,
-        endereco: enderecos || {
-          cep: '',
-          logradouro: '',
-          numero: '',
-          bairro: '',
-          cidade: '',
-          estado: '',
+      // Formata para o SismobFormMaster ler 'nomeDono', 'url_logo' e 'endereco.logradouro'
+      const dataFormatada = {
+        ...row,
+        // Garante que o nome do dono venha preenchido
+        nomeDono: row.nomeDono || row.nome_fantasia || '',
+        // Envelopa o endereço para o padrão Lego que o formulário espera
+        endereco: {
+          cep: row.cep || '',
+          logradouro: row.logradouro || '',
+          numero: row.numero || '',
+          bairro: row.bairro || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
         },
       };
+
+      console.log(
+        `✅ [SISMOB DEBUG] Dados carregados para: ${row.nome_fantasia}`,
+      );
+      return dataFormatada;
     } catch (e: any) {
-      console.error('❌ [SISMOB] Erro ao carregar imobiliária:', e.message);
+      console.error(
+        '❌ [SISMOB FATAL] Erro na busca de imobiliária:',
+        e.message,
+      );
       return null;
     }
   }

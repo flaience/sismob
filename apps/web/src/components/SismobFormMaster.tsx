@@ -63,11 +63,16 @@ export default function SismobFormMaster({
       setLoading(true);
       api
         .get(`${endpoint}/${idEdicao}`, {
-          params: { imobiliariaId: tenant.id },
+          params: { imobiliariaId: tenant?.id },
         })
         .then((res) => {
+          // LOG DE FRONTEIRA: Abra o F12 e veja se o JSON aparece aqui!
+          console.log("📂 [SISMOB UI] O que chegou da API:", res.data);
+
           const data = Array.isArray(res.data) ? res.data[0] : res.data;
-          if (data) setFormData(data);
+          if (data) {
+            setFormData(data);
+          }
         })
         .finally(() => setLoading(false));
     }
