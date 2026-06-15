@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as schema from '@sismob/database';
-import { eq, and, ilike } from 'drizzle-orm';
+import { eq, and, ilike, sql } from 'drizzle-orm';
 import {
   persistirEnderecoLego,
   removerEnderecoLego,
@@ -28,17 +28,47 @@ export class PessoasService {
   }
 
   async findOne(id: string, tenantId: string) {
-    const p = schema.pessoas as any;
-    const e = schema.enderecos as any;
-    const res = await this.db
-      .select()
-      .from(p)
-      .leftJoin(e, eq(p.endereco_id, e.id))
-      .where(and(eq(p.id, id), eq(p.tenant_id, tenantId)))
-      .limit(1);
+    // PROTEÇÃO CONTRA O ERRO 'UNDEFINED_VALUE'
+    if (!id || id === 'undefined' || !tenantId || tenantId === 'undefined') {
+      console.warn('⚠️ [SISMOB] Tentativa de busca com parâmetros nulos.');
+      return null;
+    }
 
-    if (!res[0]) return null;
-    return { ...res[0].pessoas, endereco: res[0].enderecos };
+    try {
+      console.log(
+        `📡 [SISMOB] Buscando perfil completo: ${id} no tenant ${tenantId}`,
+      );
+
+      // O TIRO DE MISERICÓRDIA: SQL Puro com Join para o endereço
+      const res = await this.db.execute(sql`
+        SELECT 
+          p.*, 
+          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        FROM pessoas p
+        LEFT JOIN enderecos e ON e.id = p.endereco_id
+        WHERE p.id = ${id} AND p.tenant_id = ${tenantId}
+        LIMIT 1
+      `);
+
+      const rows = res.rows || res;
+      if (!rows || rows.length === 0) return null;
+      const row = rows[0];
+
+      return {
+        ...row,
+        endereco: {
+          cep: row.cep || '',
+          logradouro: row.logradouro || '',
+          numero: row.numero || '',
+          bairro: row.bairro || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
+        },
+      };
+    } catch (e: any) {
+      console.error('❌ [DB FATAL]:', e.message);
+      return null;
+    }
   }
 
   async save(dto: any, tenantId: string) {
