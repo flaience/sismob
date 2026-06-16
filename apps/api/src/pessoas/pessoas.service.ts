@@ -50,50 +50,50 @@ export class PessoasService {
   }
 
   // 3. MOTOR DE GRAVAÇÃO (SAVE / UPSERT) COM ENDEREÇO LEGO
+  // apps/api/src/pessoas/pessoas.service.ts
   async save(dto: any, tenantId: string) {
     try {
       return await this.db.transaction(async (tx) => {
         let enderecoId = dto.endereco_id;
 
-        // A. TRATA O ENDEREÇO (LEGO)
-        if (dto.cep || dto.logradouro) {
+        // 1. LÓGICA LEGO: Se enviou dados de endereço, gerencia a tabela 'enderecos'
+        if (dto.endereco?.cep || dto.cep) {
           const dadosEnd = {
-            cep: dto.cep,
-            logradouro: dto.logradouro,
-            numero: dto.numero,
-            bairro: dto.bairro,
-            cidade: dto.cidade,
-            estado: dto.estado,
+            cep: dto.endereco?.cep || dto.cep,
+            logradouro: dto.endereco?.logradouro || dto.logradouro,
+            numero: dto.endereco?.numero || dto.numero,
+            bairro: dto.endereco?.bairro || dto.bairro,
+            cidade: dto.endereco?.cidade || dto.cidade,
+            estado: dto.endereco?.estado || dto.estado,
           };
 
           const tableEnd = schema.enderecos as any;
-
           if (enderecoId && enderecoId !== 'undefined') {
             await tx
               .update(tableEnd)
               .set(dadosEnd)
               .where(eq(tableEnd.id, Number(enderecoId)));
           } else {
-            const [novo] = await (
+            const [novoEnd] = await (
               tx.insert(tableEnd).values(dadosEnd) as any
             ).returning();
-            enderecoId = novo.id;
+            enderecoId = novoEnd.id;
           }
         }
 
-        // B. TRATA A PESSOA (CRM)
+        // 2. LÓGICA CRM: Salva a Pessoa vinculada ao Tenant e ao Endereço
         const tablePessoa = schema.pessoas as any;
         const isUpdate = !!dto.id && dto.id !== 'undefined';
 
-        const dadosPessoa = {
+        const payload = {
           tenant_id: tenantId,
-          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
           endereco_id: enderecoId ? Number(enderecoId) : null,
+          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
           nome: dto.nome,
           email: dto.email,
           documento: dto.documento || '000.000.000-00',
           telefone: dto.telefone,
-          papel: dto.papel,
+          papel: dto.papel, // 6 para Dono, 0 para SuperAdmin (Luis)
           tipo: dto.tipo || 'f',
           cargo: dto.cargo,
         };
@@ -101,27 +101,22 @@ export class PessoasService {
         if (isUpdate) {
           await tx
             .update(tablePessoa)
-            .set(dadosPessoa)
-            .where(
-              and(
-                eq(tablePessoa.id, dto.id),
-                eq(tablePessoa.tenant_id, tenantId),
-              ),
-            );
+            .set(payload)
+            .where(eq(tablePessoa.id, dto.id));
           return { id: dto.id, success: true };
         } else {
-          const [nova] = await (
-            tx.insert(tablePessoa).values(dadosPessoa) as any
+          const [novaPessoa] = await (
+            tx.insert(tablePessoa).values(payload) as any
           ).returning();
-          return { id: nova.id, success: true };
+          return { id: novaPessoa.id, success: true };
         }
       });
     } catch (e) {
-      console.error('❌ Erro fatal no Save Pessoa:', e.message);
-      throw new InternalServerErrorException(e.message);
+      throw new InternalServerErrorException(
+        'Erro na gravação Lego: ' + e.message,
+      );
     }
   }
-
   // 4. IDENTIFICAÇÃO DO TENANT (O que destrava o site)
   async findImobiliariaByHost(host: string) {
     try {

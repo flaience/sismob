@@ -1,72 +1,67 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { type Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import api from "@/lib/api";
-import { useTenant } from "./TenantContext"; // 1. IMPORTAÇÃO DO TENANT
+import { useTenant } from "./TenantContext";
 
 const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { tenant, loading: tenantLoading } = useTenant();
 
-  // 2. DECLARAÇÃO DO TENANT (Mata o erro 'Cannot find name tenant')
-  const { tenant } = useTenant();
-
-  const fetchProfile = async (session: Session | null) => {
+  const fetchProfile = async (session: any) => {
     try {
-      // 3. O SEGREDO: Só busca o perfil se tiver Usuário logado E Imobiliária identificada
-      if (session?.user && tenant?.id) {
-        console.log(
-          `🔍 [SISMOB] Sincronizando ${session.user.email} na imobiliária ${tenant.nome_conta}`,
-        );
+      if (!session?.user) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
 
+      // 🛡️ RECONQUISTA DO PODER (O SEGREDO)
+      const isLuis = session.user.email === "luis@flaience.com";
+
+      if (tenant?.id) {
+        // Fluxo Normal: Busca o perfil da pessoa naquela imobiliária
         const res = await api
           .get(`/pessoas/${session.user.id}`, {
-            params: { imobiliariaId: tenant.id }, // Passa o ID correto para a API
+            params: { imobiliariaId: tenant.id },
           })
           .catch(() => ({ data: null }));
 
         const dbData = Array.isArray(res.data) ? res.data[0] : res.data;
-
-        if (dbData) {
-          console.log("✅ [SISMOB] Perfil DB sincronizado.");
-          setUser({ ...session.user, ...dbData });
-        } else {
-          console.warn(
-            "ℹ️ [SISMOB] Perfil não localizado, usando dados do Auth.",
-          );
-          setUser(session.user);
-        }
-        setLoading(false);
-      } else if (!session?.user) {
-        // Se não há login, para o loading
-        setUser(null);
-        setLoading(false);
+        setUser({ ...session.user, ...dbData });
+      } else if (isLuis) {
+        // 🚀 BYPASS INDUSTRIAL: Se for o Luis, libera o menu mesmo sem Tenant
+        setUser({
+          ...session.user,
+          papel: "0",
+          cargo: "gerente",
+          nome: "Luis Admin",
+        });
+      } else {
+        setUser(session.user);
       }
-    } catch (error) {
-      console.error("❌ [SISMOB] Erro na sincronização de perfil.");
+    } finally {
+      // 🏁 O Loading NUNCA fica preso aqui
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // 4. SINCRONIA REATIVA:
-    // Este efeito roda sempre que o 'tenant.id' mudar.
-    // No momento que o sistema descobre a imobiliária, ele busca o perfil do Luis.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchProfile(session);
-    });
-
+    if (!tenantLoading) {
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => fetchProfile(session));
+    }
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       fetchProfile(session);
     });
-
     return () => subscription.unsubscribe();
-  }, [tenant?.id]); // <--- DEPENDÊNCIA VITAL
+  }, [tenant?.id, tenantLoading]);
 
   return (
     <AuthContext.Provider

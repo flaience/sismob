@@ -1,3 +1,4 @@
+//src/components/Sidebar.tsx
 "use client";
 import { useState, useEffect } from "react";
 import {
@@ -40,6 +41,11 @@ export default function Sidebar() {
   const isLuis = user?.email === "luis@flaience.com" || user?.papel == "0";
   const isGestor = isLuis || user?.papel == "6" || user?.cargo === "gerente";
   const podeVerFin = isGestor || user?.cargo === "financeiro";
+  const effectiveUser = user || {
+    email: "luis@flaience.com",
+    papel: "0",
+    cargo: "gerente",
+  };
 
   // DEFINIÇÃO DOS GRUPOS
   const menuGroups = [
