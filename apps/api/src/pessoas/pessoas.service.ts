@@ -2,108 +2,151 @@ import {
   Injectable,
   Inject,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
-import { eq, and, ilike, sql } from 'drizzle-orm';
-import {
-  persistirEnderecoLego,
-  removerEnderecoLego,
-} from '../common/utils/address-factory';
+import { eq, and, ilike } from 'drizzle-orm';
 
 @Injectable()
 export class PessoasService {
-  constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
+  constructor(
+    @Inject('DRIZZLE_CONNECTION')
+    private db: PostgresJsDatabase<typeof schema>,
+  ) {}
 
+  // 1. BUSCA POR PAPEL (O que alimenta os Grids do CRM)
   async findByRole(papel: string, tenantId: string, search?: string) {
-    const p = schema.pessoas as any;
-    const e = schema.enderecos as any;
-    let conds = [eq(p.papel, papel), eq(p.tenant_id, tenantId)];
-    if (search) conds.push(ilike(p.nome, `%${search}%`));
-
-    return await this.db
-      .select()
-      .from(p)
-      .leftJoin(e, eq(p.endereco_id, e.id))
-      .where(and(...conds));
-  }
-
-  async findOne(id: string, tenantId: string) {
-    // PROTEÇÃO CONTRA O ERRO 'UNDEFINED_VALUE'
-    if (!id || id === 'undefined' || !tenantId || tenantId === 'undefined') {
-      console.warn('⚠️ [SISMOB] Tentativa de busca com parâmetros nulos.');
-      return null;
-    }
-
     try {
-      console.log(
-        `📡 [SISMOB] Buscando perfil completo: ${id} no tenant ${tenantId}`,
-      );
+      const table = schema.pessoas as any;
+      let conds = [eq(table.tenant_id, tenantId), eq(table.papel, papel)];
 
-      // O TIRO DE MISERICÓRDIA: SQL Puro com Join para o endereço
-      const res = await this.db.execute(sql`
-        SELECT 
-          p.*, 
-          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
-        FROM pessoas p
-        LEFT JOIN enderecos e ON e.id = p.endereco_id
-        WHERE p.id = ${id} AND p.tenant_id = ${tenantId}
-        LIMIT 1
-      `);
+      if (search) {
+        conds.push(ilike(table.nome, `%${search}%`) as any);
+      }
 
-      const rows = res.rows || res;
-      if (!rows || rows.length === 0) return null;
-      const row = rows[0];
-
-      return {
-        ...row,
-        endereco: {
-          cep: row.cep || '',
-          logradouro: row.logradouro || '',
-          numero: row.numero || '',
-          bairro: row.bairro || '',
-          cidade: row.cidade || '',
-          estado: row.estado || '',
-        },
-      };
-    } catch (e: any) {
-      console.error('❌ [DB FATAL]:', e.message);
-      return null;
+      return await this.db
+        .select()
+        .from(table)
+        .where(and(...conds));
+    } catch (e) {
+      console.error('❌ Erro findByRole:', e.message);
+      return [];
     }
   }
 
-  async save(dto: any, tenantId: string) {
-    return await this.db.transaction(async (tx: any) => {
-      const { id, endereco, ...dados } = dto;
-      const pTable = schema.pessoas as any;
+  // 2. BUSCA UM ÚNICO (Com suporte a Endereço Lego)
+  async findOne(id: string, tenantId: string) {
+    const table = schema.pessoas as any;
+    const queryApi = this.db.query as any;
 
-      const enderecoId = await persistirEnderecoLego(
-        tx,
-        endereco,
-        dto.endereco_id,
-      );
-      const payload = {
-        ...dados,
-        tenant_id: tenantId,
-        endereco_id: enderecoId,
-        updated_at: new Date(),
-      };
-
-      if (id && id !== 'undefined') {
-        await tx.update(pTable).set(payload).where(eq(pTable.id, id));
-        return { id, success: true };
-      } else {
-        const [nova] = await tx.insert(pTable).values(payload).returning();
-        return { id: nova.id, success: true };
-      }
+    const result = await queryApi.pessoas.findFirst({
+      where: and(eq(table.id, id), eq(table.tenant_id, tenantId)),
+      with: { endereco: true }, // Se você configurou relations no schema
     });
+
+    if (!result) throw new NotFoundException('Pessoa não encontrada.');
+    return result;
+  }
+
+  // 3. MOTOR DE GRAVAÇÃO (SAVE / UPSERT) COM ENDEREÇO LEGO
+  async save(dto: any, tenantId: string) {
+    try {
+      return await this.db.transaction(async (tx) => {
+        let enderecoId = dto.endereco_id;
+
+        // A. TRATA O ENDEREÇO (LEGO)
+        if (dto.cep || dto.logradouro) {
+          const dadosEnd = {
+            cep: dto.cep,
+            logradouro: dto.logradouro,
+            numero: dto.numero,
+            bairro: dto.bairro,
+            cidade: dto.cidade,
+            estado: dto.estado,
+          };
+
+          const tableEnd = schema.enderecos as any;
+
+          if (enderecoId && enderecoId !== 'undefined') {
+            await tx
+              .update(tableEnd)
+              .set(dadosEnd)
+              .where(eq(tableEnd.id, Number(enderecoId)));
+          } else {
+            const [novo] = await (
+              tx.insert(tableEnd).values(dadosEnd) as any
+            ).returning();
+            enderecoId = novo.id;
+          }
+        }
+
+        // B. TRATA A PESSOA (CRM)
+        const tablePessoa = schema.pessoas as any;
+        const isUpdate = !!dto.id && dto.id !== 'undefined';
+
+        const dadosPessoa = {
+          tenant_id: tenantId,
+          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
+          endereco_id: enderecoId ? Number(enderecoId) : null,
+          nome: dto.nome,
+          email: dto.email,
+          documento: dto.documento || '000.000.000-00',
+          telefone: dto.telefone,
+          papel: dto.papel,
+          tipo: dto.tipo || 'f',
+          cargo: dto.cargo,
+        };
+
+        if (isUpdate) {
+          await tx
+            .update(tablePessoa)
+            .set(dadosPessoa)
+            .where(
+              and(
+                eq(tablePessoa.id, dto.id),
+                eq(tablePessoa.tenant_id, tenantId),
+              ),
+            );
+          return { id: dto.id, success: true };
+        } else {
+          const [nova] = await (
+            tx.insert(tablePessoa).values(dadosPessoa) as any
+          ).returning();
+          return { id: nova.id, success: true };
+        }
+      });
+    } catch (e) {
+      console.error('❌ Erro fatal no Save Pessoa:', e.message);
+      throw new InternalServerErrorException(e.message);
+    }
+  }
+
+  // 4. IDENTIFICAÇÃO DO TENANT (O que destrava o site)
+  async findImobiliariaByHost(host: string) {
+    try {
+      const table = schema.tenants as any;
+      const res = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.dominio_customizado, host));
+
+      if (res.length > 0) return res[0];
+
+      // Busca por slug se não achar por domínio
+      return await this.db
+        .select()
+        .from(table)
+        .where(eq(table.slug, host.split('.')[0]));
+    } catch (e) {
+      return null;
+    }
   }
 
   async remove(id: string, tenantId: string) {
-    return await this.db.transaction(async (tx: any) => {
-      const pTable = schema.pessoas as any;
-      const [reg] = await tx.select().from(pTable).where(eq(pTable.id, id));
-      if (reg?.endereco_id) await removerEnderecoLego(tx, reg.endereco_id);
-      return await tx.delete(pTable).where(eq(pTable.id, id));
-    });
+    const table = schema.pessoas as any;
+    return await this.db
+      .delete(table)
+      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)));
   }
 }

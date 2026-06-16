@@ -16,19 +16,24 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           ? "sismob.flaience.com"
           : host;
 
-        console.log("🔍 Identificando:", queryHost);
         const res = await api.get(
           `/pessoas/config/identificar?host=${queryHost}`,
         );
-
-        // Se a API retornar objeto ou array, tratamos:
         const data = Array.isArray(res.data) ? res.data[0] : res.data;
-        if (data) setTenant(data);
+
+        if (data) {
+          setTenant(data);
+        } else {
+          // Fallback caso a API responda 200 mas sem dados
+          setTenant({ id: null, nome_fantasia: "Sismob Offline" });
+        }
       } catch (e) {
-        console.error("❌ Erro na API. Destravando para modo offline/admin.");
+        console.error(
+          "❌ Falha na identificação do Tenant. Usando modo de segurança.",
+        );
+        setTenant({ id: null, nome_fantasia: "Admin Local" });
       } finally {
-        // OBRIGATÓRIO: Libera o site em 1 segundo de qualquer jeito
-        setTimeout(() => setLoading(false), 1000);
+        setLoading(false); // Liberação imediata
       }
     }
     identificar();
@@ -36,10 +41,20 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TenantContext.Provider value={{ tenant, loading }}>
-      {children}
+      {!loading ? (
+        children
+      ) : (
+        <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <p className="text-gray-500 font-bold animate-pulse">
+              Sincronizando Sismob v6.0...
+            </p>
+          </div>
+        </div>
+      )}
     </TenantContext.Provider>
   );
 }
 
-export const useTenant = () =>
-  useContext(TenantContext) || { tenant: null, loading: false };
+export const useTenant = () => useContext(TenantContext);
