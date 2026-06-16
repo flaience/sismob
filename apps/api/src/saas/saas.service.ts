@@ -52,6 +52,8 @@ export class SaasService {
 
   // apps/api/src/saas/saas.service.ts
 
+  // apps/api/src/saas/saas.service.ts
+
   async buscarUmTenant(id: string) {
     try {
       console.log(`🔎 [SISMOB DEBUG] Buscando imobiliária ID: ${id}`);

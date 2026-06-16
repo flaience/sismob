@@ -60,6 +60,7 @@ export default function SismobFormMaster({
     if (!tenant?.id) return;
 
     // A. Busca dados para Edição
+    // Dentro do useEffect de carga de dados do SismobFormMaster.tsx
     if (idEdicao) {
       setLoading(true);
       api
@@ -67,14 +68,15 @@ export default function SismobFormMaster({
           params: { imobiliariaId: tenant?.id },
         })
         .then((res) => {
-          // LOG DE FRONTEIRA: Abra o F12 e veja se o JSON aparece aqui!
-          console.log("📂 [SISMOB UI] O que chegou da API:", res.data);
+          // Se a API retornar null ou erro, o data será vazio
+          const data = res.data;
+          console.log("📂 [SISMOB UI] Dados recebidos:", data);
 
-          const data = Array.isArray(res.data) ? res.data[0] : res.data;
           if (data) {
             setFormData(data);
           }
         })
+        .catch((err) => console.error("Erro ao carregar form:", err))
         .finally(() => setLoading(false));
     }
 
