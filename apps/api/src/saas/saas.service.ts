@@ -50,59 +50,46 @@ export class SaasService {
 
   // apps/api/src/saas/saas.service.ts
 
+  // apps/api/src/saas/saas.service.ts
+
   async buscarUmTenant(id: string) {
     try {
-      const tableTenants = schema.tenants as any;
-      const tablePessoas = schema.pessoas as any;
-      const tableEnderecos = schema.enderecos as any;
+      console.log(`🔎 [SISMOB DEBUG] Buscando imobiliária ID: ${id}`);
 
-      // 1. Buscamos o Tenant e o Endereço de forma segura
-      // Usamos select() do Drizzle que mapeia as colunas automaticamente
-      const results = await this.db
-        .select({
-          tenant: tableTenants,
-          endereco: tableEnderecos,
-          nomeDono: tablePessoas.nome,
-        })
-        .from(tableTenants)
-        .leftJoin(
-          tableEnderecos,
-          eq(tableTenants.endereco_id, tableEnderecos.id),
-        )
-        .leftJoin(
-          tablePessoas,
-          and(
-            eq(tablePessoas.tenant_id, tableTenants.id),
-            or(eq(tablePessoas.papel, '6'), eq(tablePessoas.papel, '0')),
-          ),
-        )
-        .where(eq(tableTenants.id, id))
-        .limit(1);
+      // Usamos SQL puro para a busca de UM, para garantir que o 'endereco_id' seja lido
+      // mesmo que o Drizzle ORM esteja em conflito de tipos.
+      const res = await this.db.execute(sql`
+      SELECT 
+        t.*,
+        (SELECT nome FROM pessoas WHERE tenant_id = t.id AND (papel = '6' OR papel = '0') LIMIT 1) as "nomeDono",
+        e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+      FROM tenants t
+      LEFT JOIN enderecos e ON e.id = t.endereco_id
+      WHERE t.id = ${id}
+      LIMIT 1
+    `);
 
-      if (!results || results.length === 0) return null;
+      const rows = res.rows || res;
+      if (!rows || rows.length === 0) return null;
 
-      const { tenant, endereco, nomeDono } = results[0];
+      const row = rows[0];
 
-      // 2. Formatamos exatamente como o SismobFormMaster espera (Objeto aninhado)
-      const dataFormatada = {
-        ...tenant,
-        nomeDono: nomeDono || tenant.nome_fantasia,
+      // Montamos o objeto exatamente como o SismobFormMaster espera (com 'endereco' aninhado)
+      return {
+        ...row,
+        nomeDono: row.nomeDono || row.nome_fantasia || '',
         endereco: {
-          cep: endereco?.cep || '',
-          logradouro: endereco?.logradouro || '',
-          numero: endereco?.numero || '',
-          bairro: endereco?.bairro || '',
-          cidade: endereco?.cidade || '',
-          estado: endereco?.estado || '',
+          cep: row.cep || '',
+          logradouro: row.logradouro || '',
+          numero: row.numero || '',
+          bairro: row.bairro || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
         },
       };
-
-      return dataFormatada;
-    } catch (e) {
-      console.error(
-        '❌ [SISMOB FATAL] Erro na busca de imobiliária:',
-        e.message,
-      );
+    } catch (e: any) {
+      console.error('❌ [SISMOB FATAL] Erro na busca:', e.message);
+      // Se o erro for "column endereco_id does not exist", o sistema avisará no log.
       return null;
     }
   }
