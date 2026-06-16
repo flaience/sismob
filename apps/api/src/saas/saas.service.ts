@@ -48,54 +48,57 @@ export class SaasService {
    * Usa o seu Resolutor de Endereço Universal
    */
 
+  // apps/api/src/saas/saas.service.ts
+
   async buscarUmTenant(id: string) {
     try {
-      console.log(`🔎 [SISMOB DEBUG] Buscando imobiliária ID: ${id}`);
+      const tableTenants = schema.tenants as any;
+      const tablePessoas = schema.pessoas as any;
+      const tableEnderecos = schema.enderecos as any;
 
-      // SQL RESILIENTE: Usamos LEFT JOIN para não perder o registro se o dono/endereço sumirem
-      const res = await this.db.execute(sql`
-        SELECT 
-          t.*,
-          p.nome as "nomeDono",
-          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
-        FROM tenants t
-        LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
-        LEFT JOIN enderecos e ON e.id = t.endereco_id
-        WHERE t.id = ${id}
-        LIMIT 1
-      `);
+      // 1. Buscamos o Tenant e o Endereço de forma segura
+      // Usamos select() do Drizzle que mapeia as colunas automaticamente
+      const results = await this.db
+        .select({
+          tenant: tableTenants,
+          endereco: tableEnderecos,
+          nomeDono: tablePessoas.nome,
+        })
+        .from(tableTenants)
+        .leftJoin(
+          tableEnderecos,
+          eq(tableTenants.endereco_id, tableEnderecos.id),
+        )
+        .leftJoin(
+          tablePessoas,
+          and(
+            eq(tablePessoas.tenant_id, tableTenants.id),
+            or(eq(tablePessoas.papel, '6'), eq(tablePessoas.papel, '0')),
+          ),
+        )
+        .where(eq(tableTenants.id, id))
+        .limit(1);
 
-      const rows = res.rows || res;
-      if (!rows || rows.length === 0) {
-        console.error(
-          `❌ [SISMOB DEBUG] Registro não encontrado no banco para o ID: ${id}`,
-        );
-        return null;
-      }
+      if (!results || results.length === 0) return null;
 
-      const row = rows[0];
+      const { tenant, endereco, nomeDono } = results[0];
 
-      // Formata para o SismobFormMaster ler 'nomeDono', 'url_logo' e 'endereco.logradouro'
+      // 2. Formatamos exatamente como o SismobFormMaster espera (Objeto aninhado)
       const dataFormatada = {
-        ...row,
-        // Garante que o nome do dono venha preenchido
-        nomeDono: row.nomeDono || row.nome_fantasia || '',
-        // Envelopa o endereço para o padrão Lego que o formulário espera
+        ...tenant,
+        nomeDono: nomeDono || tenant.nome_fantasia,
         endereco: {
-          cep: row.cep || '',
-          logradouro: row.logradouro || '',
-          numero: row.numero || '',
-          bairro: row.bairro || '',
-          cidade: row.cidade || '',
-          estado: row.estado || '',
+          cep: endereco?.cep || '',
+          logradouro: endereco?.logradouro || '',
+          numero: endereco?.numero || '',
+          bairro: endereco?.bairro || '',
+          cidade: endereco?.cidade || '',
+          estado: endereco?.estado || '',
         },
       };
 
-      console.log(
-        `✅ [SISMOB DEBUG] Dados carregados para: ${row.nome_fantasia}`,
-      );
       return dataFormatada;
-    } catch (e: any) {
+    } catch (e) {
       console.error(
         '❌ [SISMOB FATAL] Erro na busca de imobiliária:',
         e.message,
