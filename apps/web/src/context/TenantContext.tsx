@@ -2,19 +2,25 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "@/lib/api";
 
-const TenantContext = createContext<any>(null);
+// Iniciamos o contexto com um valor padrão para evitar o erro de destruturação
+const TenantContext = createContext<any>({ tenant: null, loading: true });
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // PROTEÇÃO: Next.js tenta rodar isso no build (servidor), onde window não existe
+    if (typeof window === "undefined") return;
+
     async function identificar() {
       try {
         const host = window.location.hostname;
-        const queryHost = host.includes("localhost")
-          ? "sismob.flaience.com"
-          : host;
+        // Se estiver em localhost, simula o domínio oficial para testes
+        const queryHost =
+          host.includes("localhost") || host.includes("vercel.app")
+            ? "sismob.flaience.com"
+            : host;
 
         const res = await api.get(
           `/pessoas/config/identificar?host=${queryHost}`,
@@ -24,16 +30,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         if (data) {
           setTenant(data);
         } else {
-          // Fallback caso a API responda 200 mas sem dados
-          setTenant({ id: null, nome_fantasia: "Sismob Offline" });
+          setTenant({ id: null, nome_fantasia: "Sismob" });
         }
       } catch (e) {
-        console.error(
-          "❌ Falha na identificação do Tenant. Usando modo de segurança.",
-        );
-        setTenant({ id: null, nome_fantasia: "Admin Local" });
+        console.error("❌ Falha na identificação do Tenant.");
+        setTenant({ id: null, nome_fantasia: "Sismob Offline" });
       } finally {
-        setLoading(false); // Liberação imediata
+        setLoading(false);
       }
     }
     identificar();
@@ -41,20 +44,20 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TenantContext.Provider value={{ tenant, loading }}>
-      {!loading ? (
-        children
-      ) : (
-        <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            <p className="text-gray-500 font-bold animate-pulse">
-              Sincronizando Sismob v6.0...
-            </p>
-          </div>
-        </div>
-      )}
+      {/* 
+         Durante o Build, o loading sempre será true no início. 
+         Não bloqueamos o children para que o Next possa "enxergar" as páginas no prerender.
+      */}
+      {children}
     </TenantContext.Provider>
   );
 }
 
-export const useTenant = () => useContext(TenantContext);
+// HOOK BLINDADO: Se o contexto for null, ele retorna um objeto vazio em vez de crashar
+export const useTenant = () => {
+  const context = useContext(TenantContext);
+  if (!context) {
+    return { tenant: null, loading: false };
+  }
+  return context;
+};
