@@ -71,38 +71,41 @@ export class SaasService {
    * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
    */
   async onboarding(dto: any) {
+    // LOG DE RAIO-X (Crucial para você ver no Railway)
+    console.log(
+      '📦 [SISMOB DEBUG] DTO CHEGANDO NO SERVICE:',
+      JSON.stringify(dto),
+    );
+
     return await this.db.transaction(async (tx: any) => {
       try {
-        const isUpdate = dto.id && dto.id !== 'undefined';
-        const tableTenants = schema.tenants as any;
-        const tablePessoas = schema.pessoas as any;
+        const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
 
-        // 🚀 1. GRAVAÇÃO LEGO (A Ordem que você definiu)
-        // O FormMaster envia dto.endereco.cep, etc.
+        // 1. GRAVA O ENDEREÇO LEGO (Regra de Ouro)
         const enderecoId = await persistirEnderecoLego(
           tx,
           dto.endereco,
           dto.endereco_id,
         );
-
-        const payloadTenant = {
-          nome_conta: dto.nome_conta,
-          nome_fantasia: dto.nome_fantasia,
-          url_logo: dto.url_logo,
-          slug: dto.slug,
-          email_financeiro: dto.email_financeiro,
-          telefone: dto.telefone,
-          endereco_id: enderecoId, // <--- O VÍNCULO AGORA VAI PREENCHIDO
-          status: dto.status || 'ativo',
-        };
+        console.log('📍 [SISMOB DEBUG] ID Endereço Lego:', enderecoId);
 
         if (isUpdate) {
-          await tx
-            .update(tableTenants)
-            .set(payloadTenant)
-            .where(eq(tableTenants.id, dto.id));
+          // 2. UPDATE COM SQL BRUTO (Garante que o campo seja gravado)
+          await tx.execute(sql`
+          UPDATE tenants SET 
+            nome_conta = ${dto.nome_conta},
+            nome_fantasia = ${dto.nome_fantasia},
+            telefone = ${dto.telefone},
+            email_financeiro = ${dto.email_financeiro},
+            slug = ${dto.slug},
+            url_logo = ${dto.url_logo},
+            endereco_id = ${enderecoId},
+            updated_at = NOW()
+          WHERE id = ${dto.id}
+        `);
 
-          // Atualiza o Dono (Papel 6)
+          // Atualiza o Dono (Pessoa Papel 6)
+          const tablePessoas = schema.pessoas as any;
           await tx
             .update(tablePessoas)
             .set({ nome: dto.nomeDono, email: dto.email_financeiro })
@@ -115,35 +118,41 @@ export class SaasService {
 
           return { success: true, id: dto.id };
         } else {
-          // Cria Novo Tenant
-          const [tenant] = await (
-            tx.insert(tableTenants).values(payloadTenant) as any
-          ).returning();
+          // 3. INSERT COM SQL BRUTO (A Prova de Erros)
+          const res = await tx.execute(sql`
+          INSERT INTO tenants 
+          (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
+          VALUES 
+          (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
+          RETURNING id
+        `);
 
-          // Cria Unidade Matriz
-          const [unidade] = await (
-            tx.insert(schema.unidades as any).values({
-              tenant_id: tenant.id,
-              nome: 'MATRIZ - CENTRAL',
+          const tenantId = res.rows[0].id;
+
+          // Cria Matriz e Dono usando o motor padrão
+          const [unidade] = await tx
+            .insert(schema.unidades as any)
+            .values({
+              tenant_id: tenantId,
+              nome: 'MATRIZ',
               is_matriz: true,
-            }) as any
-          ).returning();
+            })
+            .returning();
 
-          // Cria Dono (Papel 6)
-          await (tx.insert(tablePessoas).values({
-            tenant_id: tenant.id,
+          await tx.insert(schema.pessoas as any).values({
+            tenant_id: tenantId,
             unidade_id: unidade.id,
             nome: dto.nomeDono || dto.nome_fantasia,
             email: dto.email_financeiro,
-            documento: '000.000.000-00',
             papel: '6',
-            is_admin: true,
+            documento: '000.000.000-00',
             endereco_id: enderecoId,
-          }) as any);
+          });
 
-          return { success: true, id: tenant.id };
+          return { success: true, id: tenantId };
         }
       } catch (e) {
+        console.error('❌ [SISMOB FATAL] Erro na gravação bruta:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
