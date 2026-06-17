@@ -33,12 +33,22 @@ export class SaasService {
    */
   async listarTenants() {
     try {
-      // O SELECT * via SQL puro ignora qualquer erro de versão de schema
-      const res = await this.db.execute(
-        sql`SELECT * FROM tenants ORDER BY created_at DESC`,
-      );
+      const res = await this.db.execute(sql`
+        SELECT 
+          id, 
+          nome_fantasia, 
+          nome_conta, 
+          slug, 
+          email_financeiro, 
+          telefone, 
+          status, 
+          version_schema 
+        FROM tenants 
+        ORDER BY created_at DESC
+      `);
       return res.rows || res;
     } catch (e) {
+      console.error('❌ Erro ao listar imobiliárias:', e.message);
       return [];
     }
   }
@@ -56,30 +66,34 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     try {
-      console.log(`🔎 [SISMOB DEBUG] Buscando imobiliária ID: ${id}`);
-
-      // Usamos SQL puro para a busca de UM, para garantir que o 'endereco_id' seja lido
-      // mesmo que o Drizzle ORM esteja em conflito de tipos.
       const res = await this.db.execute(sql`
-      SELECT 
-        t.*,
-        (SELECT nome FROM pessoas WHERE tenant_id = t.id AND (papel = '6' OR papel = '0') LIMIT 1) as "nomeDono",
-        e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
-      FROM tenants t
-      LEFT JOIN enderecos e ON e.id = t.endereco_id
-      WHERE t.id = ${id}
-      LIMIT 1
-    `);
+        SELECT 
+          t.*,
+          p.nome as "nomeDono",
+          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+        FROM tenants t
+        LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
+        LEFT JOIN enderecos e ON e.id = t.endereco_id
+        WHERE t.id = ${id}
+        LIMIT 1
+      `);
 
       const rows = res.rows || res;
       if (!rows || rows.length === 0) return null;
 
       const row = rows[0];
 
-      // Montamos o objeto exatamente como o SismobFormMaster espera (com 'endereco' aninhado)
+      // MONTAGEM INDUSTRIAL: Garante que as chaves batam com o mapa-modulos.ts
       return {
-        ...row,
-        nomeDono: row.nomeDono || row.nome_fantasia || '',
+        id: row.id,
+        nome_conta: row.nome_conta,
+        nome_fantasia: row.nome_fantasia,
+        url_logo: row.url_logo,
+        slug: row.slug,
+        email_financeiro: row.email_financeiro,
+        telefone: row.telefone,
+        status: row.status,
+        nomeDono: row.nomeDono || '', // Mapeia para o campo nomeDono da seção 2
         endereco: {
           cep: row.cep || '',
           logradouro: row.logradouro || '',
@@ -89,9 +103,8 @@ export class SaasService {
           estado: row.estado || '',
         },
       };
-    } catch (e: any) {
-      console.error('❌ [SISMOB FATAL] Erro na busca:', e.message);
-      // Se o erro for "column endereco_id does not exist", o sistema avisará no log.
+    } catch (e) {
+      console.error('❌ Erro ao buscar imobiliária:', e.message);
       return null;
     }
   }
@@ -102,78 +115,98 @@ export class SaasService {
     return await this.db.transaction(async (tx: any) => {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined';
-        const tenantId = dto.id;
+
+        // 1. Persistir Endereço Lego
+        let enderecoId = dto.endereco_id;
+        if (dto.endereco?.cep) {
+          const dadosEnd = {
+            cep: dto.endereco.cep,
+            logradouro: dto.endereco.logradouro,
+            numero: dto.endereco.numero,
+            bairro: dto.endereco.bairro,
+            cidade: dto.endereco.cidade,
+            estado: dto.endereco.estado,
+          };
+
+          const tableEnd = schema.enderecos as any;
+          if (enderecoId) {
+            await tx
+              .update(tableEnd)
+              .set(dadosEnd)
+              .where(eq(tableEnd.id, enderecoId));
+          } else {
+            const [novo] = await tx
+              .insert(tableEnd)
+              .values(dadosEnd)
+              .returning();
+            enderecoId = novo.id;
+          }
+        }
+
         const tableTenants = schema.tenants as any;
-        const tablePessoas = schema.pessoas as any;
-        const tableUnidades = schema.unidades as any;
-
-        // 1. ENDEREÇO LEGO (Gravamos antes para ter o ID)
-        const enderecoId = await persistirEnderecoLego(
-          tx,
-          dto.endereco,
-          dto.endereco_id,
-        );
-
         const payloadTenant = {
           nome_conta: dto.nome_conta,
-          nome_fantasia: dto.nome_fantasia || dto.nome_conta,
-          url_logo: dto.url_logo || null,
+          nome_fantasia: dto.nome_fantasia,
+          url_logo: dto.url_logo,
           slug: dto.slug,
           email_financeiro: dto.email_financeiro,
-          telefone: dto.telefone || null,
-          endereco_id: enderecoId, // <--- VINCULO LEGO
-          status: 'ativo',
-          version_schema: '1.0.1',
-          updated_at: new Date(),
+          telefone: dto.telefone,
+          endereco_id: enderecoId,
+          status: dto.status || 'ativo',
         };
 
         if (isUpdate) {
           await tx
             .update(tableTenants)
             .set(payloadTenant)
-            .where(eq(tableTenants.id, tenantId));
-          // Atualiza dados do dono
+            .where(eq(tableTenants.id, dto.id));
+
+          // Atualiza o Dono (Pessoa Papel 6)
+          const tablePessoas = schema.pessoas as any;
           await tx
             .update(tablePessoas)
             .set({ nome: dto.nomeDono, email: dto.email_financeiro })
             .where(
               and(
-                eq(tablePessoas.tenant_id, tenantId),
+                eq(tablePessoas.tenant_id, dto.id),
                 eq(tablePessoas.papel, '6'),
               ),
             );
         } else {
+          // Cria Novo
           const [tenant] = await tx
             .insert(tableTenants)
             .values(payloadTenant)
             .returning();
+
+          // Cria Unidade Matriz
           const [unidade] = await tx
-            .insert(tableUnidades)
+            .insert(schema.unidades as any)
             .values({
               tenant_id: tenant.id,
-              nome: 'MATRIZ - CENTRAL',
+              nome: 'MATRIZ',
               is_matriz: true,
             })
             .returning();
 
-          await tx.insert(tablePessoas).values({
+          // Cria Dono
+          await tx.insert(schema.pessoas as any).values({
             tenant_id: tenant.id,
             unidade_id: unidade.id,
-            nome: dto.nomeDono || dto.nome_fantasia,
+            nome: dto.nomeDono,
             email: dto.email_financeiro,
-            documento: dto.documento || '000.000.000-00',
             papel: '6',
-            is_admin: true,
-            cargo: 'ceo',
-            endereco_id: enderecoId, // Dono compartilha o endereço da sede
+            documento: '000.000.000-00',
+            endereco_id: enderecoId,
           });
         }
         return { success: true };
-      } catch (e: any) {
+      } catch (e) {
         throw new InternalServerErrorException(e.message);
       }
     });
   }
+
   async findOne(id: number, tenantId: string) {
     const table = schema.imoveis as any;
     const results = await this.db
