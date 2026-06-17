@@ -71,17 +71,13 @@ export class SaasService {
    * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
    */
   async onboarding(dto: any) {
-    // LOG DE RAIO-X (Crucial para você ver no Railway)
-    console.log(
-      '📦 [SISMOB DEBUG] DTO CHEGANDO NO SERVICE:',
-      JSON.stringify(dto),
-    );
+    console.log('📦 [SISMOB DEBUG] DTO Recebido:', JSON.stringify(dto));
 
     return await this.db.transaction(async (tx: any) => {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
 
-        // 1. GRAVA O ENDEREÇO LEGO (Regra de Ouro)
+        // 1. GRAVA O ENDEREÇO LEGO PRIMEIRO (Regra de Ouro)
         const enderecoId = await persistirEnderecoLego(
           tx,
           dto.endereco,
@@ -90,7 +86,7 @@ export class SaasService {
         console.log('📍 [SISMOB DEBUG] ID Endereço Lego:', enderecoId);
 
         if (isUpdate) {
-          // 2. UPDATE COM SQL BRUTO (Garante que o campo seja gravado)
+          // UPDATE COM SQL BRUTO
           await tx.execute(sql`
           UPDATE tenants SET 
             nome_conta = ${dto.nome_conta},
@@ -118,7 +114,7 @@ export class SaasService {
 
           return { success: true, id: dto.id };
         } else {
-          // 3. INSERT COM SQL BRUTO (A Prova de Erros)
+          // INSERT COM SQL BRUTO
           const res = await tx.execute(sql`
           INSERT INTO tenants 
           (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
@@ -127,11 +123,22 @@ export class SaasService {
           RETURNING id
         `);
 
-          const tenantId = res.rows[0].id;
+          // 🛡️ CAPTURA DE ID RESILIENTE (Resolve o erro do undefined '0')
+          const rows = res.rows || res;
+          const tenantId = rows[0]?.id || rows[0]?.id_tenant; // Tenta as variações comuns
 
-          // Cria Matriz e Dono usando o motor padrão
+          if (!tenantId) {
+            throw new Error(
+              'Falha ao recuperar o ID da imobiliária após o insert.',
+            );
+          }
+
+          console.log('✅ [SISMOB DEBUG] Tenant Criado ID:', tenantId);
+
+          // 2. CRIAÇÃO DA MATRIZ
+          const tableUnidades = schema.unidades as any;
           const [unidade] = await tx
-            .insert(schema.unidades as any)
+            .insert(tableUnidades)
             .values({
               tenant_id: tenantId,
               nome: 'MATRIZ',
@@ -139,7 +146,9 @@ export class SaasService {
             })
             .returning();
 
-          await tx.insert(schema.pessoas as any).values({
+          // 3. CRIAÇÃO DO DONO (PAPEL 6)
+          const tablePessoas = schema.pessoas as any;
+          await tx.insert(tablePessoas).values({
             tenant_id: tenantId,
             unidade_id: unidade.id,
             nome: dto.nomeDono || dto.nome_fantasia,
@@ -152,12 +161,11 @@ export class SaasService {
           return { success: true, id: tenantId };
         }
       } catch (e) {
-        console.error('❌ [SISMOB FATAL] Erro na gravação bruta:', e.message);
+        console.error('❌ [SISMOB FATAL] Erro no fluxo Onboarding:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
   }
-
   async findOne(id: number, tenantId: string) {
     const table = schema.imoveis as any;
     const results = await this.db
