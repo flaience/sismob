@@ -31,60 +31,54 @@ export class SaasService {
   /**
    * 1. LISTAGEM GLOBAL (Para o Luis)
    */
+
   async listarTenants() {
     try {
       const res = await this.db.execute(sql`
-        SELECT 
-          id, 
-          nome_fantasia, 
-          nome_conta, 
-          slug, 
-          email_financeiro, 
-          telefone, 
-          status, 
-          version_schema 
-        FROM tenants 
-        ORDER BY created_at DESC
-      `);
-      return res.rows || res;
+      SELECT 
+        id, 
+        nome_fantasia as "nome_fantasia", 
+        nome_conta as "nome_conta", 
+        telefone as "telefone", 
+        email_financeiro as "email_financeiro",
+        status as "status",
+        slug as "slug"
+      FROM tenants 
+      ORDER BY created_at DESC
+    `);
+      const rows = res.rows || res;
+      console.log('📊 [API DATA] Listagem enviada:', rows.length, 'registros');
+      return rows;
     } catch (e) {
-      console.error('❌ Erro ao listar imobiliárias:', e.message);
       return [];
     }
   }
-
   /**
    * 2. BUSCA ÚNICA (Para o formulário de alteração)
    * Usa o seu Resolutor de Endereço Universal
    */
 
-  // apps/api/src/saas/saas.service.ts
-
-  // apps/api/src/saas/saas.service.ts
-
-  // apps/api/src/saas/saas.service.ts
-
   async buscarUmTenant(id: string) {
     try {
       const res = await this.db.execute(sql`
-        SELECT 
-          t.*,
-          p.nome as "nomeDono",
-          e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
-        FROM tenants t
-        LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
-        LEFT JOIN enderecos e ON e.id = t.endereco_id
-        WHERE t.id = ${id}
-        LIMIT 1
-      `);
+      SELECT 
+        t.id, t.nome_conta, t.nome_fantasia, t.url_logo, t.slug, t.email_financeiro, t.telefone, t.status,
+        p.nome as "nomeDono",
+        e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+      FROM tenants t
+      LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
+      LEFT JOIN enderecos e ON e.id = t.endereco_id
+      WHERE t.id = ${id}
+      LIMIT 1
+    `);
 
       const rows = res.rows || res;
       if (!rows || rows.length === 0) return null;
 
       const row = rows[0];
 
-      // MONTAGEM INDUSTRIAL: Garante que as chaves batam com o mapa-modulos.ts
-      return {
+      // ESTRUTURA LEGO INDUSTRIAL: Criamos o objeto 'endereco' para o FormMaster ler
+      const response = {
         id: row.id,
         nome_conta: row.nome_conta,
         nome_fantasia: row.nome_fantasia,
@@ -93,7 +87,8 @@ export class SaasService {
         email_financeiro: row.email_financeiro,
         telefone: row.telefone,
         status: row.status,
-        nomeDono: row.nomeDono || '', // Mapeia para o campo nomeDono da seção 2
+        nomeDono: row.nomeDono || '',
+        // O SEGREDO ESTÁ AQUI:
         endereco: {
           cep: row.cep || '',
           logradouro: row.logradouro || '',
@@ -103,8 +98,14 @@ export class SaasService {
           estado: row.estado || '',
         },
       };
+
+      console.log(
+        '🎯 [API DATA] Objeto formatado para o Form:',
+        response.nome_fantasia,
+      );
+      return response;
     } catch (e) {
-      console.error('❌ Erro ao buscar imobiliária:', e.message);
+      console.error('❌ Erro na busca:', e.message);
       return null;
     }
   }

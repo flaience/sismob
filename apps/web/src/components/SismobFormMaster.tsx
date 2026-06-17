@@ -56,11 +56,11 @@ export default function SismobFormMaster({
   }, [initialData]);
 
   // 3. CARGA DE DADOS E LOOKUPS
-  useEffect(() => {
-    if (!tenant?.id) return;
+  // Dentro do SismobFormMaster.tsx
 
-    // A. Busca dados para Edição
-    // Dentro do useEffect de carga de dados do SismobFormMaster.tsx
+  useEffect(() => {
+    if (!tenant?.id && !endpoint.includes("saas")) return; // Deixa passar se for SaaS Admin
+
     if (idEdicao) {
       setLoading(true);
       api
@@ -68,52 +68,33 @@ export default function SismobFormMaster({
           params: { imobiliariaId: tenant?.id },
         })
         .then((res) => {
-          // Se a API retornar null ou erro, o data será vazio
-          const data = res.data;
-          console.log("📂 [SISMOB UI] Dados recebidos:", data);
+          // FORÇAMOS A DESCOBERTA DO DADO
+          const rawData = res.data;
+          const data = Array.isArray(rawData) ? rawData[0] : rawData;
+
+          console.log("📂 [SISMOB UI] Dados Processados:", data);
 
           if (data) {
-            setFormData(data);
+            // Garantimos que se o endereço vier vazio, o objeto exista para não dar erro nos inputs
+            setFormData({
+              ...data,
+              endereco: data.endereco || {
+                cep: "",
+                logradouro: "",
+                numero: "",
+                bairro: "",
+                cidade: "",
+                estado: "",
+              },
+            });
           }
         })
-        .catch((err) => console.error("Erro ao carregar form:", err))
+        .catch((err) => console.error("Erro ao carregar:", err))
         .finally(() => setLoading(false));
     }
 
-    // B. Motor de Auto-Lookup (Preenche selects e checklists)
-    sections?.forEach((section) => {
-      section.fields?.forEach(async (field: any) => {
-        if (
-          (field.type === "select" || field.type === "checklist") &&
-          !field.options
-        ) {
-          try {
-            let urlLookup =
-              field.name === "unidade_id"
-                ? "/configuracoes/unidades"
-                : field.name === "proprietario_id"
-                  ? "/pessoas"
-                  : field.name === "atributos" || field.entity === "atributos"
-                    ? "/configuracoes/atributos"
-                    : `/configuracoes/${field.entity || field.name.replace("_id", "s").replace("_", "-")}`;
-
-            const params: any = { imobiliariaId: tenant.id };
-            if (field.name === "proprietario_id") params.papel = "3";
-
-            const res = await api.get(urlLookup, { params });
-            const list = Array.isArray(res.data)
-              ? res.data
-              : res.data
-                ? [res.data]
-                : [];
-            setOptions((prev: any) => ({ ...prev, [field.name]: list }));
-          } catch (e) {
-            console.warn("Falha no lookup:", field.name);
-          }
-        }
-      });
-    });
-  }, [tenant?.id, idEdicao, endpoint, sections]);
+    // ... resto dos lookups
+  }, [tenant?.id, idEdicao, endpoint]);
 
   // 4. MOTOR DE CEP AUTOMÁTICO (ViaCEP)
   useEffect(() => {
