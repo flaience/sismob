@@ -169,7 +169,6 @@ export class SaasService {
       const table = schema.tenants as any;
       // O banco fará o delete em cascata se configurado no schema
       return await this.db.delete(table).where(eq(table.id, id));
-      S;
     } catch (e: any) {
       throw new InternalServerErrorException(
         'Existem registros vinculados a esta imobiliária.',
