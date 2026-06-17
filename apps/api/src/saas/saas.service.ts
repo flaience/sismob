@@ -33,25 +33,11 @@ export class SaasService {
    */
 
   async listarTenants() {
-    try {
-      const res = await this.db.execute(sql`
-      SELECT 
-        id, 
-        nome_fantasia as "nome_fantasia", 
-        nome_conta as "nome_conta", 
-        telefone as "telefone", 
-        email_financeiro as "email_financeiro",
-        status as "status",
-        slug as "slug"
-      FROM tenants 
-      ORDER BY created_at DESC
-    `);
-      const rows = res.rows || res;
-      console.log('📊 [API DATA] Listagem enviada:', rows.length, 'registros');
-      return rows;
-    } catch (e) {
-      return [];
-    }
+    const res = await this.db.execute(sql`
+    SELECT id, nome_fantasia, telefone, email_financeiro, nome_conta, status 
+    FROM tenants ORDER BY created_at DESC
+  `);
+    return res.rows || res;
   }
   /**
    * 2. BUSCA ÚNICA (Para o formulário de alteração)
@@ -59,55 +45,27 @@ export class SaasService {
    */
 
   async buscarUmTenant(id: string) {
-    try {
-      const res = await this.db.execute(sql`
-      SELECT 
-        t.id, t.nome_conta, t.nome_fantasia, t.url_logo, t.slug, t.email_financeiro, t.telefone, t.status,
-        p.nome as "nomeDono",
-        e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
-      FROM tenants t
-      LEFT JOIN pessoas p ON p.tenant_id = t.id AND (p.papel = '6' OR p.papel = '0')
-      LEFT JOIN enderecos e ON e.id = t.endereco_id
-      WHERE t.id = ${id}
-      LIMIT 1
-    `);
+    const res = await this.db.execute(sql`
+    SELECT t.*, p.nome as "nomeDono", e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+    FROM tenants t
+    LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
+    LEFT JOIN enderecos e ON e.id = t.endereco_id
+    WHERE t.id = ${id} LIMIT 1
+  `);
+    const row = (res.rows || res)[0];
+    if (!row) return null;
 
-      const rows = res.rows || res;
-      if (!rows || rows.length === 0) return null;
-
-      const row = rows[0];
-
-      // ESTRUTURA LEGO INDUSTRIAL: Criamos o objeto 'endereco' para o FormMaster ler
-      const response = {
-        id: row.id,
-        nome_conta: row.nome_conta,
-        nome_fantasia: row.nome_fantasia,
-        url_logo: row.url_logo,
-        slug: row.slug,
-        email_financeiro: row.email_financeiro,
-        telefone: row.telefone,
-        status: row.status,
-        nomeDono: row.nomeDono || '',
-        // O SEGREDO ESTÁ AQUI:
-        endereco: {
-          cep: row.cep || '',
-          logradouro: row.logradouro || '',
-          numero: row.numero || '',
-          bairro: row.bairro || '',
-          cidade: row.cidade || '',
-          estado: row.estado || '',
-        },
-      };
-
-      console.log(
-        '🎯 [API DATA] Objeto formatado para o Form:',
-        response.nome_fantasia,
-      );
-      return response;
-    } catch (e) {
-      console.error('❌ Erro na busca:', e.message);
-      return null;
-    }
+    return {
+      ...row,
+      endereco: {
+        cep: row.cep,
+        logradouro: row.logradouro,
+        numero: row.numero,
+        bairro: row.bairro,
+        cidade: row.cidade,
+        estado: row.estado,
+      },
+    };
   }
   /**
    * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
@@ -116,35 +74,17 @@ export class SaasService {
     return await this.db.transaction(async (tx: any) => {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined';
-
-        // 1. Persistir Endereço Lego
-        let enderecoId = dto.endereco_id;
-        if (dto.endereco?.cep) {
-          const dadosEnd = {
-            cep: dto.endereco.cep,
-            logradouro: dto.endereco.logradouro,
-            numero: dto.endereco.numero,
-            bairro: dto.endereco.bairro,
-            cidade: dto.endereco.cidade,
-            estado: dto.endereco.estado,
-          };
-
-          const tableEnd = schema.enderecos as any;
-          if (enderecoId) {
-            await tx
-              .update(tableEnd)
-              .set(dadosEnd)
-              .where(eq(tableEnd.id, enderecoId));
-          } else {
-            const [novo] = await tx
-              .insert(tableEnd)
-              .values(dadosEnd)
-              .returning();
-            enderecoId = novo.id;
-          }
-        }
-
         const tableTenants = schema.tenants as any;
+        const tablePessoas = schema.pessoas as any;
+
+        // 🚀 1. GRAVAÇÃO LEGO (A Ordem que você definiu)
+        // O FormMaster envia dto.endereco.cep, etc.
+        const enderecoId = await persistirEnderecoLego(
+          tx,
+          dto.endereco,
+          dto.endereco_id,
+        );
+
         const payloadTenant = {
           nome_conta: dto.nome_conta,
           nome_fantasia: dto.nome_fantasia,
@@ -152,7 +92,7 @@ export class SaasService {
           slug: dto.slug,
           email_financeiro: dto.email_financeiro,
           telefone: dto.telefone,
-          endereco_id: enderecoId,
+          endereco_id: enderecoId, // <--- O VÍNCULO AGORA VAI PREENCHIDO
           status: dto.status || 'ativo',
         };
 
@@ -162,8 +102,7 @@ export class SaasService {
             .set(payloadTenant)
             .where(eq(tableTenants.id, dto.id));
 
-          // Atualiza o Dono (Pessoa Papel 6)
-          const tablePessoas = schema.pessoas as any;
+          // Atualiza o Dono (Papel 6)
           await tx
             .update(tablePessoas)
             .set({ nome: dto.nomeDono, email: dto.email_financeiro })
@@ -173,35 +112,37 @@ export class SaasService {
                 eq(tablePessoas.papel, '6'),
               ),
             );
+
+          return { success: true, id: dto.id };
         } else {
-          // Cria Novo
-          const [tenant] = await tx
-            .insert(tableTenants)
-            .values(payloadTenant)
-            .returning();
+          // Cria Novo Tenant
+          const [tenant] = await (
+            tx.insert(tableTenants).values(payloadTenant) as any
+          ).returning();
 
           // Cria Unidade Matriz
-          const [unidade] = await tx
-            .insert(schema.unidades as any)
-            .values({
+          const [unidade] = await (
+            tx.insert(schema.unidades as any).values({
               tenant_id: tenant.id,
-              nome: 'MATRIZ',
+              nome: 'MATRIZ - CENTRAL',
               is_matriz: true,
-            })
-            .returning();
+            }) as any
+          ).returning();
 
-          // Cria Dono
-          await tx.insert(schema.pessoas as any).values({
+          // Cria Dono (Papel 6)
+          await (tx.insert(tablePessoas).values({
             tenant_id: tenant.id,
             unidade_id: unidade.id,
-            nome: dto.nomeDono,
+            nome: dto.nomeDono || dto.nome_fantasia,
             email: dto.email_financeiro,
-            papel: '6',
             documento: '000.000.000-00',
+            papel: '6',
+            is_admin: true,
             endereco_id: enderecoId,
-          });
+          }) as any);
+
+          return { success: true, id: tenant.id };
         }
-        return { success: true };
       } catch (e) {
         throw new InternalServerErrorException(e.message);
       }
@@ -228,6 +169,7 @@ export class SaasService {
       const table = schema.tenants as any;
       // O banco fará o delete em cascata se configurado no schema
       return await this.db.delete(table).where(eq(table.id, id));
+      S;
     } catch (e: any) {
       throw new InternalServerErrorException(
         'Existem registros vinculados a esta imobiliária.',
