@@ -9,9 +9,9 @@ import { eq } from 'drizzle-orm';
 export async function persistirEnderecoLego(
   tx: any,
   dados: any,
-  idExistente?: number,
+  idExistente?: any,
 ) {
-  // 1. Se não houver dados reais, retorna o que já existia ou nulo
+  // Se não tem dados mínimos, não faz nada
   if (!dados || (!dados.cep && !dados.logradouro)) return idExistente || null;
 
   const table = schema.enderecos as any;
@@ -24,12 +24,20 @@ export async function persistirEnderecoLego(
     estado: dados.estado || '??',
   };
 
-  if (idExistente && idExistente > 0) {
-    // 2. Atualiza o bloco de Lego existente
-    await tx.update(table).set(payload).where(eq(table.id, idExistente));
-    return idExistente;
+  // 🚨 O SEGREDO: Se temos um ID válido, forçamos o UPDATE do bloco existente
+  if (idExistente && idExistente !== 'undefined' && Number(idExistente) > 0) {
+    console.log(
+      '🆙 [SISMOB LEGO] Atualizando bloco de endereço ID:',
+      idExistente,
+    );
+    await tx
+      .update(table)
+      .set(payload)
+      .where(eq(table.id, Number(idExistente)));
+    return Number(idExistente);
   } else {
-    // 3. Fabrica um novo bloco de Lego e devolve o novo ID
+    // Caso contrário, fabrica um novo
+    console.log('🆕 [SISMOB LEGO] Criando novo bloco de endereço');
     const [novo] = await tx.insert(table).values(payload).returning();
     return novo.id;
   }

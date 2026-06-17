@@ -77,25 +77,23 @@ export class SaasService {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
 
-        // 1. GRAVA O ENDEREÇO LEGO PRIMEIRO (Regra de Ouro)
+        // 1. OBTEMOS O ID DO ENDEREÇO (Pode vir na raiz do DTO ou dentro do objeto endereco)
+        const idDoEndereco = dto.endereco_id || dto.endereco?.id;
+
+        // 2. PERSISTÊNCIA LEGO
         const enderecoId = await persistirEnderecoLego(
           tx,
           dto.endereco,
-          dto.endereco_id,
+          idDoEndereco,
         );
-        console.log('📍 [SISMOB DEBUG] ID Endereço Lego:', enderecoId);
 
         if (isUpdate) {
-          // UPDATE COM SQL BRUTO
+          // UPDATE TENANT
           await tx.execute(sql`
           UPDATE tenants SET 
-            nome_conta = ${dto.nome_conta},
             nome_fantasia = ${dto.nome_fantasia},
             telefone = ${dto.telefone},
-            email_financeiro = ${dto.email_financeiro},
-            slug = ${dto.slug},
-            url_logo = ${dto.url_logo},
-            endereco_id = ${enderecoId},
+            endereco_id = ${enderecoId}, -- Mantém o vínculo
             updated_at = NOW()
           WHERE id = ${dto.id}
         `);
