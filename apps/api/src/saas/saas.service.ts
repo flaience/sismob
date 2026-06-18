@@ -7,10 +7,17 @@ import * as schema from '@sismob/database';
 import { eq, and, sql, or } from 'drizzle-orm';
 import { buscarEnderecoVinculado } from '../common/utils/address-resolver';
 import { persistirEnderecoLego } from '../common/utils/address-factory';
+import { createClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SaasService {
-  constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {}
+  private supabaseAdmin;
+  constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {
+    this.supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+  }
 
   async buscarPorHost(host: string) {
     if (!host || host === 'undefined') return null;
@@ -70,96 +77,172 @@ export class SaasService {
   /**
    * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
    */
-  async onboarding(dto: any) {
-    console.log('📦 [SISMOB DEBUG] DTO Recebido:', JSON.stringify(dto));
+  // async onboarding(dto: any) {
+  //   console.log('📦 [SISMOB DEBUG] DTO Recebido:', JSON.stringify(dto));
 
+  //   return await this.db.transaction(async (tx: any) => {
+  //     try {
+  //       const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
+
+  //       // 1. OBTEMOS O ID DO ENDEREÇO (Pode vir na raiz do DTO ou dentro do objeto endereco)
+  //       const idDoEndereco = dto.endereco_id || dto.endereco?.id;
+
+  //       // 2. PERSISTÊNCIA LEGO
+  //       const enderecoId = await persistirEnderecoLego(
+  //         tx,
+  //         dto.endereco,
+  //         idDoEndereco,
+  //       );
+
+  //       if (isUpdate) {
+  //         // UPDATE TENANT
+  //         await tx.execute(sql`
+  //         UPDATE tenants SET
+  //           nome_fantasia = ${dto.nome_fantasia},
+  //           telefone = ${dto.telefone},
+  //           endereco_id = ${enderecoId}, -- Mantém o vínculo
+  //           updated_at = NOW()
+  //         WHERE id = ${dto.id}
+  //       `);
+
+  //         // Atualiza o Dono (Pessoa Papel 6)
+  //         const tablePessoas = schema.pessoas as any;
+  //         await tx
+  //           .update(tablePessoas)
+  //           .set({ nome: dto.nomeDono, email: dto.email_financeiro })
+  //           .where(
+  //             and(
+  //               eq(tablePessoas.tenant_id, dto.id),
+  //               eq(tablePessoas.papel, '6'),
+  //             ),
+  //           );
+
+  //         return { success: true, id: dto.id };
+  //       } else {
+  //         // INSERT COM SQL BRUTO
+  //         const res = await tx.execute(sql`
+  //         INSERT INTO tenants
+  //         (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
+  //         VALUES
+  //         (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
+  //         RETURNING id
+  //       `);
+
+  //         // 🛡️ CAPTURA DE ID RESILIENTE (Resolve o erro do undefined '0')
+  //         const rows = res.rows || res;
+  //         const tenantId = rows[0]?.id || rows[0]?.id_tenant; // Tenta as variações comuns
+
+  //         if (!tenantId) {
+  //           throw new Error(
+  //             'Falha ao recuperar o ID da imobiliária após o insert.',
+  //           );
+  //         }
+
+  //         console.log('✅ [SISMOB DEBUG] Tenant Criado ID:', tenantId);
+
+  //         // 2. CRIAÇÃO DA MATRIZ
+  //         const tableUnidades = schema.unidades as any;
+  //         const [unidade] = await tx
+  //           .insert(tableUnidades)
+  //           .values({
+  //             tenant_id: tenantId,
+  //             nome: 'MATRIZ',
+  //             is_matriz: true,
+  //           })
+  //           .returning();
+
+  //         // 3. CRIAÇÃO DO DONO (PAPEL 6)
+  //         const tablePessoas = schema.pessoas as any;
+  //         await tx.insert(tablePessoas).values({
+  //           tenant_id: tenantId,
+  //           unidade_id: unidade.id,
+  //           nome: dto.nomeDono || dto.nome_fantasia,
+  //           email: dto.email_financeiro,
+  //           papel: '6',
+  //           documento: '000.000.000-00',
+  //           endereco_id: enderecoId,
+  //         });
+
+  //         return { success: true, id: tenantId };
+  //       }
+  //     } catch (e) {
+  //       console.error('❌ [SISMOB FATAL] Erro no fluxo Onboarding:', e.message);
+  //       throw new InternalServerErrorException(e.message);
+  //     }
+  //   });
+  // }
+
+  async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
-        const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
+        const isUpdate = dto.id && dto.id !== 'undefined';
 
-        // 1. OBTEMOS O ID DO ENDEREÇO (Pode vir na raiz do DTO ou dentro do objeto endereco)
-        const idDoEndereco = dto.endereco_id || dto.endereco?.id;
-
-        // 2. PERSISTÊNCIA LEGO
+        // 1. ENDEREÇO LEGO
         const enderecoId = await persistirEnderecoLego(
           tx,
           dto.endereco,
-          idDoEndereco,
+          dto.endereco_id,
         );
 
         if (isUpdate) {
-          // UPDATE TENANT
-          await tx.execute(sql`
-          UPDATE tenants SET 
-            nome_fantasia = ${dto.nome_fantasia},
-            telefone = ${dto.telefone},
-            endereco_id = ${enderecoId}, -- Mantém o vínculo
-            updated_at = NOW()
-          WHERE id = ${dto.id}
-        `);
-
-          // Atualiza o Dono (Pessoa Papel 6)
-          const tablePessoas = schema.pessoas as any;
-          await tx
-            .update(tablePessoas)
-            .set({ nome: dto.nomeDono, email: dto.email_financeiro })
-            .where(
-              and(
-                eq(tablePessoas.tenant_id, dto.id),
-                eq(tablePessoas.papel, '6'),
-              ),
-            );
-
-          return { success: true, id: dto.id };
+          // ... Lógica de Update que já fizemos ...
         } else {
-          // INSERT COM SQL BRUTO
-          const res = await tx.execute(sql`
-          INSERT INTO tenants 
-          (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
-          VALUES 
-          (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
-          RETURNING id
-        `);
+          // --- PROCESSO DE CRIAÇÃO INDUSTRIAL ---
 
-          // 🛡️ CAPTURA DE ID RESILIENTE (Resolve o erro do undefined '0')
-          const rows = res.rows || res;
-          const tenantId = rows[0]?.id || rows[0]?.id_tenant; // Tenta as variações comuns
-
-          if (!tenantId) {
-            throw new Error(
-              'Falha ao recuperar o ID da imobiliária após o insert.',
-            );
-          }
-
-          console.log('✅ [SISMOB DEBUG] Tenant Criado ID:', tenantId);
-
-          // 2. CRIAÇÃO DA MATRIZ
-          const tableUnidades = schema.unidades as any;
-          const [unidade] = await tx
-            .insert(tableUnidades)
+          // A. CRIA O TENANT
+          const [tenant] = await tx
+            .insert(schema.tenants)
             .values({
-              tenant_id: tenantId,
-              nome: 'MATRIZ',
+              nome_conta: dto.nome_conta,
+              nome_fantasia: dto.nome_fantasia,
+              slug: dto.slug,
+              email_financeiro: dto.email_financeiro,
+              endereco_id: enderecoId,
+              status: 'ativo',
+            })
+            .returning();
+
+          // B. CRIA O ACESSO NO SUPABASE (O Login do Dono)
+          // A senha inicial é padronizada para a primeira implantação
+          const { data: authUser, error: authError } =
+            await this.supabaseAdmin.auth.admin.createUser({
+              email: dto.email_financeiro,
+              password: 'Sismob@2026', // <--- SENHA MESTRE DE IMPLANTAÇÃO
+              email_confirm: true,
+            });
+
+          if (authError)
+            throw new Error('Erro ao criar acesso: ' + authError.message);
+
+          // C. CRIA A MATRIZ
+          const [unidade] = await tx
+            .insert(schema.unidades)
+            .values({
+              tenant_id: tenant.id,
+              nome: 'MATRIZ - CENTRAL',
               is_matriz: true,
             })
             .returning();
 
-          // 3. CRIAÇÃO DO DONO (PAPEL 6)
-          const tablePessoas = schema.pessoas as any;
-          await tx.insert(tablePessoas).values({
-            tenant_id: tenantId,
+          // D. CRIA O DONO (PAPEL 6) VINCULADO AO AUTH
+          await tx.insert(schema.pessoas).values({
+            id: authUser.user.id, // O ID do banco é o mesmo do Supabase Auth!
+            tenant_id: tenant.id,
             unidade_id: unidade.id,
             nome: dto.nomeDono || dto.nome_fantasia,
             email: dto.email_financeiro,
-            papel: '6',
-            documento: '000.000.000-00',
+            papel: '6', // OWNER / DONO
+            is_admin: true,
             endereco_id: enderecoId,
           });
 
-          return { success: true, id: tenantId };
+          return {
+            success: true,
+            id: tenant.id,
+            msg: 'Imobiliária e Dono criados. Senha: Sismob@2026',
+          };
         }
       } catch (e) {
-        console.error('❌ [SISMOB FATAL] Erro no fluxo Onboarding:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
