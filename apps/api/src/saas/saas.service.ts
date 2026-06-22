@@ -264,49 +264,30 @@ export class SaasService {
    */
   // apps/api/src/saas/saas.service.ts
 
+  // apps/api/src/saas/saas.service.ts
+
   async removerTenant(id: string) {
-    return await this.db.transaction(async (tx: any) => {
-      try {
-        console.log(
-          `🗑️ [SISMOB] Iniciando limpeza total da imobiliária: ${id}`,
-        );
+    try {
+      const table = schema.tenants as any;
 
-        // 1. Descobrimos o ID do endereço para não deixar lixo no banco (Lego)
-        const resTenant = await tx.execute(
-          sql`SELECT endereco_id FROM tenants WHERE id = ${id}`,
-        );
-        const enderecoId = resTenant.rows[0]?.endereco_id;
+      // Tentativa de deleção direta. O Postgres vai validar as Foreign Keys em milissegundos.
+      await this.db.delete(table).where(eq(table.id, id));
 
-        // 2. Lógica de "Terra Arrasada" (Apaga tudo que aponta para esse Tenant)
-        // O Drizzle/SQL apaga na ordem correta para não dar erro de FK
+      return { success: true };
+    } catch (e: any) {
+      // 💡 O SEGREDO: Capturamos o código de erro do Postgres para "Violação de Chave Estrangeira"
+      // No Postgres, o código '23503' significa: "Não posso deletar porque existem filhos".
 
-        // A. Apaga os Logs e Atividades
-        await tx.execute(
-          sql`DELETE FROM logs_atividades WHERE tenant_id = ${id}`,
-        );
-
-        // B. Apaga as Pessoas (Dono, Corretores, etc)
-        await tx.execute(sql`DELETE FROM pessoas WHERE tenant_id = ${id}`);
-
-        // C. Apaga as Unidades/Filiais
-        await tx.execute(sql`DELETE FROM unidades WHERE tenant_id = ${id}`);
-
-        // D. Apaga a própria Imobiliária (Tenant)
-        await tx.execute(sql`DELETE FROM tenants WHERE id = ${id}`);
-
-        // E. Por fim, apaga o endereço na tabela Lego (se ele não estiver sendo usado por mais ninguém)
-        if (enderecoId) {
-          await tx.execute(sql`DELETE FROM enderecos WHERE id = ${enderecoId}`);
-        }
-
-        console.log('✅ [SISMOB] Imobiliária e todos os vínculos removidos.');
-        return { success: true };
-      } catch (e) {
-        console.error('❌ [SISMOB] Falha na exclusão:', e.message);
+      if (e.code === '23503' || e.message.includes('foreign key constraint')) {
         throw new InternalServerErrorException(
-          'Erro ao excluir: Esta imobiliária possui registros operacionais (Imóveis/Títulos) que impedem a remoção direta.',
+          'BLOQUEIO DE SEGURANÇA: Esta imobiliária possui registros vinculados (Imóveis, Pessoas ou Financeiro) e não pode ser excluída para preservar a integridade dos dados.',
         );
       }
-    });
+
+      // Se for qualquer outro erro técnico, lançamos a mensagem original
+      throw new InternalServerErrorException(
+        'Erro inesperado na exclusão: ' + e.message,
+      );
+    }
   }
 }

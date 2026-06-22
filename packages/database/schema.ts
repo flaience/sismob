@@ -97,7 +97,9 @@ export const pessoas = pgTable(
     tenant_id: uuid("tenant_id")
       .references(() => tenants.id, { onDelete: "cascade" })
       .notNull(),
-    unidade_id: integer("unidade_id").references(() => unidades.id),
+    unidade_id: integer("unidade_id").references(() => unidades.id, {
+      onDelete: "cascade",
+    }),
     endereco_id: integer("endereco_id").references(() => enderecos.id), // <--- O VINCULO
     tipo: tipoFisicaJuridica("tipo").default("f"),
     papel: papelPessoa("papel").notNull(),
@@ -134,7 +136,12 @@ export const imoveis = pgTable("imoveis", {
   tenant_id: uuid("tenant_id")
     .references(() => tenants.id, { onDelete: "cascade" })
     .notNull(),
-  unidade_id: integer("unidade_id").references(() => unidades.id),
+  unidade_id: integer("unidade_id").references(() => unidades.id, {
+    onDelete: "cascade",
+  }),
+  proprietario_id: uuid("proprietario_id").references(() => pessoas.id, {
+    onDelete: "cascade",
+  }),
   endereco_id: integer("endereco_id").references(() => enderecos.id),
   titulo: varchar("titulo", { length: 255 }).notNull(),
   descricao: text("descricao"),
@@ -143,7 +150,7 @@ export const imoveis = pgTable("imoveis", {
   preco_aluguel: decimal("preco_aluguel", { precision: 12, scale: 2 }),
   area_privativa: decimal("area_privativa", { precision: 10, scale: 2 }),
   video_url: text("video_url"),
-  proprietario_id: uuid("proprietario_id").references(() => pessoas.id),
+
   created_at: timestamp("created_at").defaultNow(),
 });
 // ==========================================
@@ -151,8 +158,10 @@ export const imoveis = pgTable("imoveis", {
 // ==========================================
 export const categoriasAtributos = pgTable("categorias_atributos", {
   id: serial("id").primaryKey(),
-  tenant_id: uuid("tenant_id").references(() => tenants.id),
-  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Dormitórios", "Lazer"
+  tenant_id: uuid("tenant_id").references(() => tenants.id, {
+    onDelete: "cascade",
+  }), // <--- ADICIONADO
+  nome: varchar("nome", { length: 100 }).notNull(),
 });
 
 // 2. O CARDÁPIO DE ITENS (O que você sugeriu)
@@ -163,6 +172,7 @@ export const atributos = pgTable("atributos", {
     .notNull(),
   categoria_id: integer("categoria_id").references(
     () => categoriasAtributos.id,
+    { onDelete: "cascade" },
   ),
   nome: varchar("nome", { length: 100 }).notNull(),
   quantidade: integer("quantidade").default(1),
@@ -213,8 +223,10 @@ export const instrucoesChegada = pgTable("instrucoes_chegada", {
 
 export const grupoCaixa = pgTable("grupo_caixa", {
   id: serial("id").primaryKey(),
-  tenant_id: uuid("tenant_id").references(() => tenants.id),
-  codigo: varchar("codigo", { length: 20 }), // ex: 1.01
+  tenant_id: uuid("tenant_id").references(() => tenants.id, {
+    onDelete: "cascade",
+  }), // <--- ADICIONADO
+  codigo: varchar("codigo", { length: 20 }),
   descricao: varchar("descricao", { length: 100 }).notNull(),
   tipo: tipoMovimentoFinanceiro("tipo").notNull(),
 });
@@ -241,13 +253,16 @@ export const contasBancarias = pgTable("contas_bancarias", {
 export const titulos = pgTable("titulos", {
   id: serial("id").primaryKey(),
   tenant_id: uuid("tenant_id")
-    .references(() => tenants.id)
-    .notNull(),
-  pessoa_id: uuid("pessoa_id").references(() => pessoas.id),
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(), // <--- ADICIONADO
+  pessoa_id: uuid("pessoa_id").references(() => pessoas.id, {
+    onDelete: "set null",
+  }), // Mantém o título se a pessoa sumir
 
   // Banco onde o dinheiro entra/sai (Se NULL, é Dinheiro vivo)
   conta_bancaria_id: integer("conta_bancaria_id").references(
     () => contasBancarias.id,
+    { onDelete: "cascade" },
   ),
   usuario_id: uuid("usuario_id").references(() => pessoas.id),
   valor_nominal: decimal("valor_nominal", {
@@ -273,14 +288,17 @@ export const titulos = pgTable("titulos", {
 export const caixa = pgTable("caixa", {
   id: serial("id").primaryKey(),
   tenant_id: uuid("tenant_id")
-    .references(() => tenants.id)
+    .references(() => tenants.id, { onDelete: "cascade" })
     .notNull(),
-  grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id),
+  grupo_caixa_id: integer("grupo_caixa_id").references(() => grupoCaixa.id, {
+    onDelete: "cascade",
+  }),
   titulo_id: integer("titulo_id").references(() => titulos.id, {
     onDelete: "cascade",
   }),
   conta_bancaria_id: integer("conta_bancaria_id").references(
     () => contasBancarias.id,
+    { onDelete: "cascade" },
   ),
   usuario_id: uuid("usuario_id").references(() => pessoas.id),
   tipo: tipoMovimentoFinanceiro("tipo").notNull(),
@@ -331,9 +349,15 @@ export const negociacoes = pgTable("negociacoes", {
   tenant_id: uuid("tenant_id")
     .references(() => tenants.id, { onDelete: "cascade" })
     .notNull(),
-  imovel_id: integer("imovel_id").references(() => imoveis.id),
-  corretor_id: uuid("corretor_id").references(() => pessoas.id),
-  cliente_id: uuid("cliente_id").references(() => pessoas.id),
+  imovel_id: integer("imovel_id").references(() => imoveis.id, {
+    onDelete: "cascade",
+  }),
+  corretor_id: uuid("corretor_id").references(() => pessoas.id, {
+    onDelete: "cascade",
+  }),
+  cliente_id: uuid("cliente_id").references(() => pessoas.id, {
+    onDelete: "cascade",
+  }),
   status: statusNegociacao("status").default("proposta"),
 
   // Nomes exatos da sua lista:
@@ -403,7 +427,8 @@ export const aiConversas = pgTable("ai_conversas", {
 // ==========================================
 export const logsAtividades = pgTable("logs_atividades", {
   id: serial("id").primaryKey(),
-  tenant_id: uuid("tenant_id").references(() => tenants.id),
+  // <--- ADICIONADO
+
   usuario_id: uuid("usuario_id").references(() => pessoas.id),
   operacao: varchar("operacao", { length: 1 }).notNull(), // i, a, d
   descricao: text("descricao"),
