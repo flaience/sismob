@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { LogIn, ShieldCheck, Loader2 } from "lucide-react";
+import { LogIn, ShieldCheck, Loader2, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -26,6 +26,32 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert(
+        "Por favor, digite seu e-mail no campo correspondente antes de solicitar a recuperação.",
+      );
+      return;
+    }
+
+    const confirmReset = confirm(
+      `Deseja enviar um link de recuperação para o e-mail: ${email}?`,
+    );
+    if (!confirmReset) return;
+
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      alert("Erro ao processar recuperação: " + error.message);
+    } else {
+      alert("✅ Link de recuperação enviado! Verifique sua caixa de entrada.");
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl border border-slate-100 p-12 space-y-8 animate-in fade-in zoom-in duration-500">
@@ -47,16 +73,29 @@ export default function LoginPage() {
               type="email"
               placeholder="E-mail corporativo"
               required
+              value={email}
               className="w-full p-5 bg-slate-50 rounded-2xl border-none focus:ring-2 ring-brand font-bold transition-all outline-none"
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              type="password"
-              placeholder="Senha de acesso"
-              required
-              className="w-full p-5 bg-slate-50 rounded-2xl border-none focus:ring-2 ring-brand font-bold transition-all outline-none"
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="space-y-2">
+              <input
+                type="password"
+                placeholder="Senha de acesso"
+                required
+                value={password}
+                className="w-full p-5 bg-slate-50 rounded-2xl border-none focus:ring-2 ring-brand font-bold transition-all outline-none"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <div className="flex justify-end px-2">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-[10px] font-black text-slate-400 hover:text-brand transition-colors flex items-center gap-1 uppercase tracking-widest"
+                >
+                  <KeyRound size={12} /> Esqueci minha senha
+                </button>
+              </div>
+            </div>
           </div>
 
           <button
@@ -74,6 +113,12 @@ export default function LoginPage() {
             ENTRAR NO SISTEMA
           </button>
         </form>
+
+        <div className="pt-4 text-center">
+          <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">
+            Sismob Real Estate Engine v6.0
+          </p>
+        </div>
       </div>
     </div>
   );
