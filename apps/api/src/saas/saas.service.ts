@@ -39,12 +39,28 @@ export class SaasService {
    * 1. LISTAGEM GLOBAL (Para o Luis)
    */
 
+  // apps/api/src/saas/saas.service.ts
+
   async listarTenants() {
-    const res = await this.db.execute(sql`
-    SELECT id, nome_fantasia, telefone, email_financeiro, nome_conta, status 
-    FROM tenants ORDER BY created_at DESC
-  `);
-    return res.rows || res;
+    try {
+      // Usamos ALIAS (as) para garantir que o JS leia o nome certo das colunas
+      const res = await this.db.execute(sql`
+      SELECT 
+        id, 
+        nome_fantasia as "nome_fantasia", 
+        nome_conta as "nome_conta", 
+        telefone as "telefone", 
+        email_financeiro as "email_financeiro", 
+        status 
+      FROM tenants 
+      ORDER BY created_at DESC
+    `);
+
+      const rows = res.rows || res;
+      return Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      return [];
+    }
   }
   /**
    * 2. BUSCA ÚNICA (Para o formulário de alteração)

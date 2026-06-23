@@ -16,48 +16,45 @@ export default function SismobListMaster({ config, papelUrl }: any) {
   const columns = config?.columns || [{ label: "Nome", key: "nome" }];
   const endpoint = config?.entity;
 
+  // Dentro do SismobListMaster.tsx
+
   const loadData = useCallback(async () => {
-    if (!tenant?.id || !endpoint) return;
+    // 🛡️ AJUSTE INDUSTRIAL: Se for gestão de imobiliárias (saas), não exigimos tenant.id
+    const isSaas = endpoint?.includes("saas");
+
+    if (!endpoint) return;
+    if (!isSaas && !tenant?.id) {
+      // Se não for Saas e não tiver tenant, apenas desliga o loading e sai
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
-      // 1. LOG DE ENVIO: Vamos ver qual ID de imobiliária o site está mandando
-      console.log(`📡 [SISMOB DEBUG] Requisitando: /${endpoint}`, {
-        tenantIdEnviado: tenant.id,
-        papel: config.papel,
-        filtroBusca: searchTerm,
-      });
+      console.log(`📡 [SISMOB DEBUG] Requisitando: /${endpoint}`);
 
       const res = await api.get(`/${endpoint}`, {
         params: {
-          imobiliariaId: tenant.id,
+          imobiliariaId: tenant?.id, // Pode ser null no caso do Saas
           papel: config.papel,
           search: searchTerm,
         },
       });
 
-      // 2. LOG DE RESPOSTA: Vamos ver o que o Banco de Dados devolveu de verdade
-      console.log(
-        `✅ [SISMOB DEBUG] Resposta da API para ${config.title}:`,
-        res.data,
-      );
+      // 🛡️ TRATAMENTO DE RESPOSTA RESILIENTE
+      // Aceita Array direto ou objeto { rows: [] } vindo do SQL Bruto
+      const rawData = res.data;
+      const resultado = Array.isArray(rawData)
+        ? rawData
+        : rawData?.rows || (rawData ? [rawData] : []);
 
-      const resultado = Array.isArray(res.data)
-        ? res.data
-        : res.data
-          ? [res.data]
-          : [];
-
-      // Se o log acima mostrar dados mas a tela continuar vazia, o problema é o nome das colunas no MAPA_SISMOB
+      console.log(`✅ [SISMOB DEBUG] Dados recebidos:`, resultado);
       setData(resultado);
     } catch (e: any) {
-      console.error(
-        `❌ [SISMOB DEBUG] Falha na comunicação com a API (${config.title}):`,
-        e.message,
-      );
+      console.error(`❌ Erro na API:`, e.message);
       setData([]);
     } finally {
-      setLoading(false);
+      setLoading(false); // <--- GARANTE QUE O "SINCRONIZANDO" SUMA
     }
   }, [tenant?.id, endpoint, config.papel, searchTerm]);
 
