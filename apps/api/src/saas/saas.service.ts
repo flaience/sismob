@@ -1,3 +1,4 @@
+// apps/api/src/saas/saas.service.ts
 import {
   Injectable,
   Inject,
@@ -69,148 +70,55 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     const res = await this.db.execute(sql`
-    SELECT t.*, p.nome as "nomeDono", e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+    SELECT 
+      t.id, t.nome_conta, t.nome_fantasia, t.slug, t.dominio_customizado, 
+      t.status, t.email_financeiro, t.url_logo, t.telefone, t.endereco_id,
+      p.nome as "nomeDono", 
+      e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
     FROM tenants t
     LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
     LEFT JOIN enderecos e ON e.id = t.endereco_id
-    WHERE t.id = ${id} LIMIT 1
+    WHERE t.id = ${id} 
+    LIMIT 1
   `);
+
     const row = (res.rows || res)[0];
     if (!row) return null;
 
     return {
       ...row,
+      // Garante que o campo que o FormMaster usa esteja preenchido pelo banco
+      email_financeiro: row.email_financeiro,
       endereco: {
-        cep: row.cep,
-        logradouro: row.logradouro,
-        numero: row.numero,
-        bairro: row.bairro,
-        cidade: row.cidade,
-        estado: row.estado,
+        id: row.endereco_id, // Vital para o persistirEnderecoLego saber que é um Update
+        cep: row.cep || '',
+        logradouro: row.logradouro || '',
+        numero: row.numero || '',
+        bairro: row.bairro || '',
+        cidade: row.cidade || '',
+        estado: row.estado || '',
       },
     };
   }
   /**
    * 3. MOTOR DE ONBOARDING (Inclusão e Alteração Inteligente)
    */
-  // async onboarding(dto: any) {
-  //   console.log('📦 [SISMOB DEBUG] DTO Recebido:', JSON.stringify(dto));
-
-  //   return await this.db.transaction(async (tx: any) => {
-  //     try {
-  //       const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
-
-  //       // 1. OBTEMOS O ID DO ENDEREÇO (Pode vir na raiz do DTO ou dentro do objeto endereco)
-  //       const idDoEndereco = dto.endereco_id || dto.endereco?.id;
-
-  //       // 2. PERSISTÊNCIA LEGO
-  //       const enderecoId = await persistirEnderecoLego(
-  //         tx,
-  //         dto.endereco,
-  //         idDoEndereco,
-  //       );
-
-  //       if (isUpdate) {
-  //         // UPDATE TENANT
-  //         await tx.execute(sql`
-  //         UPDATE tenants SET
-  //           nome_fantasia = ${dto.nome_fantasia},
-  //           telefone = ${dto.telefone},
-  //           endereco_id = ${enderecoId}, -- Mantém o vínculo
-  //           updated_at = NOW()
-  //         WHERE id = ${dto.id}
-  //       `);
-
-  //         // Atualiza o Dono (Pessoa Papel 6)
-  //         const tablePessoas = schema.pessoas as any;
-  //         await tx
-  //           .update(tablePessoas)
-  //           .set({ nome: dto.nomeDono, email: dto.email_financeiro })
-  //           .where(
-  //             and(
-  //               eq(tablePessoas.tenant_id, dto.id),
-  //               eq(tablePessoas.papel, '6'),
-  //             ),
-  //           );
-
-  //         return { success: true, id: dto.id };
-  //       } else {
-  //         // INSERT COM SQL BRUTO
-  //         const res = await tx.execute(sql`
-  //         INSERT INTO tenants
-  //         (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
-  //         VALUES
-  //         (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
-  //         RETURNING id
-  //       `);
-
-  //         // 🛡️ CAPTURA DE ID RESILIENTE (Resolve o erro do undefined '0')
-  //         const rows = res.rows || res;
-  //         const tenantId = rows[0]?.id || rows[0]?.id_tenant; // Tenta as variações comuns
-
-  //         if (!tenantId) {
-  //           throw new Error(
-  //             'Falha ao recuperar o ID da imobiliária após o insert.',
-  //           );
-  //         }
-
-  //         console.log('✅ [SISMOB DEBUG] Tenant Criado ID:', tenantId);
-
-  //         // 2. CRIAÇÃO DA MATRIZ
-  //         const tableUnidades = schema.unidades as any;
-  //         const [unidade] = await tx
-  //           .insert(tableUnidades)
-  //           .values({
-  //             tenant_id: tenantId,
-  //             nome: 'MATRIZ',
-  //             is_matriz: true,
-  //           })
-  //           .returning();
-
-  //         // 3. CRIAÇÃO DO DONO (PAPEL 6)
-  //         const tablePessoas = schema.pessoas as any;
-  //         await tx.insert(tablePessoas).values({
-  //           tenant_id: tenantId,
-  //           unidade_id: unidade.id,
-  //           nome: dto.nomeDono || dto.nome_fantasia,
-  //           email: dto.email_financeiro,
-  //           papel: '6',
-  //           documento: '000.000.000-00',
-  //           endereco_id: enderecoId,
-  //         });
-
-  //         return { success: true, id: tenantId };
-  //       }
-  //     } catch (e) {
-  //       console.error('❌ [SISMOB FATAL] Erro no fluxo Onboarding:', e.message);
-  //       throw new InternalServerErrorException(e.message);
-  //     }
-  //   });
-  // }
-
-  // apps/api/src/saas/saas.service.ts
-
-  // apps/api/src/saas/saas.service.ts
 
   async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
-
-        // 1. ENDEREÇO LEGO (Sempre o primeiro)
-        const idDoEndereco = dto.endereco_id || dto.endereco?.id;
         const enderecoId = await persistirEnderecoLego(
           tx,
           dto.endereco,
-          idDoEndereco,
+          dto.endereco_id,
         );
 
         if (isUpdate) {
-          // --- FLUXO DE ATUALIZAÇÃO ---
-
-          // A. BUSCA O DONO ATUAL PARA SABER O ID DO AUTH
           const tablePessoas = schema.pessoas as any;
-          const donoAtual = await tx
+
+          // 1. Localizamos o dono (Papel 6)
+          const donos = await tx
             .select()
             .from(tablePessoas)
             .where(
@@ -221,22 +129,30 @@ export class SaasService {
             )
             .limit(1);
 
-          const authUserId = donoAtual[0]?.id;
+          const donoAtual = donos[0];
 
-          // B. ATUALIZA O SUPABASE AUTH (Se o e-mail mudou, o login muda!)
-          if (authUserId && dto.email_financeiro !== donoAtual[0]?.email) {
+          // 2. Só tentamos atualizar o Auth se o e-mail realmente mudou
+          if (donoAtual && dto.email_financeiro !== donoAtual.email) {
             console.log(
-              '📧 [SISMOB] Atualizando e-mail de login no Supabase Auth...',
+              `📧 [SISMOB] Trocando e-mail de ${donoAtual.email} para ${dto.email_financeiro}`,
             );
+
             const { error: authError } =
-              await this.supabaseAdmin.auth.admin.updateUserById(authUserId, {
-                email: dto.email_financeiro,
-              });
-            if (authError)
-              throw new Error('Erro ao atualizar Auth: ' + authError.message);
+              await this.supabaseAdmin.auth.admin.updateUserById(
+                donoAtual.id, // O ID da pessoa no banco é o ID do Auth
+                {
+                  email: dto.email_financeiro,
+                  email_confirm: true, // <--- FORÇA A CONFIRMAÇÃO IMEDIATA
+                },
+              );
+
+            if (authError) {
+              console.error('❌ Detalhe do erro Supabase:', authError);
+              throw new Error(`Falha no Supabase: ${authError.message}`);
+            }
           }
 
-          // C. ATUALIZA O TENANT (SQL BRUTO)
+          // 3. Atualiza o Tenant (SQL Bruto)
           await tx.execute(sql`
           UPDATE tenants SET 
             nome_fantasia = ${dto.nome_fantasia},
@@ -250,12 +166,12 @@ export class SaasService {
           WHERE id = ${dto.id}
         `);
 
-          // D. ATUALIZA A PESSOA (DONO)
+          // 4. Atualiza a Pessoa
           await tx
             .update(tablePessoas)
             .set({
               nome: dto.nomeDono,
-              email: dto.email_financeiro, // Sincroniza o e-mail aqui também!
+              email: dto.email_financeiro,
               endereco_id: enderecoId,
             })
             .where(
@@ -267,17 +183,15 @@ export class SaasService {
 
           return { success: true, id: dto.id };
         } else {
-          // ... (Mantenha o seu código de INSERT que já funciona)
+          // ... (Seu código de Insert que já funciona)
         }
       } catch (e) {
-        console.error(
-          '❌ [SISMOB FATAL] Erro na sincronização de e-mail:',
-          e.message,
-        );
+        console.error('❌ [SISMOB FATAL]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
   }
+
   async findOne(id: number, tenantId: string) {
     const table = schema.imoveis as any;
     const results = await this.db
