@@ -98,14 +98,57 @@ export class SaasService {
    */
 
   async onboarding(dto: any) {
-    // 1. LOG DE ENTRADA: O que o formulário está mandando?
-    console.log('📦 [SISMOB DEBUG] DTO RECEBIDO:', JSON.stringify(dto));
+    console.log(
+      '🏭 [SISMOB DEBUG] Iniciando gravação para:',
+      dto.nome_fantasia,
+    );
 
+    const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
+
+    // --- BLOCO 1: SINCRONIZAÇÃO DE AUTH (FORA DA TRANSAÇÃO) ---
+    // Fazemos fora para que um erro de "Confirm email change" no Supabase não mate o resto da gravação
+    if (isUpdate) {
+      try {
+        const tablePessoas = schema.pessoas as any;
+        const donos = await this.db
+          .select()
+          .from(tablePessoas)
+          .where(
+            and(
+              eq(tablePessoas.tenant_id, dto.id),
+              eq(tablePessoas.papel, '6'),
+            ),
+          )
+          .limit(1);
+
+        const donoAtual = donos[0];
+
+        if (donoAtual && dto.email_financeiro !== donoAtual.email) {
+          console.log(
+            `📧 [SISMOB] Sincronizando e-mail no Auth para o ID: ${donoAtual.id}`,
+          );
+          const { error: authError } =
+            await this.supabaseAdmin.auth.admin.updateUserById(donoAtual.id, {
+              email: dto.email_financeiro,
+              email_confirm: true,
+            });
+          if (authError) {
+            console.error('⚠️ [SUPABASE AUTH WARNING]:', authError.message);
+            // Registramos o aviso, mas deixamos o banco de dados prosseguir
+          }
+        }
+      } catch (authExc) {
+        console.error(
+          '⚠️ Falha não crítica na verificação de Auth:',
+          authExc.message,
+        );
+      }
+    }
+
+    // --- BLOCO 2: TRANSAÇÃO ATÔMICA DO BANCO (DADOS RÍGIDOS) ---
     return await this.db.transaction(async (tx: any) => {
       try {
-        const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
-
-        // 🚀 LEGO: O ID do endereço pode vir em 'endereco_id' ou 'endereco.id'
+        // 🚀 LEGO: Captura o ID do endereço para garantir o UPDATE do bloco existente
         const idDoEndereco = dto.endereco_id || dto.endereco?.id;
         const enderecoId = await persistirEnderecoLego(
           tx,
@@ -114,60 +157,22 @@ export class SaasService {
         );
 
         if (isUpdate) {
-          const tablePessoas = schema.pessoas as any;
-
-          // 2. BUSCA O DONO ATUAL
-          const donos = await tx
-            .select()
-            .from(tablePessoas)
-            .where(
-              and(
-                eq(tablePessoas.tenant_id, dto.id),
-                eq(tablePessoas.papel, '6'),
-              ),
-            )
-            .limit(1);
-
-          const donoAtual = donos[0];
-
-          // 3. ATUALIZAÇÃO DO LOGIN (SUPABASE AUTH)
-          if (donoAtual && dto.email_financeiro !== donoAtual.email) {
-            console.log(
-              `📧 [SISMOB] Tentando trocar e-mail de login: ${donoAtual.id}`,
-            );
-
-            const { data: updateData, error: authError } =
-              await this.supabaseAdmin.auth.admin.updateUserById(donoAtual.id, {
-                email: dto.email_financeiro,
-                email_confirm: true,
-              });
-
-            if (authError) {
-              // 🚨 AQUI VOCÊ VERÁ O ERRO REAL NO RAILWAY (Ex: "Email already in use" ou "User not found")
-              console.error(
-                '❌ [SUPABASE AUTH ERROR]:',
-                JSON.stringify(authError),
-              );
-              throw new Error(`Erro no Cofre de Senhas: ${authError.message}`);
-            }
-            console.log('✅ [SISMOB] Login do dono atualizado no Supabase.');
-          }
-
-          // 4. ATUALIZA O TENANT (SQL BRUTO PARA NÃO FALHAR)
+          // A. UPDATE TENANT (SQL BRUTO PARA SEGURANÇA DE COLUNAS)
           await tx.execute(sql`
-          UPDATE tenants SET 
-            nome_fantasia = ${dto.nome_fantasia},
-            nome_conta = ${dto.nome_conta},
-            telefone = ${dto.telefone},
-            email_financeiro = ${dto.email_financeiro},
-            slug = ${dto.slug},
-            url_logo = ${dto.url_logo},
-            endereco_id = ${enderecoId},
-            updated_at = NOW()
-          WHERE id = ${dto.id}
-        `);
+            UPDATE tenants SET 
+              nome_fantasia = ${dto.nome_fantasia},
+              nome_conta = ${dto.nome_conta},
+              telefone = ${dto.telefone},
+              email_financeiro = ${dto.email_financeiro},
+              slug = ${dto.slug},
+              url_logo = ${dto.url_logo},
+              endereco_id = ${enderecoId},
+              updated_at = NOW()
+            WHERE id = ${dto.id}
+          `);
 
-          // 5. ATUALIZA A PESSOA (DONO)
+          // B. UPDATE PESSOA (DONO)
+          const tablePessoas = schema.pessoas as any;
           await tx
             .update(tablePessoas)
             .set({
@@ -182,12 +187,64 @@ export class SaasService {
               ),
             );
 
+          console.log('✅ [SISMOB] Atualização concluída com sucesso.');
           return { success: true, id: dto.id };
         } else {
-          // ... (Seu código de Insert que já está funcionando)
+          // --- C. INSERÇÃO DE NOVA IMOBILIÁRIA (FLOW INDUSTRIAL) ---
+
+          // 1. Insert do Tenant
+          const resTenant = await tx.execute(sql`
+            INSERT INTO tenants 
+            (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
+            VALUES 
+            (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
+            RETURNING id
+          `);
+
+          const rows = resTenant.rows || resTenant;
+          const tenantId = rows[0]?.id;
+
+          // 2. Criar Usuário no Supabase Auth (Novo Acesso)
+          const { data: authUser, error: authError } =
+            await this.supabaseAdmin.auth.admin.createUser({
+              email: dto.email_financeiro,
+              password: 'Sismob@2026',
+              email_confirm: true,
+            });
+
+          if (authError)
+            throw new Error('Erro ao criar acesso Auth: ' + authError.message);
+
+          // 3. Criar Unidade Matriz
+          const tableUnidades = schema.unidades as any;
+          const [unidade] = await tx
+            .insert(tableUnidades)
+            .values({
+              tenant_id: tenantId,
+              nome: 'MATRIZ - CENTRAL',
+              is_matriz: true,
+            })
+            .returning();
+
+          // 4. Criar Dono (Pessoa Papel 6)
+          const tablePessoas = schema.pessoas as any;
+          await tx.insert(tablePessoas).values({
+            id: authUser.user.id,
+            tenant_id: tenantId,
+            unidade_id: unidade.id,
+            nome: dto.nomeDono || dto.nome_fantasia,
+            email: dto.email_financeiro,
+            documento: dto.documento || dto.nome_conta || '000.000.000-00',
+            papel: '6',
+            is_admin: true,
+            endereco_id: enderecoId,
+          });
+
+          console.log('✅ [SISMOB] Novo Tenant e Dono criados com sucesso.');
+          return { success: true, id: tenantId };
         }
       } catch (e) {
-        console.error('❌ [SISMOB FATAL ERROR]:', e.message);
+        console.error('❌ [SISMOB FATAL]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
