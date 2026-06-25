@@ -190,17 +190,14 @@ export class SaasService {
 
   // apps/api/src/saas/saas.service.ts
 
-  async onboarding(dto: any) {
-    console.log(
-      '📦 [SISMOB DEBUG] Iniciando Onboarding para:',
-      dto.nome_fantasia,
-    );
+  // apps/api/src/saas/saas.service.ts
 
+  async onboarding(dto: any) {
     return await this.db.transaction(async (tx: any) => {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
 
-        // 1. ENDEREÇO LEGO (Ordem Industrial)
+        // 1. ENDEREÇO LEGO (Sempre o primeiro)
         const idDoEndereco = dto.endereco_id || dto.endereco?.id;
         const enderecoId = await persistirEnderecoLego(
           tx,
@@ -209,70 +206,74 @@ export class SaasService {
         );
 
         if (isUpdate) {
-          // ... (Mantenha seu código de UPDATE que já funciona)
-          return { success: true, id: dto.id };
-        } else {
-          // 🚀 CRIAÇÃO DE NOVA IMOBILIÁRIA (CENÁRIO ONDE DEU ERRO)
+          // --- FLUXO DE ATUALIZAÇÃO ---
 
-          // A. INSERT DO TENANT
-          const resTenant = await tx.execute(sql`
-          INSERT INTO tenants 
-          (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
-          VALUES 
-          (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
-          RETURNING id
-        `);
+          // A. BUSCA O DONO ATUAL PARA SABER O ID DO AUTH
+          const tablePessoas = schema.pessoas as any;
+          const donoAtual = await tx
+            .select()
+            .from(tablePessoas)
+            .where(
+              and(
+                eq(tablePessoas.tenant_id, dto.id),
+                eq(tablePessoas.papel, '6'),
+              ),
+            )
+            .limit(1);
 
-          const rows = resTenant.rows || resTenant;
-          const tenantId = rows[0]?.id;
+          const authUserId = donoAtual[0]?.id;
 
-          // B. CRIAÇÃO DO USUÁRIO NO SUPABASE AUTH
-          // 💡 Se o usuário já existir no Auth, o catch abaixo vai pegar e te avisar
-          const { data: authUser, error: authError } =
-            await this.supabaseAdmin.auth.admin.createUser({
-              email: dto.email_financeiro,
-              password: 'Sismob@2026',
-              email_confirm: true,
-            });
-
-          if (authError) {
-            throw new Error(
-              `Erro no Supabase Auth: ${authError.message}. (Dica: Verifique se o e-mail já existe na aba Authentication do Supabase)`,
+          // B. ATUALIZA O SUPABASE AUTH (Se o e-mail mudou, o login muda!)
+          if (authUserId && dto.email_financeiro !== donoAtual[0]?.email) {
+            console.log(
+              '📧 [SISMOB] Atualizando e-mail de login no Supabase Auth...',
             );
+            const { error: authError } =
+              await this.supabaseAdmin.auth.admin.updateUserById(authUserId, {
+                email: dto.email_financeiro,
+              });
+            if (authError)
+              throw new Error('Erro ao atualizar Auth: ' + authError.message);
           }
 
-          // C. CRIAÇÃO DA MATRIZ
-          const [unidade] = await tx
-            .insert(schema.unidades as any)
-            .values({
-              tenant_id: tenantId,
-              nome: 'MATRIZ - CENTRAL',
-              is_matriz: true,
+          // C. ATUALIZA O TENANT (SQL BRUTO)
+          await tx.execute(sql`
+          UPDATE tenants SET 
+            nome_fantasia = ${dto.nome_fantasia},
+            nome_conta = ${dto.nome_conta},
+            telefone = ${dto.telefone},
+            email_financeiro = ${dto.email_financeiro},
+            slug = ${dto.slug},
+            url_logo = ${dto.url_logo},
+            endereco_id = ${enderecoId},
+            updated_at = NOW()
+          WHERE id = ${dto.id}
+        `);
+
+          // D. ATUALIZA A PESSOA (DONO)
+          await tx
+            .update(tablePessoas)
+            .set({
+              nome: dto.nomeDono,
+              email: dto.email_financeiro, // Sincroniza o e-mail aqui também!
+              endereco_id: enderecoId,
             })
-            .returning();
+            .where(
+              and(
+                eq(tablePessoas.tenant_id, dto.id),
+                eq(tablePessoas.papel, '6'),
+              ),
+            );
 
-          // D. CRIAÇÃO DO DONO (PAPEL 6)
-          // 🛡️ BLINDAGEM DE DOCUMENTO: Usamos o nome_conta (CNPJ) se o documento vier vazio
-          const documentoDono =
-            dto.documento || dto.nome_conta || '000.000.000-00';
-
-          await tx.insert(schema.pessoas as any).values({
-            id: authUser.user.id, // Vínculo com o Auth
-            tenant_id: tenantId,
-            unidade_id: unidade.id,
-            nome: dto.nomeDono || dto.nome_fantasia,
-            email: dto.email_financeiro,
-            documento: documentoDono, // <--- NUNCA MAIS SERÁ NULO
-            papel: '6',
-            is_admin: true,
-            endereco_id: enderecoId,
-          });
-
-          return { success: true, id: tenantId };
+          return { success: true, id: dto.id };
+        } else {
+          // ... (Mantenha o seu código de INSERT que já funciona)
         }
       } catch (e) {
-        console.error('❌ [SISMOB FATAL] Erro no Onboarding:', e.message);
-        // Aqui devolvemos a mensagem amigável para o seu alert() no frontend
+        console.error(
+          '❌ [SISMOB FATAL] Erro na sincronização de e-mail:',
+          e.message,
+        );
         throw new InternalServerErrorException(e.message);
       }
     });
