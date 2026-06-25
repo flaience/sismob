@@ -70,27 +70,20 @@ export class SaasService {
 
   async buscarUmTenant(id: string) {
     const res = await this.db.execute(sql`
-    SELECT 
-      t.id, t.nome_conta, t.nome_fantasia, t.slug, t.dominio_customizado, 
-      t.status, t.email_financeiro, t.url_logo, t.telefone, t.endereco_id,
-      p.nome as "nomeDono", 
-      e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
+    SELECT t.*, p.nome as "nomeDono", e.cep, e.logradouro, e.numero, e.bairro, e.cidade, e.estado
     FROM tenants t
     LEFT JOIN pessoas p ON p.tenant_id = t.id AND p.papel = '6'
     LEFT JOIN enderecos e ON e.id = t.endereco_id
-    WHERE t.id = ${id} 
-    LIMIT 1
+    WHERE t.id = ${id} LIMIT 1
   `);
-
     const row = (res.rows || res)[0];
     if (!row) return null;
 
     return {
       ...row,
-      // Garante que o campo que o FormMaster usa esteja preenchido pelo banco
-      email_financeiro: row.email_financeiro,
+      nomeDono: row.nomeDono || '',
       endereco: {
-        id: row.endereco_id, // Vital para o persistirEnderecoLego saber que é um Update
+        id: row.endereco_id, // <--- OBRIGATÓRIO PARA O UPDATE FUNCIONAR
         cep: row.cep || '',
         logradouro: row.logradouro || '',
         numero: row.numero || '',
@@ -105,19 +98,25 @@ export class SaasService {
    */
 
   async onboarding(dto: any) {
+    // 1. LOG DE ENTRADA: O que o formulário está mandando?
+    console.log('📦 [SISMOB DEBUG] DTO RECEBIDO:', JSON.stringify(dto));
+
     return await this.db.transaction(async (tx: any) => {
       try {
         const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
+
+        // 🚀 LEGO: O ID do endereço pode vir em 'endereco_id' ou 'endereco.id'
+        const idDoEndereco = dto.endereco_id || dto.endereco?.id;
         const enderecoId = await persistirEnderecoLego(
           tx,
           dto.endereco,
-          dto.endereco_id,
+          idDoEndereco,
         );
 
         if (isUpdate) {
           const tablePessoas = schema.pessoas as any;
 
-          // 1. Localizamos o dono (Papel 6)
+          // 2. BUSCA O DONO ATUAL
           const donos = await tx
             .select()
             .from(tablePessoas)
@@ -131,28 +130,30 @@ export class SaasService {
 
           const donoAtual = donos[0];
 
-          // 2. Só tentamos atualizar o Auth se o e-mail realmente mudou
+          // 3. ATUALIZAÇÃO DO LOGIN (SUPABASE AUTH)
           if (donoAtual && dto.email_financeiro !== donoAtual.email) {
             console.log(
-              `📧 [SISMOB] Trocando e-mail de ${donoAtual.email} para ${dto.email_financeiro}`,
+              `📧 [SISMOB] Tentando trocar e-mail de login: ${donoAtual.id}`,
             );
 
-            const { error: authError } =
-              await this.supabaseAdmin.auth.admin.updateUserById(
-                donoAtual.id, // O ID da pessoa no banco é o ID do Auth
-                {
-                  email: dto.email_financeiro,
-                  email_confirm: true, // <--- FORÇA A CONFIRMAÇÃO IMEDIATA
-                },
-              );
+            const { data: updateData, error: authError } =
+              await this.supabaseAdmin.auth.admin.updateUserById(donoAtual.id, {
+                email: dto.email_financeiro,
+                email_confirm: true,
+              });
 
             if (authError) {
-              console.error('❌ Detalhe do erro Supabase:', authError);
-              throw new Error(`Falha no Supabase: ${authError.message}`);
+              // 🚨 AQUI VOCÊ VERÁ O ERRO REAL NO RAILWAY (Ex: "Email already in use" ou "User not found")
+              console.error(
+                '❌ [SUPABASE AUTH ERROR]:',
+                JSON.stringify(authError),
+              );
+              throw new Error(`Erro no Cofre de Senhas: ${authError.message}`);
             }
+            console.log('✅ [SISMOB] Login do dono atualizado no Supabase.');
           }
 
-          // 3. Atualiza o Tenant (SQL Bruto)
+          // 4. ATUALIZA O TENANT (SQL BRUTO PARA NÃO FALHAR)
           await tx.execute(sql`
           UPDATE tenants SET 
             nome_fantasia = ${dto.nome_fantasia},
@@ -166,11 +167,11 @@ export class SaasService {
           WHERE id = ${dto.id}
         `);
 
-          // 4. Atualiza a Pessoa
+          // 5. ATUALIZA A PESSOA (DONO)
           await tx
             .update(tablePessoas)
             .set({
-              nome: dto.nomeDono,
+              nome: dto.nomeDono || dto.nome_fantasia,
               email: dto.email_financeiro,
               endereco_id: enderecoId,
             })
@@ -183,10 +184,10 @@ export class SaasService {
 
           return { success: true, id: dto.id };
         } else {
-          // ... (Seu código de Insert que já funciona)
+          // ... (Seu código de Insert que já está funcionando)
         }
       } catch (e) {
-        console.error('❌ [SISMOB FATAL]:', e.message);
+        console.error('❌ [SISMOB FATAL ERROR]:', e.message);
         throw new InternalServerErrorException(e.message);
       }
     });
