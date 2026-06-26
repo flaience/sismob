@@ -123,18 +123,24 @@ export class SaasService {
 
         const donoAtual = donos[0];
 
+        // Dentro do SaasService.ts -> método onboarding -> if (isUpdate)
+
         if (donoAtual && dto.email_financeiro !== donoAtual.email) {
           console.log(
-            `📧 [SISMOB] Sincronizando e-mail no Auth para o ID: ${donoAtual.id}`,
+            `📧 [SISMOB] Resetando credenciais para: ${dto.email_financeiro}`,
           );
+
           const { error: authError } =
             await this.supabaseAdmin.auth.admin.updateUserById(donoAtual.id, {
               email: dto.email_financeiro,
+              password: 'Sismob@2026', // <--- AGORA A SENHA TAMBÉM É RESETADA NA TROCA DE E-MAIL
               email_confirm: true,
             });
+
           if (authError) {
             console.error('⚠️ [SUPABASE AUTH WARNING]:', authError.message);
-            // Registramos o aviso, mas deixamos o banco de dados prosseguir
+          } else {
+            console.log('✅ [SISMOB] E-mail e Senha resetados no Supabase.');
           }
         }
       } catch (authExc) {
