@@ -2,161 +2,155 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Lock, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import {
+  Lock,
+  Loader2,
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hasSession, setHasSession] = useState(false);
+  const [ready, setReady] = useState(false); // Libera o formulário
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const router = useRouter();
 
-  // 1. VERIFICAÇÃO DE SEGURANÇA: O link é válido?
-  // Dentro do seu ResetPasswordPage()
-
+  // 🚀 MOTOR DE VALIDAÇÃO DE SESSÃO (PADRÃO INDUSTRIAL)
   useEffect(() => {
-    let attempts = 0;
+    async function prepareSession() {
+      const url = new URL(window.location.href);
 
-    const check = async () => {
+      // 1. Tenta o fluxo PKCE (?code=...)
+      const code = url.searchParams.get("code");
+      if (code) {
+        console.log("🔑 [SISMOB] Trocando código por sessão...");
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setErrorMsg("Link inválido ou expirado. Peça um novo acesso.");
+          return;
+        }
+        setReady(true);
+        return;
+      }
+
+      // 2. Tenta o fluxo de Token no Hash (#access_token=...)
+      const hash = window.location.hash;
+      if (hash && hash.includes("access_token")) {
+        console.log("🔑 [SISMOB] Validando tokens do link...");
+        setReady(true);
+        return;
+      }
+
+      // 3. Verifica se já existe uma sessão ativa
       const { data } = await supabase.auth.getSession();
-      console.log(
-        `🔍 [SISMOB] Tentativa ${attempts}: Sessão existe?`,
-        !!data.session,
-      );
-
       if (data.session) {
-        setHasSession(true);
-        return; // Sucesso!
+        setReady(true);
+      } else {
+        setErrorMsg(
+          "Sessão de segurança não encontrada. Inicie o processo novamente.",
+        );
       }
+    }
 
-      // Se não achou e ainda não tentou 10 vezes, tenta de novo em 500ms
-      if (attempts < 10) {
-        attempts++;
-        setTimeout(check, 500);
-      }
-    };
-
-    check();
-
-    // Mantém o listener de evento para garantir
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setHasSession(true);
-    });
-
-    return () => subscription.unsubscribe();
+    prepareSession();
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (password !== confirmPassword) {
-      alert("As senhas não coincidem!");
-      return;
-    }
-
-    if (password.length < 6) {
-      alert("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
+    if (password !== confirmPassword)
+      return setErrorMsg("As senhas não conferem.");
+    if (password.length < 6) return setErrorMsg("Mínimo de 6 caracteres.");
 
     setLoading(true);
-    // 🚀 O COMANDO INDUSTRIAL: Atualiza o usuário que entrou pelo link
+    setErrorMsg(null);
+
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      alert(
-        "Erro ao atualizar: " +
-          error.message +
-          ". Tente solicitar um novo link de recuperação.",
-      );
+      setErrorMsg("Falha ao salvar: " + error.message);
     } else {
-      alert("✅ Senha atualizada com sucesso! Entre com sua nova senha.");
-      // Limpa a sessão para forçar login limpo
-      await supabase.auth.signOut();
-      router.push("/login");
+      setSuccessMsg("Senha atualizada! Entrando...");
+      // Limpa para forçar login limpo
+      setTimeout(async () => {
+        await supabase.auth.signOut();
+        router.push("/login");
+      }, 2000);
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <form
-        onSubmit={handleReset}
-        className="max-w-md w-full bg-white p-10 rounded-[3rem] shadow-xl space-y-8 animate-in fade-in duration-500"
-      >
+      <div className="max-w-md w-full bg-white p-10 rounded-[3rem] shadow-xl space-y-8 animate-in fade-in duration-500">
         <div className="text-center space-y-2">
           <div className="bg-brand w-16 h-16 rounded-3xl flex items-center justify-center text-white mx-auto shadow-lg">
             <ShieldCheck size={32} />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase">
+          <h1 className="text-3xl font-black tracking-tighter uppercase text-slate-900">
             Nova Senha
           </h1>
           <p className="text-slate-400 text-sm">
-            Defina sua nova credencial de acesso.
+            Sismob v6.0 • Redefinição de Acesso
           </p>
         </div>
 
-        {!hasSession && (
-          <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-3 text-amber-700 text-xs font-bold animate-pulse">
-            <AlertCircle className="shrink-0" />
-            Link de recuperação expirado ou inválido. Por favor, solicite um
-            novo na tela de login.
+        {errorMsg && (
+          <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex gap-3 text-red-700 text-xs font-bold animate-shake">
+            <AlertCircle className="shrink-0" size={16} /> {errorMsg}
           </div>
         )}
 
-        <div className="space-y-4">
+        {successMsg && (
+          <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex gap-3 text-emerald-700 text-xs font-bold">
+            <CheckCircle2 className="shrink-0" size={16} /> {successMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleReset} className="space-y-4">
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-400 ml-4">
-              Digite a nova senha
+              Senha
             </label>
-            <div className="relative">
-              <Lock
-                className="absolute left-4 top-4 text-slate-300"
-                size={20}
-              />
-              <input
-                required
-                type="password"
-                className="w-full pl-12 p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <input
+              required
+              type="password"
+              disabled={!ready || loading}
+              className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold disabled:opacity-50"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-400 ml-4">
-              Confirme a nova senha
+              Confirmar
             </label>
-            <div className="relative">
-              <Lock
-                className="absolute left-4 top-4 text-slate-300"
-                size={20}
-              />
-              <input
-                required
-                type="password"
-                className="w-full pl-12 p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
+            <input
+              required
+              type="password"
+              disabled={!ready || loading}
+              className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold disabled:opacity-50"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
-        </div>
 
-        <button
-          disabled={loading || !hasSession}
-          className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black shadow-xl hover:bg-brand transition-all disabled:bg-slate-200 disabled:shadow-none"
-        >
-          {loading ? (
-            <Loader2 className="animate-spin mx-auto" />
-          ) : (
-            "FINALIZAR E ENTRAR"
-          )}
-        </button>
-      </form>
+          <button
+            disabled={!ready || loading}
+            className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black shadow-xl hover:bg-brand transition-all disabled:bg-slate-200"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin mx-auto" />
+            ) : (
+              "REDEFINIR AGORA"
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
