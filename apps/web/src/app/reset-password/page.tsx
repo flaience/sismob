@@ -12,14 +12,40 @@ export default function ResetPasswordPage() {
   const router = useRouter();
 
   // 1. VERIFICAÇÃO DE SEGURANÇA: O link é válido?
+  // Dentro do seu ResetPasswordPage()
+
   useEffect(() => {
-    async function checkSession() {
+    let attempts = 0;
+
+    const check = async () => {
       const { data } = await supabase.auth.getSession();
+      console.log(
+        `🔍 [SISMOB] Tentativa ${attempts}: Sessão existe?`,
+        !!data.session,
+      );
+
       if (data.session) {
         setHasSession(true);
+        return; // Sucesso!
       }
-    }
-    checkSession();
+
+      // Se não achou e ainda não tentou 10 vezes, tenta de novo em 500ms
+      if (attempts < 10) {
+        attempts++;
+        setTimeout(check, 500);
+      }
+    };
+
+    check();
+
+    // Mantém o listener de evento para garantir
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setHasSession(true);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
