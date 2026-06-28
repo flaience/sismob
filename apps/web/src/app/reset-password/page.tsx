@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import {
@@ -14,50 +14,65 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false); // Libera o formulário
+  const [ready, setReady] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const router = useRouter();
 
-  // 🚀 MOTOR DE VALIDAÇÃO DE SESSÃO (PADRÃO INDUSTRIAL)
+  const router = useRouter();
+  const isProcessing = useRef(false); // 🚀 TRAVA INDUSTRIAL: Impede que o código seja usado 2x
+
   useEffect(() => {
     async function prepareSession() {
-      const url = new URL(window.location.href);
+      // Se já estivermos processando ou já estiver pronto, não faz nada
+      if (isProcessing.current || ready) return;
+      isProcessing.current = true;
 
-      // 1. Tenta o fluxo PKCE (?code=...)
+      setErrorMsg(null);
+      console.log("🔍 [SISMOB] Iniciando validação de link...");
+
+      // 1. Verifica se já existe uma sessão ativa (caso o link já tenha sido processado)
+      const {
+        data: { session: existingSession },
+      } = await supabase.auth.getSession();
+      if (existingSession) {
+        console.log("✅ [SISMOB] Sessão de recuperação já ativa.");
+        setReady(true);
+        return;
+      }
+
+      const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
+
       if (code) {
         console.log("🔑 [SISMOB] Trocando código por sessão...");
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+
         if (error) {
-          setErrorMsg("Link inválido ou expirado. Peça um novo acesso.");
-          return;
+          console.error("❌ [SUPABASE ERROR]:", error.message);
+          setErrorMsg(
+            "Este link já foi usado ou expirou. Peça um novo acesso na tela de login.",
+          );
+          setReady(false);
+        } else {
+          console.log("✅ [SISMOB] Sessão estabelecida com sucesso.");
+          // Limpa a URL
+          window.history.replaceState({}, document.title, "/reset-password");
+          setReady(true);
         }
-        setReady(true);
-        return;
-      }
-
-      // 2. Tenta o fluxo de Token no Hash (#access_token=...)
-      const hash = window.location.hash;
-      if (hash && hash.includes("access_token")) {
-        console.log("🔑 [SISMOB] Validando tokens do link...");
-        setReady(true);
-        return;
-      }
-
-      // 3. Verifica se já existe uma sessão ativa
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setReady(true);
       } else {
-        setErrorMsg(
-          "Sessão de segurança não encontrada. Inicie o processo novamente.",
-        );
+        // Caso o Supabase use o formato de fragmento (#)
+        if (window.location.hash.includes("access_token")) {
+          setReady(true);
+        } else {
+          setErrorMsg(
+            "Link de recuperação não identificado. Por favor, solicite um novo.",
+          );
+        }
       }
     }
 
     prepareSession();
-  }, []);
+  }, [ready]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,12 +88,11 @@ export default function ResetPasswordPage() {
     if (error) {
       setErrorMsg("Falha ao salvar: " + error.message);
     } else {
-      setSuccessMsg("Senha atualizada! Entrando...");
-      // Limpa para forçar login limpo
+      setSuccessMsg("Senha atualizada com sucesso! Redirecionando...");
       setTimeout(async () => {
         await supabase.auth.signOut();
         router.push("/login");
-      }, 2000);
+      }, 2500);
     }
     setLoading(false);
   };
@@ -113,30 +127,42 @@ export default function ResetPasswordPage() {
         <form onSubmit={handleReset} className="space-y-4">
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-400 ml-4">
-              Senha
+              Nova Senha
             </label>
-            <input
-              required
-              type="password"
-              disabled={!ready || loading}
-              className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold disabled:opacity-50"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <Lock
+                className="absolute left-4 top-4 text-slate-300"
+                size={20}
+              />
+              <input
+                required
+                type="password"
+                disabled={!ready || loading}
+                className="w-full pl-12 p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold disabled:opacity-50"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-400 ml-4">
-              Confirmar
+              Confirme a senha
             </label>
-            <input
-              required
-              type="password"
-              disabled={!ready || loading}
-              className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold disabled:opacity-50"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
+            <div className="relative">
+              <Lock
+                className="absolute left-4 top-4 text-slate-300"
+                size={20}
+              />
+              <input
+                required
+                type="password"
+                disabled={!ready || loading}
+                className="w-full pl-12 p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-brand font-bold disabled:opacity-50"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
           </div>
 
           <button
@@ -146,7 +172,7 @@ export default function ResetPasswordPage() {
             {loading ? (
               <Loader2 className="animate-spin mx-auto" />
             ) : (
-              "REDEFINIR AGORA"
+              "REDEFINIR E ENTRAR"
             )}
           </button>
         </form>
