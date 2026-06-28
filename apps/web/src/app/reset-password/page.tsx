@@ -21,59 +21,53 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const isProcessing = useRef(false); // 🚀 TRAVA INDUSTRIAL: Impede que o código seja usado 2x
 
+  // Substitua o useEffect atual por este:
   useEffect(() => {
     async function prepareSession() {
-      // Se já estivermos processando ou já estiver pronto, não faz nada
       if (isProcessing.current || ready) return;
-      isProcessing.current = true;
-
-      setErrorMsg(null);
-      console.log("🔍 [SISMOB] Iniciando validação de link...");
-
-      // 1. Verifica se já existe uma sessão ativa (caso o link já tenha sido processado)
-      const {
-        data: { session: existingSession },
-      } = await supabase.auth.getSession();
-      if (existingSession) {
-        console.log("✅ [SISMOB] Sessão de recuperação já ativa.");
-        setReady(true);
-        return;
-      }
 
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
 
+      // 1. Primeiro verificamos se o link já nos deu uma sessão automática
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        console.log("✅ [SISMOB] Sessão já ativa via link.");
+        setReady(true);
+        return;
+      }
+
+      // 2. Se não tem sessão, mas tem código, tentamos a troca MANUAL
       if (code) {
+        isProcessing.current = true;
         console.log("🔑 [SISMOB] Trocando código por sessão...");
+
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
           console.error("❌ [SUPABASE ERROR]:", error.message);
-          setErrorMsg(
-            "Este link já foi usado ou expirou. Peça um novo acesso na tela de login.",
-          );
-          setReady(false);
+          // 🚨 SE DER ERRO AQUI, verificamos se a sessão não "nasceu" mesmo assim
+          const {
+            data: { session: retrySession },
+          } = await supabase.auth.getSession();
+          if (retrySession) {
+            setReady(true);
+          } else {
+            setErrorMsg(
+              "Este link expirou. Por favor, peça um novo acesso no login.",
+            );
+          }
         } else {
-          console.log("✅ [SISMOB] Sessão estabelecida com sucesso.");
-          // Limpa a URL
-          window.history.replaceState({}, document.title, "/reset-password");
           setReady(true);
-        }
-      } else {
-        // Caso o Supabase use o formato de fragmento (#)
-        if (window.location.hash.includes("access_token")) {
-          setReady(true);
-        } else {
-          setErrorMsg(
-            "Link de recuperação não identificado. Por favor, solicite um novo.",
-          );
         }
       }
     }
 
     prepareSession();
   }, [ready]);
-
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword)
