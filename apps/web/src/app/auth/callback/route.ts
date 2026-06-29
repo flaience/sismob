@@ -37,8 +37,16 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Se deu certo, vai para a página de trocar senha (ou dashboard)
+      console.log(
+        "✅ [SISMOB CALLBACK] Sessão criada, redirecionando para:",
+        next,
+      );
       return NextResponse.redirect(`${origin}${next}`);
+    } else {
+      console.error(
+        "❌ [SISMOB CALLBACK] Erro na troca de código:",
+        error.message,
+      );
     }
   }
 
