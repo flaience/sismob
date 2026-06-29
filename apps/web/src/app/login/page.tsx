@@ -27,6 +27,7 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = async () => {
+    // 1. Validação de segurança
     if (!email) {
       alert(
         "Por favor, digite seu e-mail no campo correspondente antes de solicitar a recuperação.",
@@ -34,12 +35,16 @@ export default function LoginPage() {
       return;
     }
 
+    // 2. Confirmação industrial
     const confirmReset = confirm(
       `Deseja enviar um link de recuperação para o e-mail: ${email}?`,
     );
     if (!confirmReset) return;
 
     setLoading(true);
+
+    // 3. Disparo do Reset
+    // O window.location.origin garante que o link aponte para localhost ou Vercel automaticamente
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -49,6 +54,7 @@ export default function LoginPage() {
     } else {
       alert("✅ Link de recuperação enviado! Verifique sua caixa de entrada.");
     }
+
     setLoading(false);
   };
 
