@@ -76,6 +76,7 @@ export const tenants = pgTable("tenants", {
   nome_fantasia: varchar("nome_fantasia", { length: 255 }),
   telefone: varchar("telefone", { length: 20 }),
   url_logo: text("url_logo"),
+  senha_master_hash: text("senha_master_hash"),
 });
 
 export const unidades = pgTable("unidades", {
@@ -112,6 +113,7 @@ export const pessoas = pgTable(
     onboarding_status: jsonb("onboarding_status").default({}),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
+    senha_hash: text("senha_hash"),
   },
   (table) => ({
     tenantIdx: index("idx_pessoas_tenant").on(table.tenant_id),

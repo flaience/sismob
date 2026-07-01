@@ -9,6 +9,7 @@ import { eq, and, sql, or } from 'drizzle-orm';
 import { buscarEnderecoVinculado } from '../common/utils/address-resolver';
 import { persistirEnderecoLego } from '../common/utils/address-factory';
 import { createClient } from '@supabase/supabase-js';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SaasService {
@@ -105,8 +106,11 @@ export class SaasService {
 
     const isUpdate = dto.id && dto.id !== 'undefined' && dto.id !== '';
 
+    // Geramos o Hash da senha padrão Sismob@2026 para uso industrial
+    const salt = await bcrypt.genSalt(10);
+    const senhaPadraoHash = await bcrypt.hash('Sismob@2026', salt);
+
     // --- BLOCO 1: SINCRONIZAÇÃO DE AUTH (FORA DA TRANSAÇÃO) ---
-    // Fazemos fora para que um erro de "Confirm email change" no Supabase não mate o resto da gravação
     if (isUpdate) {
       try {
         const tablePessoas = schema.pessoas as any;
@@ -123,24 +127,23 @@ export class SaasService {
 
         const donoAtual = donos[0];
 
-        // Dentro do SaasService.ts -> método onboarding -> if (isUpdate)
-
+        // Se o e-mail mudou, resetamos o login e a senha no Supabase
         if (donoAtual && dto.email_financeiro !== donoAtual.email) {
           console.log(
-            `📧 [SISMOB] Resetando credenciais para: ${dto.email_financeiro}`,
+            `📧 [SISMOB] Sincronizando e-mail e resetando senha: ${dto.email_financeiro}`,
           );
 
           const { error: authError } =
             await this.supabaseAdmin.auth.admin.updateUserById(donoAtual.id, {
               email: dto.email_financeiro,
-              password: 'Sismob@2026', // <--- AGORA A SENHA TAMBÉM É RESETADA NA TROCA DE E-MAIL
+              password: 'Sismob@2026', // Reseta para o padrão no Supabase
               email_confirm: true,
             });
 
           if (authError) {
             console.error('⚠️ [SUPABASE AUTH WARNING]:', authError.message);
           } else {
-            console.log('✅ [SISMOB] E-mail e Senha resetados no Supabase.');
+            console.log('✅ [SISMOB] Credenciais sincronizadas no Supabase.');
           }
         }
       } catch (authExc) {
@@ -163,7 +166,7 @@ export class SaasService {
         );
 
         if (isUpdate) {
-          // A. UPDATE TENANT (SQL BRUTO PARA SEGURANÇA DE COLUNAS)
+          // A. UPDATE TENANT (Garante senha master e endereço)
           await tx.execute(sql`
             UPDATE tenants SET 
               nome_fantasia = ${dto.nome_fantasia},
@@ -173,6 +176,7 @@ export class SaasService {
               slug = ${dto.slug},
               url_logo = ${dto.url_logo},
               endereco_id = ${enderecoId},
+              senha_master_hash = ${senhaPadraoHash},
               updated_at = NOW()
             WHERE id = ${dto.id}
           `);
@@ -185,6 +189,7 @@ export class SaasService {
               nome: dto.nomeDono || dto.nome_fantasia,
               email: dto.email_financeiro,
               endereco_id: enderecoId,
+              senha_hash: senhaPadraoHash, // Sincroniza senha no nosso banco também
             })
             .where(
               and(
@@ -198,19 +203,19 @@ export class SaasService {
         } else {
           // --- C. INSERÇÃO DE NOVA IMOBILIÁRIA (FLOW INDUSTRIAL) ---
 
-          // 1. Insert do Tenant
+          // 1. Insert do Tenant (Com Senha Master)
           const resTenant = await tx.execute(sql`
             INSERT INTO tenants 
-            (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status)
+            (nome_conta, nome_fantasia, telefone, email_financeiro, slug, url_logo, endereco_id, status, senha_master_hash)
             VALUES 
-            (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo')
+            (${dto.nome_conta}, ${dto.nome_fantasia}, ${dto.telefone}, ${dto.email_financeiro}, ${dto.slug}, ${dto.url_logo}, ${enderecoId}, 'ativo', ${senhaPadraoHash})
             RETURNING id
           `);
 
           const rows = resTenant.rows || resTenant;
           const tenantId = rows[0]?.id;
 
-          // 2. Criar Usuário no Supabase Auth (Novo Acesso)
+          // 2. Criar Usuário no Supabase Auth
           const { data: authUser, error: authError } =
             await this.supabaseAdmin.auth.admin.createUser({
               email: dto.email_financeiro,
@@ -232,7 +237,7 @@ export class SaasService {
             })
             .returning();
 
-          // 4. Criar Dono (Pessoa Papel 6)
+          // 4. Criar Dono (Pessoa Papel 6 com Senha Hash)
           const tablePessoas = schema.pessoas as any;
           await tx.insert(tablePessoas).values({
             id: authUser.user.id,
@@ -244,6 +249,7 @@ export class SaasService {
             papel: '6',
             is_admin: true,
             endereco_id: enderecoId,
+            senha_hash: senhaPadraoHash, // 🛡️ SOBERANIA: Senha gravada no nosso banco
           });
 
           console.log('✅ [SISMOB] Novo Tenant e Dono criados com sucesso.');

@@ -7,13 +7,20 @@ import {
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
 import { eq, and, ilike } from 'drizzle-orm';
-
+import { createClient, SupabaseClient } from '@supabase/supabase-js'; // <--- ADICIONADO
+import * as bcrypt from 'bcrypt'; // <--- ADICIONADO
 @Injectable()
 export class PessoasService {
+  private supabaseAdmin: SupabaseClient;
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) {
+    this.supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+  }
 
   // 1. BUSCA POR PAPEL (O que alimenta os Grids do CRM)
   async findByRole(papel: string, tenantId: string, search?: string) {
@@ -143,5 +150,44 @@ export class PessoasService {
     return await this.db
       .delete(table)
       .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)));
+  }
+
+  async resetarSenhaIndustrial(email: string, novaSenha: any) {
+    try {
+      // 1. Criptografia
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(novaSenha, salt);
+      const table = schema.pessoas as any;
+
+      // 2. Busca o ID da pessoa
+      const res = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.email, email))
+        .limit(1);
+      if (res.length === 0) throw new Error('Usuário não localizado.');
+      const userId = res[0].id;
+
+      // 3. Atualiza nosso Banco (Sismob Control)
+      await this.db
+        .update(table)
+        .set({ senha_hash: hash })
+        .where(eq(table.id, userId));
+
+      // 4. Sincroniza Supabase Auth (Bypass no e-mail)
+      const { error } = await this.supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        {
+          password: novaSenha,
+          email_confirm: true,
+        },
+      );
+
+      if (error) throw new Error('Falha Supabase Auth: ' + error.message);
+
+      return { success: true };
+    } catch (e) {
+      throw new InternalServerErrorException(e.message);
+    }
   }
 }
