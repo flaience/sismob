@@ -47,9 +47,8 @@ export default function LoginPage() {
     // 3. Disparo do Reset
     // O window.location.origin garante que o link aponte para localhost ou Vercel automaticamente
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // 🚀 O SEGREDO: Manda para o callback, que depois te joga no reset-password
-
-      redirectTo: `${window.location.origin}/reset-password`,
+      // 🚀 MANDA PARA A ROTA DE CONFIRMAÇÃO QUE CRIAMOS
+      redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
     });
 
     if (error) {
