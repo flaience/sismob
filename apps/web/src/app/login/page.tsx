@@ -28,13 +28,28 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!email) {
       alert("Por favor, informe seu e-mail no campo de login primeiro.");
       return;
     }
-    // 🚀 LEVA O E-MAIL PARA A PRÓXIMA TELA
-    router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+
+    setLoading(true);
+
+    const origin = window.location.origin;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      alert("Erro ao enviar e-mail de recuperação: " + error.message);
+      return;
+    }
+
+    alert("Enviamos um link de recuperação para seu e-mail.");
   };
 
   return (

@@ -1,48 +1,102 @@
 "use client";
-import { useState, Suspense } from "react";
-import api from "@/lib/api";
-import { useRouter, useSearchParams } from "next/navigation";
+
+import { useEffect, useState, Suspense } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { ShieldCheck, Lock, Loader2, CheckCircle2 } from "lucide-react";
 
 function ResetContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
 
-  const [step, setStep] = useState(1); // 1: Enviar Código, 2: Validar e Trocar
-  const [token, setToken] = useState(""); // 6 dígitos
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
 
-  const handleSendCode = async () => {
-    setLoading(true);
-    try {
-      await api.post("/pessoas/solicitar-codigo", { email });
-      setStep(2);
-    } catch (err) {
-      alert("Erro ao enviar código.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
 
-  const handleFinalReset = async (e: React.FormEvent) => {
+      if (!data.session) {
+        setHasSession(false);
+        setCheckingSession(false);
+        return;
+      }
+
+      setHasSession(true);
+      setCheckingSession(false);
+    };
+
+    checkSession();
+  }, []);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await api.post("/pessoas/reset-direto", {
-        email,
-        token,
-        novaSenha: password,
-      });
-      alert("✅ Identidade confirmada. Credencial atualizada com sucesso.");
-      router.push("/login");
-    } catch (err: any) {
-      alert("Falha: " + (err.response?.data?.message || "Código inválido"));
-    } finally {
-      setLoading(false);
+
+    if (password.length < 6) {
+      alert("A senha precisa ter pelo menos 6 caracteres.");
+      return;
     }
+
+    if (password !== confirmPassword) {
+      alert("As senhas não conferem.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      alert("Erro ao atualizar senha: " + error.message);
+      return;
+    }
+
+    await supabase.auth.signOut();
+
+    alert("Senha atualizada com sucesso. Faça login novamente.");
+    router.push("/login");
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-slate-900" size={32} />
+      </div>
+    );
+  }
+
+  if (!hasSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-2xl space-y-6 text-center">
+          <div className="bg-slate-900 w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto">
+            <ShieldCheck size={32} />
+          </div>
+
+          <h1 className="text-2xl font-black tracking-tighter uppercase">
+            Link inválido ou expirado
+          </h1>
+
+          <p className="text-slate-400 text-sm font-bold">
+            Solicite um novo link de recuperação na tela de login.
+          </p>
+
+          <button
+            onClick={() => router.push("/login")}
+            className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black shadow-xl"
+          >
+            VOLTAR AO LOGIN
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -51,59 +105,62 @@ function ResetContent() {
           <div className="bg-slate-900 w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto">
             <ShieldCheck size={32} />
           </div>
+
           <h1 className="text-2xl font-black tracking-tighter uppercase">
-            Verificação de Segurança
+            Nova Senha
           </h1>
+
           <p className="text-slate-400 text-[10px] font-black uppercase">
-            ID: {email}
+            Defina sua nova credencial de acesso
           </p>
         </div>
 
-        {step === 1 ? (
-          <button
-            onClick={handleSendCode}
-            disabled={loading}
-            className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black shadow-xl hover:bg-brand transition-all"
-          >
-            {loading ? (
-              <Loader2 className="animate-spin mx-auto" />
-            ) : (
-              "SOLICITAR CÓDIGO DE 6 DÍGITOS"
-            )}
-          </button>
-        ) : (
-          <form onSubmit={handleFinalReset} className="space-y-6">
-            <div className="bg-emerald-50 p-4 rounded-2xl flex gap-3 text-emerald-700 text-[10px] font-black uppercase">
-              <CheckCircle2 size={16} /> Digite o código enviado ao seu e-mail
-            </div>
-            <input
-              required
-              placeholder="CÓDIGO DE 6 DÍGITOS"
-              className="w-full p-4 bg-slate-50 rounded-2xl text-center text-2xl font-black tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              maxLength={6}
+        <form onSubmit={handleUpdatePassword} className="space-y-6">
+          <div className="bg-emerald-50 p-4 rounded-2xl flex gap-3 text-emerald-700 text-[10px] font-black uppercase">
+            <CheckCircle2 size={16} /> Identidade confirmada
+          </div>
+
+          <div className="relative">
+            <Lock
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
             />
             <input
               required
               type="password"
-              placeholder="Nova Senha Profissional"
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-brand"
+              placeholder="Nova senha"
+              className="w-full p-5 pl-12 bg-slate-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-brand"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <button
-              disabled={loading}
-              className="w-full bg-brand text-white py-6 rounded-2xl font-black shadow-xl"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin mx-auto" />
-              ) : (
-                "CONFIRMAR IDENTIDADE E SALVAR"
-              )}
-            </button>
-          </form>
-        )}
+          </div>
+
+          <div className="relative">
+            <Lock
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              required
+              type="password"
+              placeholder="Confirmar nova senha"
+              className="w-full p-5 pl-12 bg-slate-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-brand"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+
+          <button
+            disabled={loading}
+            className="w-full bg-brand text-white py-6 rounded-2xl font-black shadow-xl flex items-center justify-center"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              "SALVAR NOVA SENHA"
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );
