@@ -27,37 +27,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    // 1. Validação de segurança
-    if (!email) {
-      alert(
-        "Por favor, digite seu e-mail no campo correspondente antes de solicitar a recuperação.",
-      );
-      return;
-    }
-
-    // 2. Confirmação industrial
-    const confirmReset = confirm(
-      `Deseja enviar um link de recuperação para o e-mail: ${email}?`,
-    );
-    if (!confirmReset) return;
-
-    setLoading(true);
-
-    // 3. Disparo do Reset
-    // O window.location.origin garante que o link aponte para localhost ou Vercel automaticamente
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // 🚀 MANDA PARA A ROTA DE CONFIRMAÇÃO QUE CRIAMOS
-      redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
-    });
-
-    if (error) {
-      alert("Erro ao processar recuperação: " + error.message);
-    } else {
-      alert("✅ Link de recuperação enviado! Verifique sua caixa de entrada.");
-    }
-
-    setLoading(false);
+  const handleForgotPassword = () => {
+    // 🚀 NAVEGAÇÃO DIRETA. O Middleware agora permite!
+    window.location.href = "/reset-password";
   };
 
   return (
