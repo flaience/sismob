@@ -164,27 +164,26 @@ export class PessoasService {
 
   async resetarSenhaIndustrial(email: string, novaSenha: any) {
     try {
-      // 1. Criptografia
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(novaSenha, salt);
       const table = schema.pessoas as any;
 
-      // 2. Busca o ID da pessoa
+      // 1. Busca no NOSSO banco
       const res = await this.db
         .select()
         .from(table)
         .where(eq(table.email, email))
         .limit(1);
-      if (res.length === 0) throw new Error('Usuário não localizado.');
+      if (res.length === 0) throw new Error('Usuário não cadastrado.');
       const userId = res[0].id;
 
-      // 3. Atualiza nosso Banco (Sismob Control)
+      // 2. Grava no NOSSO banco (Soberania)
       await this.db
         .update(table)
         .set({ senha_hash: hash })
         .where(eq(table.id, userId));
 
-      // 4. Sincroniza Supabase Auth (Bypass no e-mail)
+      // 3. Força a troca no Supabase (Sem link, sem confirmação)
       const { error } = await this.supabaseAdmin.auth.admin.updateUserById(
         userId,
         {
@@ -193,7 +192,7 @@ export class PessoasService {
         },
       );
 
-      if (error) throw new Error('Falha Supabase Auth: ' + error.message);
+      if (error) throw new Error('Supabase Auth Error: ' + error.message);
 
       return { success: true };
     } catch (e) {

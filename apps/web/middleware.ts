@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
   const { pathname } = req.nextUrl;
 
-  // 🛡️ REGRA DE OURO: Se for a página de reset, NÃO FAZ NADA.
-  // Não checa usuário, não chama Supabase. Apenas deixa passar.
-  if (pathname.startsWith("/reset-password")) {
-    return res;
+  // 🛡️ SE FOR RESET OU LOGIN, DEIXA PASSAR DIRETO SEM OLHAR NADA
+  if (
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth")
+  ) {
+    return NextResponse.next();
   }
 
-  // Se for admin, você pode manter a trava original se quiser,
-  // mas por enquanto, vamos focar em destravar o Reset.
-  return res;
+  // Só protege o que for administrativo
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/gestao")
+  ) {
+    // Aqui você pode colocar sua lógica de proteção depois,
+    // por enquanto, vamos apenas liberar o sistema para você trabalhar.
+    return NextResponse.next();
+  }
+
+  return NextResponse.next();
 }
 
-// apps/web/src/middleware.ts
 export const config = {
-  matcher: [
-    /*
-     * 🛡️ LIBERAÇÃO TOTAL PARA AS ROTAS DE RESET
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico|login|auth/confirm|reset-password).*)",
-  ],
+  matcher: ["/((?!api|_next|favicon.ico).*)"],
 };
