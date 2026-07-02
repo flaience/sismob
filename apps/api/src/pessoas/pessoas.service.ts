@@ -240,4 +240,55 @@ export class PessoasService {
       throw new InternalServerErrorException(e.message);
     }
   }
+
+  // No seu PessoasService.ts
+
+  async gerarCodigoRecuperacao(email: string) {
+    // 1. O Supabase manda o código de 6 dígitos pro e-mail do cara
+    // Ele gerencia o Rate Limit e a entrega. Nós só disparamos.
+    const { error } = await this.supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+    });
+    if (error)
+      throw new InternalServerErrorException(
+        'Erro ao gerar protocolo: ' + error.message,
+      );
+    return { success: true, message: 'Código enviado.' };
+  }
+
+  async validarProtocoloEResetar(email: string, token: string, novaSenha: any) {
+    try {
+      // 🛡️ SEGURANÇA INDUSTRIAL: Validamos o código ANTES de qualquer troca
+      const { data, error: verifyError } =
+        await this.supabaseAdmin.auth.verifyOtp({
+          email,
+          token, // O código de 6 dígitos que o usuário digitou
+          type: 'recovery',
+        });
+
+      if (verifyError)
+        throw new Error('Código de segurança inválido ou expirado.');
+
+      // Se o código é válido, o Supabase nos devolve o User ID
+      const userId = data.user.id;
+
+      // Agora sim, com a identidade PROVADA, trocamos no banco e no auth
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(novaSenha, salt);
+
+      await this.db
+        .update(schema.pessoas as any)
+        .set({ senha_hash: hash })
+        .where(eq((schema.pessoas as any).id, userId));
+
+      await this.supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: novaSenha,
+      });
+
+      return { success: true };
+    } catch (e) {
+      throw new InternalServerErrorException(e.message);
+    }
+  }
 }
