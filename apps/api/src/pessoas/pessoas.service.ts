@@ -8,7 +8,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
 import { eq, and, ilike } from 'drizzle-orm';
 import { createClient, SupabaseClient } from '@supabase/supabase-js'; // <--- ADICIONADO
-import * as bcrypt from 'bcrypt'; // <--- ADICIONADO
+import * as bcrypt from 'bcryptjs';
 @Injectable()
 export class PessoasService {
   private supabaseAdmin: SupabaseClient;

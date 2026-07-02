@@ -9,7 +9,7 @@ import { eq, and, sql, or } from 'drizzle-orm';
 import { buscarEnderecoVinculado } from '../common/utils/address-resolver';
 import { persistirEnderecoLego } from '../common/utils/address-factory';
 import { createClient } from '@supabase/supabase-js';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class SaasService {
