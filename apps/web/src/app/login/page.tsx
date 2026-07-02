@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { LogIn, ShieldCheck, Loader2, KeyRound } from "lucide-react";
-
+import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +29,8 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = () => {
-    // 🚀 NAVEGAÇÃO DIRETA. O Middleware agora permite!
-    window.location.href = "/reset-password";
+    // 🚀 Navega para o protocolo de recuperação
+    router.push("/reset-password");
   };
 
   return (
