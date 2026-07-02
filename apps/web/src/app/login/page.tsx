@@ -29,8 +29,12 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = () => {
-    // 🚀 Navega para o protocolo de recuperação
-    router.push("/reset-password");
+    if (!email) {
+      alert("Por favor, informe seu e-mail no campo de login primeiro.");
+      return;
+    }
+    // 🚀 LEVA O E-MAIL PARA A PRÓXIMA TELA
+    router.push(`/reset-password?email=${encodeURIComponent(email)}`);
   };
 
   return (

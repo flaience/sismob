@@ -168,22 +168,23 @@ export class PessoasService {
       const hash = await bcrypt.hash(novaSenha, salt);
       const table = schema.pessoas as any;
 
-      // 1. Busca no NOSSO banco
+      // 1. Acha o usuário pelo e-mail
       const res = await this.db
         .select()
         .from(table)
         .where(eq(table.email, email))
         .limit(1);
       if (res.length === 0) throw new Error('Usuário não cadastrado.');
+
       const userId = res[0].id;
 
-      // 2. Grava no NOSSO banco (Soberania)
+      // 2. Grava no NOSSO banco (Soberania Digital)
       await this.db
         .update(table)
         .set({ senha_hash: hash })
         .where(eq(table.id, userId));
 
-      // 3. Força a troca no Supabase (Sem link, sem confirmação)
+      // 3. Força no Supabase Auth (Admin Bypass)
       const { error } = await this.supabaseAdmin.auth.admin.updateUserById(
         userId,
         {
@@ -192,7 +193,7 @@ export class PessoasService {
         },
       );
 
-      if (error) throw new Error('Supabase Auth Error: ' + error.message);
+      if (error) throw new Error('Erro no Supabase: ' + error.message);
 
       return { success: true };
     } catch (e) {
