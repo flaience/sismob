@@ -200,4 +200,44 @@ export class PessoasService {
       throw new InternalServerErrorException(e.message);
     }
   }
+
+  async resetSoberano(email: string, novaSenha: any) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(novaSenha, salt);
+      const table = schema.pessoas as any;
+
+      // 1. Busca a pessoa pelo e-mail no NOSSO banco
+      const res = await this.db
+        .select()
+        .from(table)
+        .where(eq(table.email, email))
+        .limit(1);
+      if (res.length === 0)
+        throw new Error('E-mail não localizado na base do Sismob.');
+
+      const userId = res[0].id;
+
+      // 2. Atualiza a senha no NOSSO Banco (senha_hash)
+      await this.db
+        .update(table)
+        .set({ senha_hash: hash })
+        .where(eq(table.id, userId));
+
+      // 3. Força a atualização no Supabase Auth (Bypass total de e-mail e link)
+      const { error } = await this.supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        {
+          password: novaSenha,
+          email_confirm: true,
+        },
+      );
+
+      if (error) throw new Error('Supabase Admin Error: ' + error.message);
+
+      return { success: true };
+    } catch (e) {
+      throw new InternalServerErrorException(e.message);
+    }
+  }
 }
