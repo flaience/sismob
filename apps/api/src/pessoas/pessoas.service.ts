@@ -12,14 +12,24 @@ import * as bcrypt from 'bcryptjs';
 @Injectable()
 export class PessoasService {
   private supabaseAdmin: SupabaseClient;
+  // apps/api/src/pessoas/pessoas.service.ts
+
   constructor(
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
   ) {
-    this.supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    // 🛡️ BUSCA RESILIENTE: Tenta com e sem o prefixo NEXT_PUBLIC_
+    const url =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+      console.error(
+        '❌ [SISMOB] ERRO CRÍTICO: SUPABASE_URL ou SERVICE_ROLE_KEY não configurados no Railway!',
+      );
+    }
+
+    this.supabaseAdmin = createClient(url!, key!);
   }
 
   // 1. BUSCA POR PAPEL (O que alimenta os Grids do CRM)
