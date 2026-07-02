@@ -19,7 +19,6 @@ export async function GET(request: Request) {
           getAll() {
             return cookieStore.getAll();
           },
-          // 🛡️ TIPAGEM INDUSTRIAL: Resolve o erro TS(7006) e TS(7031)
           setAll(
             cookiesToSet: { name: string; value: string; options: any }[],
           ) {
@@ -28,22 +27,21 @@ export async function GET(request: Request) {
                 cookieStore.set(name, value, options),
               );
             } catch {
-              // Contexto de Server Component, ignoramos o erro de escrita
+              /* Server Component */
             }
           },
         },
       },
     );
 
-    // 🚀 O TIRO DE MISERICÓRDIA: Valida o link no Servidor
+    // 🚀 VALIDAÇÃO NO SERVIDOR (ISSO NÃO EXPIRE NO NAVEGADOR)
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
 
     if (!error) {
-      // Se o link é válido, o servidor gera o cookie e te joga pra trocar a senha
+      // Redireciona para a página de reset já logado por cookie
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
 
-  // Se falhar, volta pro login com aviso
-  return NextResponse.redirect(`${origin}/login?error=invalid_recovery_link`);
+  return NextResponse.redirect(`${origin}/login?error=invalid_token`);
 }

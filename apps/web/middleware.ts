@@ -1,42 +1,26 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request: { headers: request.headers } });
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const { pathname } = req.nextUrl;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: "", ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value: "", ...options });
-        },
-      },
-    },
-  );
+  // 🛡️ REGRA DE OURO: Se for a página de reset, NÃO FAZ NADA.
+  // Não checa usuário, não chama Supabase. Apenas deixa passar.
+  if (pathname.startsWith("/reset-password")) {
+    return res;
+  }
 
-  // SÓ ATUALIZA A SESSÃO, SEM REDIRECIONAR
-  await supabase.auth.getSession();
-  return response;
+  // Se for admin, você pode manter a trava original se quiser,
+  // mas por enquanto, vamos focar em destravar o Reset.
+  return res;
 }
 
+// apps/web/src/middleware.ts
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|login|reset-password).*)",
+    /*
+     * 🛡️ LIBERAÇÃO TOTAL PARA AS ROTAS DE RESET
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|login|auth/confirm|reset-password).*)",
   ],
 };
