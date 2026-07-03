@@ -36,18 +36,17 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
 
     setLoading(false);
 
     if (error) {
-      alert("Erro ao enviar e-mail de recuperação: " + error.message);
+      alert("Erro ao enviar código de recuperação: " + error.message);
       return;
     }
 
-    alert("Enviamos um link de recuperação para seu e-mail.");
+    alert("Enviamos um código de recuperação para seu e-mail.");
+    router.push(`/reset-password?email=${encodeURIComponent(email)}`);
   };
 
   return (
