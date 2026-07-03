@@ -1,3 +1,4 @@
+//src/app/[admin]/layout.tsx
 "use client";
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";

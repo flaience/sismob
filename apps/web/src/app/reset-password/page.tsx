@@ -1,34 +1,57 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Lock, Loader2, CheckCircle2 } from "lucide-react";
 
-function ResetContent() {
+export default function ResetPasswordPage() {
   const router = useRouter();
 
+  const [ready, setReady] = useState(false);
+  const [canReset, setCanReset] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+    let mounted = true;
 
-      if (!data.session) {
-        setHasSession(false);
-        setCheckingSession(false);
-        return;
+    const init = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (!error) {
+          window.history.replaceState({}, document.title, "/reset-password");
+        }
       }
 
-      setHasSession(true);
-      setCheckingSession(false);
+      const { data } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      setCanReset(!!data.session);
+      setReady(true);
     };
 
-    checkSession();
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) {
+        setCanReset(true);
+        setReady(true);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -63,7 +86,7 @@ function ResetContent() {
     router.push("/login");
   };
 
-  if (checkingSession) {
+  if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="animate-spin text-slate-900" size={32} />
@@ -71,7 +94,7 @@ function ResetContent() {
     );
   }
 
-  if (!hasSession) {
+  if (!canReset) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-2xl space-y-6 text-center">
@@ -163,13 +186,5 @@ function ResetContent() {
         </form>
       </div>
     </div>
-  );
-}
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense>
-      <ResetContent />
-    </Suspense>
   );
 }
