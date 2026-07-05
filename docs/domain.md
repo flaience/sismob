@@ -34,7 +34,7 @@ Para garantir flexibilidade industrial, o endereço foi desacoplado das entidade
 
 - Existe uma tabela única `enderecos` (O Bloco de Lego).
 - `Tenants`, `Pessoas` e `Imoveis` possuem uma coluna `endereco_id`.
-- Vantagem: Permite múltiplos endereços (ex: Cobrança vs Residencial) sem duplicar código.
+- Vantagem: Permite múltiplos endereços (ex: Cobrança vs Residencial) sem duplicar código.git push
 
 ## ⚖️ Negociação Progressiva
 

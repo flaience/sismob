@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   LogOut,
   Building2,
-  BarChart3,
   Receipt,
   Handshake,
 } from "lucide-react";
@@ -117,26 +116,6 @@ export default function Sidebar() {
           label: "Itens / Atributos",
           href: "/gestao/atributos-itens",
           icon: Settings,
-        },
-      ],
-    });
-  }
-
-  if (isLuis) {
-    menuGroups.push({
-      title: "ADMIN FLAIENCE",
-      icon: ShieldCheck,
-      group: "flaience",
-      items: [
-        {
-          label: "Imobiliárias",
-          href: "/gestao/imobiliarias",
-          icon: Building2,
-        },
-        {
-          label: "Faturamento SaaS",
-          href: "/gestao/faturamento",
-          icon: BarChart3,
         },
       ],
     });
