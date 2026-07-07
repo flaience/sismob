@@ -17,25 +17,40 @@ export class GenericController {
   @Get(':table')
   async list(
     @Param('table') table: string,
-    @Query('imobiliariaId') tid: string,
-    @Query('search') s: string,
-    @Query() filters: any, // Captura filtros como ?papel=3
+    @Query('imobiliariaId') tenantId: string,
+    @Query('search') search: string,
+    @Query() filters: any,
   ) {
-    return this.generic.findAll(table, tid, s, filters);
+    return this.generic.findAll(table, tenantId, search, filters);
   }
 
   @Post(':table')
-  async save(@Param('table') table: string, @Body() dto: any) {
-    // imobiliariaId vem do TenantContext no Frontend
+  async create(@Param('table') table: string, @Body() dto: any) {
     return this.generic.upsert(table, dto, dto.imobiliariaId);
+  }
+
+  @Patch(':table/:id')
+  async update(
+    @Param('table') table: string,
+    @Param('id') id: string,
+    @Body() dto: any,
+  ) {
+    return this.generic.upsert(
+      table,
+      {
+        ...dto,
+        id: Number(id),
+      },
+      dto.imobiliariaId,
+    );
   }
 
   @Delete(':table/:id')
   async remove(
     @Param('table') table: string,
     @Param('id') id: string,
-    @Query('imobiliariaId') tid: string,
+    @Query('imobiliariaId') tenantId: string,
   ) {
-    return this.generic.remove(table, Number(id), tid);
+    return this.generic.remove(table, Number(id), tenantId);
   }
 }

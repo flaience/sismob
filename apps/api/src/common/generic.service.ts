@@ -2,6 +2,8 @@ import {
   Injectable,
   Inject,
   InternalServerErrorException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
@@ -13,9 +15,34 @@ export class GenericService {
     @Inject('DRIZZLE_CONNECTION') private db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  /**
-   * BUSCA INDUSTRIAL: Aceita busca textual E filtros específicos (ex: papel, status)
-   */
+  private async assertTenantCanOperate(tenantId: string) {
+    if (!tenantId) {
+      throw new BadRequestException('Tenant não informado.');
+    }
+
+    const tenantsTable = (schema as any).tenants;
+
+    const result = await this.db
+      .select()
+      .from(tenantsTable)
+      .where(eq(tenantsTable.id, tenantId))
+      .limit(1);
+
+    const tenant = result[0];
+
+    if (!tenant) {
+      throw new ForbiddenException('Tenant não encontrado.');
+    }
+
+    const status = String(tenant.status ?? 'trial').toLowerCase();
+
+    if (status === 'suspenso') {
+      throw new ForbiddenException(
+        'Tenant suspenso. Operações de criação, edição e exclusão estão bloqueadas.',
+      );
+    }
+  }
+
   async findAll(
     tableName: string,
     tenantId: string,
@@ -28,17 +55,19 @@ export class GenericService {
 
       let conds = [eq(table.tenant_id, tenantId)];
 
-      // 1. Busca Textual (Nome ou Descrição)
       if (search) {
         const searchConds = [];
-        if (table.nome) searchConds.push(ilike(table.nome, `%${search}%`));
-        if (table.descricao)
-          searchConds.push(ilike(table.descricao, `%${search}%`));
 
-        if (searchConds.length > 0) conds.push(or(...searchConds) as any);
+        if (table.nome) searchConds.push(ilike(table.nome, `%${search}%`));
+        if (table.descricao) {
+          searchConds.push(ilike(table.descricao, `%${search}%`));
+        }
+
+        if (searchConds.length > 0) {
+          conds.push(or(...searchConds) as any);
+        }
       }
 
-      // 2. Filtros Dinâmicos (Ex: papel: '3' para proprietários)
       if (filters) {
         Object.keys(filters).forEach((key) => {
           if (
@@ -65,26 +94,38 @@ export class GenericService {
 
   async upsert(tableName: string, dto: any, tenantId: string) {
     try {
+      await this.assertTenantCanOperate(tenantId);
+
       const table = (schema as any)[tableName];
+      if (!table) throw new Error(`Tabela ${tableName} não mapeada no Schema.`);
+
       const isUpdate = !!dto.id;
 
-      // Sanitização: Remove o ID do payload de insert e garante o tenant_id
-      const { id, ...data } = dto;
-      const payload = {
+      const { id, imobiliariaId, ...data } = dto;
+
+      const payload: any = {
         ...data,
         tenant_id: tenantId,
-        updated_at: new Date(), // Auditoria para o RAG
       };
+
+      if (table.updated_at) {
+        payload.updated_at = new Date();
+      }
 
       if (isUpdate) {
         return await this.db
           .update(table)
           .set(payload)
-          .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)));
-      } else {
-        return await this.db.insert(table).values(payload).returning();
+          .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
+          .returning();
       }
+
+      return await this.db.insert(table).values(payload).returning();
     } catch (e) {
+      if (e instanceof ForbiddenException || e instanceof BadRequestException) {
+        throw e;
+      }
+
       throw new InternalServerErrorException(
         `Erro ao salvar ${tableName}: ${e.message}`,
       );
@@ -92,9 +133,24 @@ export class GenericService {
   }
 
   async remove(tableName: string, id: number, tenantId: string) {
-    const table = (schema as any)[tableName];
-    return await this.db
-      .delete(table)
-      .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)));
+    try {
+      await this.assertTenantCanOperate(tenantId);
+
+      const table = (schema as any)[tableName];
+      if (!table) throw new Error(`Tabela ${tableName} não mapeada no Schema.`);
+
+      return await this.db
+        .delete(table)
+        .where(and(eq(table.id, id), eq(table.tenant_id, tenantId)))
+        .returning();
+    } catch (e) {
+      if (e instanceof ForbiddenException || e instanceof BadRequestException) {
+        throw e;
+      }
+
+      throw new InternalServerErrorException(
+        `Erro ao excluir ${tableName}: ${e.message}`,
+      );
+    }
   }
 }
