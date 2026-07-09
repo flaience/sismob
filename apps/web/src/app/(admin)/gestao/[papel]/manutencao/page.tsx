@@ -1,3 +1,4 @@
+//src/app/[admin]/gestao/[papel]/manutencao/page.tsx
 "use client";
 import { use, Suspense } from "react";
 import SismobFormMaster from "@/components/SismobFormMaster";
