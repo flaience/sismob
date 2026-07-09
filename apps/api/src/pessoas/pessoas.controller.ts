@@ -71,6 +71,10 @@ export class PessoasController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Post()
   async create(@Body() dto: any, @Req() req: any) {
+    console.log('======================================');
+    console.log('PESSOAS CONTROLLER');
+    console.log(req.user);
+    console.log('======================================');
     return this.pessoasService.save(dto, req.user.tenantId);
   }
 

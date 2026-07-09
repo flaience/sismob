@@ -4,6 +4,11 @@ import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 export class RolesGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+
+    console.log('======================================');
+    console.log('ROLES GUARD');
+    console.log(request.user);
+    console.log('======================================');
     const user = request.user;
 
     if (!user?.userId) return false;

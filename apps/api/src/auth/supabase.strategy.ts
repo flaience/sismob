@@ -19,6 +19,11 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any) {
+    console.log('======================================');
+    console.log('SUPABASE STRATEGY');
+    console.log('Payload recebido:');
+    console.log(payload);
+    console.log('======================================');
     const pessoasTable = (schema as any).pessoas;
 
     let result = await this.db

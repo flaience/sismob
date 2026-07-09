@@ -22,6 +22,11 @@ api.interceptors.request.use(async (config) => {
     delete config.headers["Content-Type"];
   }
 
+  console.log("================================");
+  console.log("API:", config.url);
+  console.log("TOKEN:", session?.access_token?.substring(0, 40));
+  console.log("================================");
+
   return config;
 });
 

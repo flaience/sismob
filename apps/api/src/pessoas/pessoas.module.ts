@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { PessoasController } from './pessoas.controller';
 import { PessoasService } from './pessoas.service';
-import { SaasModule } from '../saas/saas.module'; // Importação do módulo vizinho
+import { SaasModule } from '../saas/saas.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  // AQUI ESTÁ A CONEXÃO: Importamos o SaasModule inteiro
-  imports: [SaasModule],
+  imports: [SaasModule, AuthModule],
   controllers: [PessoasController],
   providers: [PessoasService],
 })
