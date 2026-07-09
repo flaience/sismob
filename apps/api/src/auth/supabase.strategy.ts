@@ -1,3 +1,4 @@
+// apps/api/src/auth/supabase.strategy.ts
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -19,12 +20,15 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any) {
-    // payload.sub é o UUID do usuário que logou
-    const queryApi = this.db.query as any;
+    const pessoasTable = (schema as any).pessoas;
 
-    const userProfile = await queryApi.pessoas.findFirst({
-      where: eq(schema.pessoas.id as any, payload.sub),
-    });
+    const result = await this.db
+      .select()
+      .from(pessoasTable)
+      .where(eq(pessoasTable.id, payload.sub))
+      .limit(1);
+
+    const userProfile = result[0];
 
     if (!userProfile) {
       throw new UnauthorizedException(
@@ -32,12 +36,13 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
       );
     }
 
-    // RETORNAMOS O OBJETO QUE SERÁ USADO EM 'req.user'
     return {
       userId: userProfile.id,
       email: userProfile.email,
-      imobiliariaId: userProfile.imobiliariaId, // <--- ESTA É A VARIÁVEL QUE FALTAVA
+      tenantId: userProfile.tenant_id,
       papel: userProfile.papel,
+      cargo: userProfile.cargo,
+      nome: userProfile.nome,
     };
   }
 }

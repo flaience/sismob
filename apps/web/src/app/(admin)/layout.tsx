@@ -1,10 +1,11 @@
-// src/app/[admin]/layout.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useTenant } from "@/context/TenantContext";
+import { canAccessRoute } from "@/lib/permissions";
 import {
   getLicenseMessage,
   getLicenseState,
@@ -17,7 +18,9 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading: authLoading } = useAuth();
+  const pathname = usePathname();
+
+  const { user, loading: authLoading } = useAuth();
   const { tenant } = useTenant();
 
   const [safetyRelease, setSafetyRelease] = useState(false);
@@ -36,6 +39,8 @@ export default function AdminLayout({
   const showBillingWarning = shouldShowBillingWarning(tenantStatus);
   const tenantBlocked = isTenantSuspended(tenantStatus);
 
+  const hasRouteAccess = user ? canAccessRoute(user, pathname) : false;
+
   return (
     <div className="flex min-h-screen bg-slate-50 overflow-x-hidden">
       <Sidebar />
@@ -44,6 +49,22 @@ export default function AdminLayout({
         {isStuck ? (
           <div className="p-20 text-center animate-pulse font-black text-indigo-600 uppercase tracking-widest">
             Sincronizando Ecossistema...
+          </div>
+        ) : !hasRouteAccess ? (
+          <div className="max-w-7xl mx-auto">
+            <div className="rounded-[3rem] border border-red-100 bg-white p-12 shadow-sm text-center">
+              <p className="text-xs font-black uppercase tracking-widest text-red-400">
+                Acesso não autorizado
+              </p>
+
+              <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
+                Você não possui permissão para acessar esta área.
+              </h1>
+
+              <p className="mt-3 text-sm font-bold text-slate-400">
+                Solicite acesso ao Owner ou Administrador da imobiliária.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="max-w-7xl mx-auto space-y-6">
@@ -61,13 +82,16 @@ export default function AdminLayout({
                 <p className="text-xs font-black uppercase tracking-widest">
                   Operação Bloqueada
                 </p>
+
                 <h2 className="mt-2 text-xl font-black tracking-tight">
                   Tenant em modo consulta
                 </h2>
+
                 <p className="mt-2 text-sm font-bold">
                   {licenseMessage ||
                     "Este tenant não está autorizado a executar novas operações."}
                 </p>
+
                 <p className="mt-3 text-xs font-semibold text-red-600">
                   Estado atual: {licenseState}
                 </p>
