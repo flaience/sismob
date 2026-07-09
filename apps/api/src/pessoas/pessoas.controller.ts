@@ -10,7 +10,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PessoasService } from './pessoas.service';
 import { SaasService } from '../saas/saas.service';
 import { RolesGuard } from '../auth/roles.guard';
@@ -52,13 +52,13 @@ export class PessoasController {
     );
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
     return this.pessoasService.findOne(id, req.user.tenantId);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
   async findAll(
     @Query('papel') papel: string,
@@ -68,7 +68,7 @@ export class PessoasController {
     return this.pessoasService.findByRole(papel, req.user.tenantId, search);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   async create(@Body() dto: any, @Req() req: any) {
     console.log('======================================');
@@ -78,13 +78,13 @@ export class PessoasController {
     return this.pessoasService.save(dto, req.user.tenantId);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any, @Req() req: any) {
     return this.pessoasService.save({ ...dto, id }, req.user.tenantId);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: any) {
     const parsedId = isNaN(Number(id)) ? id : Number(id);

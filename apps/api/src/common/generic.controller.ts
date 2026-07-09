@@ -10,11 +10,11 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GenericService } from './generic.service';
 import { RolesGuard } from '../auth/roles.guard';
 
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('factory')
 export class GenericController {
   constructor(private readonly generic: GenericService) {}
