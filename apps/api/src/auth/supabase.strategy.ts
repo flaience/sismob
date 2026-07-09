@@ -1,4 +1,3 @@
-// apps/api/src/auth/supabase.strategy.ts
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -22,22 +21,33 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: any) {
     const pessoasTable = (schema as any).pessoas;
 
-    const result = await this.db
+    let result = await this.db
       .select()
       .from(pessoasTable)
       .where(eq(pessoasTable.id, payload.sub))
       .limit(1);
 
-    const userProfile = result[0];
+    let userProfile = result[0];
+
+    if (!userProfile && payload.email) {
+      result = await this.db
+        .select()
+        .from(pessoasTable)
+        .where(eq(pessoasTable.email, payload.email))
+        .limit(1);
+
+      userProfile = result[0];
+    }
 
     if (!userProfile) {
       throw new UnauthorizedException(
-        'Perfil não encontrado no banco de dados.',
+        `Perfil não encontrado para o usuário autenticado: ${payload.email || payload.sub}`,
       );
     }
 
     return {
       userId: userProfile.id,
+      authUserId: payload.sub,
       email: userProfile.email,
       tenantId: userProfile.tenant_id,
       papel: userProfile.papel,
