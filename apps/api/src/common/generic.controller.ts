@@ -1,3 +1,5 @@
+//src/common/generic.controller.ts
+
 import {
   Controller,
   Get,
