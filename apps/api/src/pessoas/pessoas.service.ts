@@ -89,16 +89,71 @@ export class PessoasService {
 
   // 2. BUSCA UM ÚNICO (Com suporte a Endereço Lego)
   async findOne(id: string, tenantId: string) {
-    const table = schema.pessoas as any;
-    const queryApi = this.db.query as any;
+    try {
+      if (!id) {
+        throw new NotFoundException('ID da pessoa não informado.');
+      }
 
-    const result = await queryApi.pessoas.findFirst({
-      where: and(eq(table.id, id), eq(table.tenant_id, tenantId)),
-      with: { endereco: true }, // Se você configurou relations no schema
-    });
+      if (!tenantId) {
+        throw new NotFoundException('Tenant não identificado.');
+      }
 
-    if (!result) throw new NotFoundException('Pessoa não encontrada.');
-    return result;
+      const pessoasTable = schema.pessoas as any;
+      const enderecosTable = schema.enderecos as any;
+
+      console.log('======================================');
+      console.log('BUSCA DE PESSOA PARA EDIÇÃO');
+      console.log('Pessoa ID:', id);
+      console.log('Tenant ID:', tenantId);
+      console.log('======================================');
+
+      const result = await this.db
+        .select({
+          pessoa: pessoasTable,
+          endereco: enderecosTable,
+        })
+        .from(pessoasTable)
+        .leftJoin(
+          enderecosTable,
+          eq(pessoasTable.endereco_id, enderecosTable.id),
+        )
+        .where(
+          and(eq(pessoasTable.id, id), eq(pessoasTable.tenant_id, tenantId)),
+        )
+        .limit(1);
+
+      const registro = result[0];
+
+      if (!registro) {
+        throw new NotFoundException('Pessoa não encontrada para este tenant.');
+      }
+
+      const response = {
+        ...registro.pessoa,
+        endereco: registro.endereco || {
+          cep: '',
+          logradouro: '',
+          numero: '',
+          bairro: '',
+          cidade: '',
+          estado: '',
+        },
+      };
+
+      console.log('Pessoa carregada:', response);
+
+      return response;
+    } catch (error: any) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      console.error('❌ Erro ao carregar pessoa:', error);
+
+      throw new InternalServerErrorException(
+        `Erro ao carregar pessoa: ${error.message}`,
+      );
+    }
   }
 
   // 3. MOTOR DE GRAVAÇÃO (SAVE / UPSERT) COM ENDEREÇO LEGO
