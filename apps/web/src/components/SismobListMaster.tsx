@@ -77,6 +77,7 @@ export default function SismobListMaster({ config, papelUrl }: any) {
       setLoading(false);
     }
   }, [endpoint, config?.papel, papelUrl, searchTerm]);
+
   const handleDelete = async (id: string) => {
     if (!confirm("⚠️ Confirmar exclusão?")) return;
     try {

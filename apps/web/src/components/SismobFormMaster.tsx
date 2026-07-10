@@ -59,42 +59,79 @@ export default function SismobFormMaster({
   // Dentro do SismobFormMaster.tsx
 
   useEffect(() => {
-    if (!tenant?.id && !endpoint.includes("saas")) return; // Deixa passar se for SaaS Admin
+    console.log("================================");
+    console.log("📂 [SISMOB FORM] Inicialização");
+    console.log("Endpoint:", endpoint);
+    console.log("ID de edição:", idEdicao);
+    console.log("Tenant:", tenant?.id);
+    console.log("================================");
 
-    if (idEdicao) {
-      setLoading(true);
-      api
-        .get(`${endpoint}/${idEdicao}`, {
-          params: { imobiliariaId: tenant?.id },
-        })
-        .then((res) => {
-          // FORÇAMOS A DESCOBERTA DO DADO
-          const rawData = res.data;
-          const data = Array.isArray(rawData) ? rawData[0] : rawData;
-
-          console.log("📂 [SISMOB UI] Dados Processados:", data);
-
-          if (data) {
-            // Garantimos que se o endereço vier vazio, o objeto exista para não dar erro nos inputs
-            setFormData({
-              ...data,
-              endereco: data.endereco || {
-                cep: "",
-                logradouro: "",
-                numero: "",
-                bairro: "",
-                cidade: "",
-                estado: "",
-              },
-            });
-          }
-        })
-        .catch((err) => console.error("Erro ao carregar:", err))
-        .finally(() => setLoading(false));
+    if (!idEdicao) {
+      console.log("🆕 [SISMOB FORM] Inclusão: nenhum ID informado.");
+      return;
     }
 
-    // ... resto dos lookups
-  }, [tenant?.id, idEdicao, endpoint]);
+    const loadRecord = async () => {
+      setLoading(true);
+
+      try {
+        const cleanEndpoint = endpoint.startsWith("/")
+          ? endpoint
+          : `/${endpoint}`;
+
+        const requestUrl = `${cleanEndpoint}/${idEdicao}`;
+
+        console.log("================================");
+        console.log("📡 [SISMOB FORM] Carregando edição");
+        console.log("URL:", requestUrl);
+        console.log("================================");
+
+        const response = await api.get(requestUrl);
+
+        const rawData = response.data;
+        const data = Array.isArray(rawData) ? rawData[0] : rawData;
+
+        console.log("================================");
+        console.log("✅ [SISMOB FORM] Registro recebido");
+        console.log(data);
+        console.log("================================");
+
+        if (!data) {
+          alert("Registro não localizado.");
+          return;
+        }
+
+        setFormData({
+          ...initialData,
+          ...data,
+          endereco: {
+            cep: data.endereco?.cep ?? "",
+            logradouro: data.endereco?.logradouro ?? "",
+            numero: data.endereco?.numero ?? "",
+            bairro: data.endereco?.bairro ?? "",
+            cidade: data.endereco?.cidade ?? "",
+            estado: data.endereco?.estado ?? "",
+          },
+        });
+      } catch (error: any) {
+        console.error("================================");
+        console.error("❌ [SISMOB FORM] Erro ao carregar edição");
+        console.error("Status:", error.response?.status);
+        console.error("Resposta:", error.response?.data);
+        console.error("Mensagem:", error.message);
+        console.error("================================");
+
+        alert(
+          error.response?.data?.message ||
+            "Não foi possível carregar o registro para edição.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRecord();
+  }, [idEdicao, endpoint, initialData]);
 
   // 4. MOTOR DE CEP AUTOMÁTICO (ViaCEP)
   useEffect(() => {
@@ -137,20 +174,40 @@ export default function SismobFormMaster({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const cleanEndpoint = endpoint.startsWith("/")
         ? endpoint
         : `/${endpoint}`;
-      await api.post(cleanEndpoint, { ...formData, imobiliariaId: tenant?.id });
-      alert("✅ Registro salvo com sucesso!");
+
+      const payload = {
+        ...formData,
+        ...initialData,
+      };
+
+      if (idEdicao) {
+        await api.patch(`${cleanEndpoint}/${idEdicao}`, payload);
+      } else {
+        await api.post(cleanEndpoint, payload);
+      }
+
+      alert(
+        idEdicao
+          ? "✅ Registro atualizado com sucesso!"
+          : "✅ Registro salvo com sucesso!",
+      );
+
       router.back();
-    } catch (err: any) {
-      alert(`❌ Erro: ${err.response?.data?.message || "Falha na gravação"}`);
+    } catch (error: any) {
+      alert(
+        `❌ Erro: ${
+          error.response?.data?.message || "Falha na gravação do registro."
+        }`,
+      );
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
