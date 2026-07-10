@@ -143,67 +143,124 @@ export class PessoasService {
   // apps/api/src/pessoas/pessoas.service.ts
   async save(dto: any, tenantId: string) {
     try {
-      return await this.db.transaction(async (tx) => {
-        let enderecoId = dto.endereco_id;
+      if (!tenantId) {
+        throw new Error('Tenant não identificado.');
+      }
 
-        // 1. LÓGICA LEGO: Se enviou dados de endereço, gerencia a tabela 'enderecos'
-        if (dto.endereco?.cep || dto.cep) {
-          const dadosEnd = {
-            cep: dto.endereco?.cep || dto.cep,
-            logradouro: dto.endereco?.logradouro || dto.logradouro,
-            numero: dto.endereco?.numero || dto.numero,
-            bairro: dto.endereco?.bairro || dto.bairro,
-            cidade: dto.endereco?.cidade || dto.cidade,
-            estado: dto.endereco?.estado || dto.estado,
+      return await this.db.transaction(async (tx) => {
+        const pessoasTable = schema.pessoas as any;
+        const enderecosTable = schema.enderecos as any;
+
+        const isUpdate = Boolean(dto.id && dto.id !== 'undefined');
+
+        const pessoaPayload = {
+          tenant_id: tenantId,
+          unidade_id: dto.unidade_id || null,
+          nome: dto.nome,
+          email: dto.email || null,
+          documento: dto.documento || '000.000.000-00',
+          telefone: dto.telefone || null,
+          papel: dto.papel,
+          tipo: dto.tipo || 'f',
+          cargo: dto.cargo || null,
+          updated_at: new Date(),
+        };
+
+        let pessoaId: string;
+
+        // ==========================================
+        // 1. GRAVA OU ATUALIZA A PESSOA
+        // ==========================================
+
+        if (isUpdate) {
+          const [pessoaAtualizada] = await tx
+            .update(pessoasTable)
+            .set(pessoaPayload)
+            .where(
+              and(
+                eq(pessoasTable.id, dto.id),
+                eq(pessoasTable.tenant_id, tenantId),
+              ),
+            )
+            .returning();
+
+          if (!pessoaAtualizada) {
+            throw new Error(
+              'Pessoa não encontrada ou não pertence ao tenant informado.',
+            );
+          }
+
+          pessoaId = pessoaAtualizada.id;
+        } else {
+          const [novaPessoa] = await tx
+            .insert(pessoasTable)
+            .values(pessoaPayload)
+            .returning();
+
+          if (!novaPessoa) {
+            throw new Error('Não foi possível criar a pessoa.');
+          }
+
+          pessoaId = novaPessoa.id;
+        }
+
+        // ==========================================
+        // 2. PREPARA OS DADOS DO ENDEREÇO
+        // ==========================================
+
+        const enderecoRecebido = dto.endereco || {};
+
+        const possuiEndereco = Boolean(
+          enderecoRecebido.cep ||
+          enderecoRecebido.logradouro ||
+          enderecoRecebido.numero ||
+          enderecoRecebido.bairro ||
+          enderecoRecebido.cidade ||
+          enderecoRecebido.estado,
+        );
+
+        if (possuiEndereco) {
+          const enderecoPayload = {
+            pessoa_id: pessoaId,
+            cep: enderecoRecebido.cep || null,
+            logradouro: enderecoRecebido.logradouro || null,
+            numero: enderecoRecebido.numero || null,
+            bairro: enderecoRecebido.bairro || null,
+            cidade: enderecoRecebido.cidade || null,
+            estado: enderecoRecebido.estado || null,
           };
 
-          const tableEnd = schema.enderecos as any;
-          if (enderecoId && enderecoId !== 'undefined') {
+          // ==========================================
+          // 3. PROCURA ENDEREÇO EXISTENTE DA PESSOA
+          // ==========================================
+
+          const [enderecoExistente] = await tx
+            .select()
+            .from(enderecosTable)
+            .where(eq(enderecosTable.pessoa_id, pessoaId))
+            .limit(1);
+
+          if (enderecoExistente) {
             await tx
-              .update(tableEnd)
-              .set(dadosEnd)
-              .where(eq(tableEnd.id, Number(enderecoId)));
+              .update(enderecosTable)
+              .set(enderecoPayload)
+              .where(eq(enderecosTable.id, enderecoExistente.id));
           } else {
-            const [novoEnd] = await (
-              tx.insert(tableEnd).values(dadosEnd) as any
-            ).returning();
-            enderecoId = novoEnd.id;
+            await tx.insert(enderecosTable).values(enderecoPayload);
           }
         }
 
-        // 2. LÓGICA CRM: Salva a Pessoa vinculada ao Tenant e ao Endereço
-        const tablePessoa = schema.pessoas as any;
-        const isUpdate = !!dto.id && dto.id !== 'undefined';
-
-        const payload = {
-          tenant_id: tenantId,
-          endereco_id: enderecoId ? Number(enderecoId) : null,
-          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
-          nome: dto.nome,
-          email: dto.email,
-          documento: dto.documento || '000.000.000-00',
-          telefone: dto.telefone,
-          papel: dto.papel, // 6 para Dono, 0 para SuperAdmin (Luis)
-          tipo: dto.tipo || 'f',
-          cargo: dto.cargo,
+        return {
+          id: pessoaId,
+          success: true,
+          operation: isUpdate ? 'updated' : 'created',
         };
-
-        if (isUpdate) {
-          await tx
-            .update(tablePessoa)
-            .set(payload)
-            .where(eq(tablePessoa.id, dto.id));
-          return { id: dto.id, success: true };
-        } else {
-          const [novaPessoa] = await (
-            tx.insert(tablePessoa).values(payload) as any
-          ).returning();
-          return { id: novaPessoa.id, success: true };
-        }
       });
-    } catch (e) {
+    } catch (error: any) {
+      console.error('❌ Erro na gravação de pessoa e endereço:', error);
+
       throw new InternalServerErrorException(
-        'Erro na gravação Lego: ' + e.message,
+        `Erro na gravação Lego: ${error.message}`,
       );
     }
   }
