@@ -101,13 +101,7 @@ export class PessoasService {
       const pessoasTable = schema.pessoas as any;
       const enderecosTable = schema.enderecos as any;
 
-      console.log('======================================');
-      console.log('BUSCA DE PESSOA PARA EDIÇÃO');
-      console.log('Pessoa ID:', id);
-      console.log('Tenant ID:', tenantId);
-      console.log('======================================');
-
-      const result = await this.db
+      const registros = await this.db
         .select({
           pessoa: pessoasTable,
           endereco: enderecosTable,
@@ -119,43 +113,33 @@ export class PessoasService {
         )
         .limit(1);
 
-      const registro = result[0];
+      const registro = registros[0];
 
-      if (!registro) {
+      if (!registro?.pessoa) {
         throw new NotFoundException('Pessoa não encontrada para este tenant.');
       }
 
-      const response = {
+      return {
         ...registro.pessoa,
-        endereco: registro.endereco
-          ? {
-              id: registro.endereco.id,
-              cep: registro.endereco.cep ?? '',
-              logradouro: registro.endereco.logradouro ?? '',
-              numero: registro.endereco.numero ?? '',
-              bairro: registro.endereco.bairro ?? '',
-              cidade: registro.endereco.cidade ?? '',
-              estado: registro.endereco.estado ?? '',
-            }
-          : {
-              cep: '',
-              logradouro: '',
-              numero: '',
-              bairro: '',
-              cidade: '',
-              estado: '',
-            },
+
+        endereco_id: registro.endereco?.id ?? null,
+
+        endereco: {
+          id: registro.endereco?.id ?? null,
+          cep: registro.endereco?.cep ?? '',
+          logradouro: registro.endereco?.logradouro ?? '',
+          numero: registro.endereco?.numero ?? '',
+          bairro: registro.endereco?.bairro ?? '',
+          cidade: registro.endereco?.cidade ?? '',
+          estado: registro.endereco?.estado ?? '',
+        },
       };
-
-      console.log('Pessoa carregada para edição:', response);
-
-      return response;
     } catch (error: any) {
       if (error instanceof NotFoundException) {
         throw error;
       }
 
-      console.error('❌ Erro ao carregar pessoa:', error);
+      console.error('❌ Erro ao carregar pessoa e endereço:', error);
 
       throw new InternalServerErrorException(
         `Erro ao carregar pessoa: ${error.message}`,
