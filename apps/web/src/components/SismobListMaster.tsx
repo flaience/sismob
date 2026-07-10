@@ -19,52 +19,69 @@ export default function SismobListMaster({ config, papelUrl }: any) {
   // Dentro do SismobListMaster.tsx
 
   const loadData = useCallback(async () => {
-    // 🛡️ AJUSTE INDUSTRIAL: Se for gestão de imobiliárias (saas), não exigimos tenant.id
-    const isSaas = endpoint?.includes("saas");
+    if (!endpoint) {
+      console.error("❌ [SISMOB LIST] Endpoint não informado.", {
+        config,
+        papelUrl,
+      });
 
-    if (!endpoint) return;
-    if (!isSaas && !tenant?.id) {
-      // Se não for Saas e não tiver tenant, apenas desliga o loading e sai
+      setData([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+
     try {
-      console.log(`📡 [SISMOB DEBUG] Requisitando: /${endpoint}`);
+      const requestUrl = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
-      const res = await api.get(`/${endpoint}`, {
-        params: {
-          imobiliariaId: tenant?.id, // Pode ser null no caso do Saas
-          papel: config.papel,
-          search: searchTerm,
-        },
-      });
+      const params = {
+        papel: config?.papel,
+        search: searchTerm.trim() || undefined,
+      };
 
-      // 🛡️ TRATAMENTO DE RESPOSTA RESILIENTE
-      // Aceita Array direto ou objeto { rows: [] } vindo do SQL Bruto
+      console.log("================================");
+      console.log("📡 [SISMOB LIST] Requisição");
+      console.log("URL:", requestUrl);
+      console.log("Papel da URL:", papelUrl);
+      console.log("Papel configurado:", config?.papel);
+      console.log("Parâmetros:", params);
+      console.log("================================");
+
+      const res = await api.get(requestUrl, { params });
+
       const rawData = res.data;
+
       const resultado = Array.isArray(rawData)
         ? rawData
         : rawData?.rows || (rawData ? [rawData] : []);
 
-      console.log(`✅ [SISMOB DEBUG] Dados recebidos:`, resultado);
+      console.log("================================");
+      console.log("✅ [SISMOB LIST] Resposta recebida");
+      console.log("Quantidade:", resultado.length);
+      console.log("Dados:", resultado);
+      console.log("================================");
+
       setData(resultado);
-    } catch (e: any) {
-      console.error(`❌ Erro na API:`, e.message);
+    } catch (error: any) {
+      console.error("================================");
+      console.error("❌ [SISMOB LIST] Erro na API");
+      console.error("URL:", `/${endpoint}`);
+      console.error("Status:", error.response?.status);
+      console.error("Resposta:", error.response?.data);
+      console.error("Mensagem:", error.message);
+      console.error("================================");
+
       setData([]);
     } finally {
-      setLoading(false); // <--- GARANTE QUE O "SINCRONIZANDO" SUMA
+      setLoading(false);
     }
-  }, [tenant?.id, endpoint, config.papel, searchTerm]);
-
+  }, [endpoint, config?.papel, papelUrl, searchTerm]);
   const handleDelete = async (id: string) => {
     if (!confirm("⚠️ Confirmar exclusão?")) return;
     try {
       // Usamos config.entity (ex: "pessoas" ou "imoveis")
-      await api.delete(`/${config.entity}/${id}`, {
-        params: { imobiliariaId: tenant?.id },
-      });
+      await api.delete(`/${config.entity}/${id}`);
       loadData();
     } catch (e) {
       alert("Erro ao excluir. Verifique se o registro possui vínculos.");

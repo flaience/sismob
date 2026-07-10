@@ -1,3 +1,4 @@
+//src/pessoas/pessoas.service.ts
 import {
   Injectable,
   Inject,
@@ -35,20 +36,54 @@ export class PessoasService {
   // 1. BUSCA POR PAPEL (O que alimenta os Grids do CRM)
   async findByRole(papel: string, tenantId: string, search?: string) {
     try {
-      const table = schema.pessoas as any;
-      let conds = [eq(table.tenant_id, tenantId), eq(table.papel, papel)];
+      console.log('======================================');
+      console.log('LISTAGEM DE PESSOAS');
+      console.log('Papel recebido:', papel);
+      console.log('Tenant recebido:', tenantId);
+      console.log('Pesquisa recebida:', search);
+      console.log('======================================');
 
-      if (search) {
-        conds.push(ilike(table.nome, `%${search}%`) as any);
+      if (!tenantId) {
+        throw new Error('tenantId não foi informado na listagem de pessoas.');
       }
 
-      return await this.db
+      if (!papel) {
+        throw new Error('papel não foi informado na listagem de pessoas.');
+      }
+
+      const table = schema.pessoas as any;
+
+      const conds = [
+        eq(table.tenant_id, tenantId),
+        eq(table.papel, String(papel)),
+      ];
+
+      if (search?.trim()) {
+        conds.push(ilike(table.nome, `%${search.trim()}%`) as any);
+      }
+
+      const result = await this.db
         .select()
         .from(table)
         .where(and(...conds));
-    } catch (e) {
-      console.error('❌ Erro findByRole:', e.message);
-      return [];
+
+      console.log('Registros encontrados:', result.length);
+      console.log(
+        result.map((item: any) => ({
+          id: item.id,
+          nome: item.nome,
+          papel: item.papel,
+          tenant_id: item.tenant_id,
+        })),
+      );
+
+      return result;
+    } catch (e: any) {
+      console.error('❌ Erro findByRole:', e);
+
+      throw new InternalServerErrorException(
+        `Erro ao listar pessoas: ${e.message}`,
+      );
     }
   }
 
