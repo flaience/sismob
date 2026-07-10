@@ -113,10 +113,7 @@ export class PessoasService {
           endereco: enderecosTable,
         })
         .from(pessoasTable)
-        .leftJoin(
-          enderecosTable,
-          eq(pessoasTable.endereco_id, enderecosTable.id),
-        )
+        .leftJoin(enderecosTable, eq(enderecosTable.pessoa_id, pessoasTable.id))
         .where(
           and(eq(pessoasTable.id, id), eq(pessoasTable.tenant_id, tenantId)),
         )
@@ -130,17 +127,27 @@ export class PessoasService {
 
       const response = {
         ...registro.pessoa,
-        endereco: registro.endereco || {
-          cep: '',
-          logradouro: '',
-          numero: '',
-          bairro: '',
-          cidade: '',
-          estado: '',
-        },
+        endereco: registro.endereco
+          ? {
+              id: registro.endereco.id,
+              cep: registro.endereco.cep ?? '',
+              logradouro: registro.endereco.logradouro ?? '',
+              numero: registro.endereco.numero ?? '',
+              bairro: registro.endereco.bairro ?? '',
+              cidade: registro.endereco.cidade ?? '',
+              estado: registro.endereco.estado ?? '',
+            }
+          : {
+              cep: '',
+              logradouro: '',
+              numero: '',
+              bairro: '',
+              cidade: '',
+              estado: '',
+            },
       };
 
-      console.log('Pessoa carregada:', response);
+      console.log('Pessoa carregada para edição:', response);
 
       return response;
     } catch (error: any) {
