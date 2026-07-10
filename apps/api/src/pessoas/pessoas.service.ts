@@ -90,14 +90,6 @@ export class PessoasService {
   // 2. BUSCA UM ÚNICO (Com suporte a Endereço Lego)
   async findOne(id: string, tenantId: string) {
     try {
-      if (!id) {
-        throw new NotFoundException('ID da pessoa não informado.');
-      }
-
-      if (!tenantId) {
-        throw new NotFoundException('Tenant não identificado.');
-      }
-
       const pessoasTable = schema.pessoas as any;
       const enderecosTable = schema.enderecos as any;
 
@@ -119,11 +111,11 @@ export class PessoasService {
         throw new NotFoundException('Pessoa não encontrada para este tenant.');
       }
 
+      console.log('PESSOA:', registro.pessoa);
+      console.log('ENDEREÇO:', registro.endereco);
+
       return {
         ...registro.pessoa,
-
-        endereco_id: registro.endereco?.id ?? null,
-
         endereco: {
           id: registro.endereco?.id ?? null,
           cep: registro.endereco?.cep ?? '',
