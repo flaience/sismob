@@ -34,6 +34,7 @@ export default function SismobFormMaster({
   const [options, setOptions] = useState<any>({});
   const [errors, setErrors] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+  const [cepAlteradoPeloUsuario, setCepAlteradoPeloUsuario] = useState(false);
 
   // 1. ESTADO INICIAL: Garante que o objeto de endereço exista para o React não travar os inputs
   const [formData, setFormData] = useState<any>({
@@ -135,27 +136,52 @@ export default function SismobFormMaster({
 
   // 4. MOTOR DE CEP AUTOMÁTICO (ViaCEP)
   useEffect(() => {
-    const cep = formData.endereco?.cep || formData.cep;
-    if (cep?.length === 8) {
-      fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.erro) {
-            if (formData.endereco) {
-              updateField("endereco.logradouro", data.logradouro);
-              updateField("endereco.bairro", data.bairro);
-              updateField("endereco.cidade", data.localidade);
-              updateField("endereco.estado", data.uf);
-            } else {
-              updateField("logradouro", data.logradouro);
-              updateField("bairro", data.bairro);
-              updateField("cidade", data.localidade);
-              updateField("estado", data.uf);
-            }
-          }
-        });
-    }
-  }, [formData.endereco?.cep, formData.cep]);
+    if (!cepAlteradoPeloUsuario) return;
+
+    const cepOriginal = String(formData.endereco?.cep || formData.cep || "");
+    const cepLimpo = cepOriginal.replace(/\D/g, "");
+
+    if (cepLimpo.length !== 8) return;
+
+    const buscarEndereco = async () => {
+      try {
+        const response = await fetch(
+          `https://viacep.com.br/ws/${cepLimpo}/json/`,
+        );
+
+        if (!response.ok) {
+          throw new Error("Falha ao consultar o CEP.");
+        }
+
+        const data = await response.json();
+
+        if (data.erro) {
+          alert("CEP não localizado.");
+          return;
+        }
+
+        setFormData((prev: any) => ({
+          ...prev,
+          endereco: {
+            ...(prev.endereco || {}),
+            cep: cepLimpo,
+            logradouro: data.logradouro || "",
+            bairro: data.bairro || "",
+            cidade: data.localidade || "",
+            estado: data.uf || "",
+            // O ViaCEP não fornece número.
+            numero: prev.endereco?.numero || "",
+          },
+        }));
+      } catch (error) {
+        console.error("❌ Erro ao consultar ViaCEP:", error);
+      } finally {
+        setCepAlteradoPeloUsuario(false);
+      }
+    };
+
+    buscarEndereco();
+  }, [formData.endereco?.cep, cepAlteradoPeloUsuario]);
 
   // 5. ATUALIZADOR DE CAMPOS (Suporta 'a.b' para objetos aninhados)
   const updateField = (name: string, val: any) => {
