@@ -99,9 +99,10 @@ export class PessoasService {
           endereco: enderecosTable,
         })
         .from(pessoasTable)
-        .leftJoin(enderecosTable, eq(enderecosTable.pessoa_id, pessoasTable.id))
-        .where(
-          and(eq(pessoasTable.id, id), eq(pessoasTable.tenant_id, tenantId)),
+
+        .leftJoin(
+          enderecosTable,
+          eq(pessoasTable.endereco_id, enderecosTable.id),
         )
         .limit(1);
 
@@ -153,11 +154,61 @@ export class PessoasService {
 
         const isUpdate = Boolean(dto.id && dto.id !== 'undefined');
 
+        let enderecoId = dto.endereco_id || dto.endereco?.id || null;
+
+        const endereco = dto.endereco || {};
+
+        const possuiEndereco = Boolean(
+          endereco.cep ||
+          endereco.logradouro ||
+          endereco.numero ||
+          endereco.bairro ||
+          endereco.cidade ||
+          endereco.estado,
+        );
+
+        if (possuiEndereco) {
+          const enderecoPayload = {
+            cep: endereco.cep || null,
+            logradouro: endereco.logradouro || null,
+            numero: endereco.numero || null,
+            bairro: endereco.bairro || null,
+            cidade: endereco.cidade || null,
+            estado: endereco.estado || null,
+          };
+
+          if (enderecoId) {
+            const [enderecoAtualizado] = await tx
+              .update(enderecosTable)
+              .set(enderecoPayload)
+              .where(eq(enderecosTable.id, Number(enderecoId)))
+              .returning();
+
+            if (!enderecoAtualizado) {
+              throw new Error('Endereço não encontrado para atualização.');
+            }
+
+            enderecoId = enderecoAtualizado.id;
+          } else {
+            const [novoEndereco] = await tx
+              .insert(enderecosTable)
+              .values(enderecoPayload)
+              .returning();
+
+            if (!novoEndereco) {
+              throw new Error('Não foi possível criar o endereço.');
+            }
+
+            enderecoId = novoEndereco.id;
+          }
+        }
+
         const pessoaPayload = {
           tenant_id: tenantId,
-          unidade_id: dto.unidade_id || null,
+          unidade_id: dto.unidade_id ? Number(dto.unidade_id) : null,
+          endereco_id: enderecoId ? Number(enderecoId) : null,
           nome: dto.nome,
-          email: dto.email || null,
+          email: dto.email,
           documento: dto.documento || '000.000.000-00',
           telefone: dto.telefone || null,
           papel: dto.papel,
@@ -165,12 +216,6 @@ export class PessoasService {
           cargo: dto.cargo || null,
           updated_at: new Date(),
         };
-
-        let pessoaId: string;
-
-        // ==========================================
-        // 1. GRAVA OU ATUALIZA A PESSOA
-        // ==========================================
 
         if (isUpdate) {
           const [pessoaAtualizada] = await tx
@@ -185,75 +230,29 @@ export class PessoasService {
             .returning();
 
           if (!pessoaAtualizada) {
-            throw new Error(
-              'Pessoa não encontrada ou não pertence ao tenant informado.',
-            );
+            throw new Error('Pessoa não encontrada ou não pertence ao tenant.');
           }
 
-          pessoaId = pessoaAtualizada.id;
-        } else {
-          const [novaPessoa] = await tx
-            .insert(pessoasTable)
-            .values(pessoaPayload)
-            .returning();
-
-          if (!novaPessoa) {
-            throw new Error('Não foi possível criar a pessoa.');
-          }
-
-          pessoaId = novaPessoa.id;
+          return {
+            id: pessoaAtualizada.id,
+            success: true,
+            operation: 'updated',
+          };
         }
 
-        // ==========================================
-        // 2. PREPARA OS DADOS DO ENDEREÇO
-        // ==========================================
+        const [novaPessoa] = await tx
+          .insert(pessoasTable)
+          .values(pessoaPayload)
+          .returning();
 
-        const enderecoRecebido = dto.endereco || {};
-
-        const possuiEndereco = Boolean(
-          enderecoRecebido.cep ||
-          enderecoRecebido.logradouro ||
-          enderecoRecebido.numero ||
-          enderecoRecebido.bairro ||
-          enderecoRecebido.cidade ||
-          enderecoRecebido.estado,
-        );
-
-        if (possuiEndereco) {
-          const enderecoPayload = {
-            pessoa_id: pessoaId,
-            cep: enderecoRecebido.cep || null,
-            logradouro: enderecoRecebido.logradouro || null,
-            numero: enderecoRecebido.numero || null,
-            bairro: enderecoRecebido.bairro || null,
-            cidade: enderecoRecebido.cidade || null,
-            estado: enderecoRecebido.estado || null,
-          };
-
-          // ==========================================
-          // 3. PROCURA ENDEREÇO EXISTENTE DA PESSOA
-          // ==========================================
-
-          const [enderecoExistente] = await tx
-            .select()
-            .from(enderecosTable)
-            .where(eq(enderecosTable.pessoa_id, pessoaId))
-            .limit(1);
-
-          if (enderecoExistente) {
-            await tx
-              .update(enderecosTable)
-              .set(enderecoPayload)
-              .where(eq(enderecosTable.id, enderecoExistente.id));
-          } else {
-            await tx.insert(enderecosTable).values(enderecoPayload);
-          }
+        if (!novaPessoa) {
+          throw new Error('Não foi possível criar a pessoa.');
         }
 
         return {
-          id: pessoaId,
+          id: novaPessoa.id,
           success: true,
-          operation: isUpdate ? 'updated' : 'created',
+          operation: 'created',
         };
       });
     } catch (error: any) {

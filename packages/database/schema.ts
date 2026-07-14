@@ -101,7 +101,11 @@ export const pessoas = pgTable(
     unidade_id: integer("unidade_id").references(() => unidades.id, {
       onDelete: "cascade",
     }),
-    endereco_id: integer("endereco_id").references(() => enderecos.id), // <--- O VINCULO
+
+    endereco_id: integer("endereco_id").references(() => enderecos.id, {
+      onDelete: "set null",
+    }),
+
     tipo: tipoFisicaJuridica("tipo").default("f"),
     papel: papelPessoa("papel").notNull(),
     nome: varchar("nome", { length: 255 }).notNull(),
@@ -114,6 +118,9 @@ export const pessoas = pgTable(
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
     senha_hash: text("senha_hash"),
+    auth_user_id: uuid("auth_user_id"),
+
+    deve_trocar_senha: boolean("deve_trocar_senha").default(false).notNull(),
   },
   (table) => ({
     tenantIdx: index("idx_pessoas_tenant").on(table.tenant_id),
@@ -144,7 +151,9 @@ export const imoveis = pgTable("imoveis", {
   proprietario_id: uuid("proprietario_id").references(() => pessoas.id, {
     onDelete: "cascade",
   }),
-  endereco_id: integer("endereco_id").references(() => enderecos.id),
+  endereco_id: integer("endereco_id").references(() => enderecos.id, {
+    onDelete: "set null",
+  }),
   titulo: varchar("titulo", { length: 255 }).notNull(),
   descricao: text("descricao"),
   tipo: varchar("tipo", { length: 50 }).notNull(),

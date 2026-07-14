@@ -41,23 +41,14 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const pessoasTable = (schema as any).pessoas;
 
+    // PRIMEIRO procura pelo auth_user_id
     let result = await this.db
       .select()
       .from(pessoasTable)
-      .where(eq(pessoasTable.id, payload.sub))
+      .where(eq(pessoasTable.auth_user_id, payload.sub))
       .limit(1);
 
     let userProfile = result[0];
-
-    if (!userProfile && payload.email) {
-      result = await this.db
-        .select()
-        .from(pessoasTable)
-        .where(eq(pessoasTable.email, payload.email))
-        .limit(1);
-
-      userProfile = result[0];
-    }
 
     if (!userProfile) {
       throw new UnauthorizedException(
