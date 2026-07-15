@@ -1,22 +1,48 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { sanitizeFileName } from '../common/utils/file-utils';
 
 @Injectable()
 export class FilesService {
-  private supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient;
 
   constructor() {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    const supabaseUrl =
+      process.env.SISMOB_SUPABASE_URL || process.env.SUPABASE_URL;
+
+    const serviceRoleKey =
+      process.env.SISMOB_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl) {
+      throw new InternalServerErrorException(
+        'SISMOB_SUPABASE_URL não configurada para o FilesService.',
+      );
+    }
+
+    if (!serviceRoleKey) {
+      throw new InternalServerErrorException(
+        'SISMOB_SUPABASE_SERVICE_ROLE_KEY não configurada para o FilesService.',
+      );
+    }
+
+    this.supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
 
-  /**
-   * UPLOAD DE ARQUIVO ÚNICO (Logo da Empresa, Perfil)
-   */
   async uploadSingle(file: any, path: string = 'geral'): Promise<string> {
+    if (!file?.buffer) {
+      throw new BadRequestException('Nenhum arquivo válido foi enviado.');
+    }
+
     const nomeLimpo = sanitizeFileName(file.originalname);
     const filePath = `${path}/${Date.now()}-${nomeLimpo}`;
 
@@ -27,23 +53,27 @@ export class FilesService {
         upsert: true,
       });
 
-    if (error)
+    if (error) {
       throw new BadRequestException(`Erro no Storage: ${error.message}`);
+    }
 
     const { data } = this.supabase.storage
       .from('sismob-media')
       .getPublicUrl(filePath);
+
     return data.publicUrl;
   }
 
-  /**
-   * UPLOAD MÚLTIPLO (Galeria de Imóveis)
-   * Resolve o erro de reconhecimento no Controller
-   */
   async uploadMultiple(files: any[], path: string = 'imoveis'): Promise<any[]> {
-    if (!files || files.length === 0) return [];
+    if (!files?.length) return [];
 
     const uploadPromises = files.map(async (file) => {
+      if (!file?.buffer) {
+        throw new BadRequestException(
+          'Foi encontrado um arquivo inválido na lista.',
+        );
+      }
+
       const nomeLimpo = sanitizeFileName(file.originalname);
       const filePath = `${path}/${Date.now()}-${nomeLimpo}`;
 
@@ -54,20 +84,21 @@ export class FilesService {
           upsert: true,
         });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        throw new BadRequestException(`Erro no Storage: ${error.message}`);
+      }
 
       const { data } = this.supabase.storage
         .from('sismob-media')
         .getPublicUrl(filePath);
 
-      // RETORNA UM OBJETO RICO (O segredo para o banco de mídias)
       return {
         url: data.publicUrl,
-        tipo: 'foto_interna', // Padrão inicial
+        tipo: 'foto_interna',
         is_capa: false,
       };
     });
 
-    return await Promise.all(uploadPromises);
+    return Promise.all(uploadPromises);
   }
 }
