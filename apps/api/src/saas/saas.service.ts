@@ -15,10 +15,25 @@ import * as bcrypt from 'bcryptjs';
 export class SaasService {
   private supabaseAdmin;
   constructor(@Inject('DRIZZLE_CONNECTION') private db: any) {
-    this.supabaseAdmin = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-    );
+    const supabaseUrl =
+      process.env.SISMOB_SUPABASE_URL || process.env.SUPABASE_URL;
+
+    const serviceRoleKey =
+      process.env.SISMOB_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error(
+        'Variáveis administrativas do Supabase SISMOB não configuradas.',
+      );
+    }
+
+    this.supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
 
   async buscarPorHost(host: string) {

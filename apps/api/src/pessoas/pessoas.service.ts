@@ -21,16 +21,25 @@ export class PessoasService {
   ) {
     // 🛡️ BUSCA RESILIENTE: Tenta com e sem o prefixo NEXT_PUBLIC_
     const url =
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      process.env.SISMOB_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+    const key =
+      process.env.SISMOB_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
-      console.error(
-        '❌ [SISMOB] ERRO CRÍTICO: SUPABASE_URL ou SERVICE_ROLE_KEY não configurados no Railway!',
+      throw new Error(
+        'SISMOB_SUPABASE_URL ou SISMOB_SUPABASE_SERVICE_ROLE_KEY não configuradas.',
       );
     }
 
-    this.supabaseAdmin = createClient(url!, key!);
+    this.supabaseAdmin = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
 
   // 1. BUSCA POR PAPEL (O que alimenta os Grids do CRM)

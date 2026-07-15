@@ -1,3 +1,4 @@
+//src/auth/supabase.strategy.ts
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -13,10 +14,12 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
     private db: PostgresJsDatabase<typeof schema>,
   ) {
     const supabaseUrl =
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+      process.env.SISMOB_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL;
 
     if (!supabaseUrl) {
-      throw new Error('SUPABASE_URL não configurada na API.');
+      throw new Error('SISMOB_SUPABASE_URL não configurada na API.');
     }
 
     super({

@@ -1,3 +1,4 @@
+//src/auth/auth.service.ts
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
@@ -11,12 +12,24 @@ export class AuthService {
     @Inject('DRIZZLE_CONNECTION')
     private db: PostgresJsDatabase<typeof schema>,
   ) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const url = process.env.SISMOB_SUPABASE_URL || process.env.SUPABASE_URL;
 
-    if (url && key) {
-      this.supabaseAdmin = createClient(url, key);
+    const key =
+      process.env.SISMOB_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+      throw new Error(
+        'SISMOB_SUPABASE_URL ou SISMOB_SUPABASE_SERVICE_ROLE_KEY não configuradas.',
+      );
     }
+
+    this.supabaseAdmin = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
 
   // apps/api/src/auth/auth.service.ts
