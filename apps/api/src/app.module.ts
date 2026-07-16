@@ -11,6 +11,7 @@ import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
 import { SaasModule } from './saas/saas.module';
 import { NegociacoesModule } from './negociacoes/negociacoes.module';
+import { LicenseModule } from './licence/license.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NegociacoesModule } from './negociacoes/negociacoes.module';
     FinanceiroModule,
     SaasModule,
     NegociacoesModule,
+    LicenseModule,
   ],
   controllers: [AppController],
 })

@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PessoasService } from './pessoas.service';
 import { SaasService } from '../saas/saas.service';
 import { RolesGuard } from '../auth/roles.guard';
+import { TenantLicenseGuard } from '../licence/tenant-license.guard';
 
 @Controller('pessoas')
 export class PessoasController {
@@ -52,13 +53,13 @@ export class PessoasController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantLicenseGuard)
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
     return this.pessoasService.findOne(id, req.user.tenantId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantLicenseGuard)
   @Get()
   async findAll(
     @Query('papel') papel: string,
@@ -68,7 +69,7 @@ export class PessoasController {
     return this.pessoasService.findByRole(papel, req.user.tenantId, search);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantLicenseGuard)
   @Post()
   async create(@Body() dto: any, @Req() req: any) {
     console.log('======================================');
@@ -78,13 +79,13 @@ export class PessoasController {
     return this.pessoasService.save(dto, req.user.tenantId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantLicenseGuard)
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: any, @Req() req: any) {
     return this.pessoasService.save({ ...dto, id }, req.user.tenantId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantLicenseGuard)
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: any) {
     const parsedId = isNaN(Number(id)) ? id : Number(id);
