@@ -31,10 +31,16 @@ export default function TesteLicencaPage() {
     } catch (err: any) {
       console.error("Erro ao testar licença:", err);
 
+      const responseData = err.response?.data;
+
       setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Não foi possível testar a licença.",
+        typeof responseData === "string"
+          ? responseData
+          : responseData?.message
+            ? Array.isArray(responseData.message)
+              ? responseData.message.join(", ")
+              : responseData.message
+            : JSON.stringify(responseData || err.message),
       );
     } finally {
       setLoading(false);
