@@ -83,7 +83,23 @@ export class FlaienceLicenseService {
         .maybeSingle();
 
       if (error) {
-        throw new Error(error.message);
+        console.error('❌ [FLAIENCE LICENSE] Erro Supabase:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+
+        throw new Error(
+          [
+            error.message,
+            error.code ? `Código: ${error.code}` : null,
+            error.details ? `Detalhes: ${error.details}` : null,
+            error.hint ? `Dica: ${error.hint}` : null,
+          ]
+            .filter(Boolean)
+            .join(' | '),
+        );
       }
 
       if (!data) {
@@ -167,9 +183,10 @@ export class FlaienceLicenseService {
     } catch (error: any) {
       console.error('❌ [FLAIENCE LICENSE] Falha ao consultar licença:', error);
 
-      throw new InternalServerErrorException(
-        `Não foi possível validar a licença Flaience: ${error.message}`,
-      );
+      throw new InternalServerErrorException({
+        message: 'Não foi possível validar a licença Flaience.',
+        technicalMessage: error?.message || 'Erro desconhecido.',
+      });
     }
   }
 }
