@@ -1,20 +1,18 @@
 // src/auth/supabase.strategy.ts
 
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
-
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
-
-import { eq, type PostgresJsDatabase } from '@sismob/database';
-
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@sismob/database';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     @Inject('DRIZZLE_CONNECTION')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    private db: PostgresJsDatabase<typeof schema>,
   ) {
     const supabaseUrl =
       process.env.SISMOB_SUPABASE_URL ||
@@ -27,11 +25,8 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-
       ignoreExpiration: false,
-
       algorithms: ['ES256'],
-
       secretOrKeyProvider: passportJwtSecret({
         cache: true,
         rateLimit: true,
@@ -44,17 +39,11 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: any) {
     console.log('======================================');
     console.log('SUPABASE STRATEGY');
-    console.log({
-      sub: payload?.sub,
-      email: payload?.email,
-    });
+    console.log('Payload recebido:');
+    console.log(payload);
     console.log('======================================');
 
-    if (!payload?.sub) {
-      throw new UnauthorizedException('Token sem identificador do usuário.');
-    }
-
-    const pessoasTable = schema.pessoas;
+    const pessoasTable = (schema as any).pessoas;
 
     const result = await this.db
       .select()
