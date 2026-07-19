@@ -1,13 +1,17 @@
-//src/auth/supabase.strategy.ts
-// teste
+// src/auth/supabase.strategy.ts
 
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { sql } from 'drizzle-orm';
 import * as schema from '@sismob/database';
-import { eq } from 'drizzle-orm';
+
+type PessoaAuthRow = Pick<
+  typeof schema.pessoas.$inferSelect,
+  'id' | 'tenant_id' | 'email' | 'papel' | 'cargo' | 'nome'
+>;
 
 @Injectable()
 export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -40,20 +44,30 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: any) {
     console.log('======================================');
     console.log('SUPABASE STRATEGY');
-    console.log('Payload recebido:');
-    console.log(payload);
+    console.log({
+      sub: payload?.sub,
+      email: payload?.email,
+    });
     console.log('======================================');
 
-    const pessoasTable = (schema as any).pessoas;
+    if (!payload?.sub) {
+      throw new UnauthorizedException('Token sem identificador do usuário.');
+    }
 
-    // PRIMEIRO procura pelo auth_user_id
-    let result = await this.db
-      .select()
-      .from(pessoasTable)
-      .where(eq(pessoasTable.auth_user_id, payload.sub))
-      .limit(1);
+    const result = await this.db.execute(sql`
+      SELECT
+        "id",
+        "tenant_id",
+        "email",
+        "papel",
+        "cargo",
+        "nome"
+      FROM "pessoas"
+      WHERE "auth_user_id" = ${payload.sub}
+      LIMIT 1
+    `);
 
-    let userProfile = result[0];
+    const userProfile = result[0] as PessoaAuthRow | undefined;
 
     if (!userProfile) {
       throw new UnauthorizedException(
