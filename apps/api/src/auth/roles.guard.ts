@@ -1,3 +1,5 @@
+//src/auth/roles.guard.ts
+//teste
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 
 @Injectable()
