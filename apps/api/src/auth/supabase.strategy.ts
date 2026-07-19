@@ -1,4 +1,5 @@
-// src/auth/supabase.strategy.ts
+//src/auth/supabase.strategy.ts
+// teste
 
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
@@ -45,13 +46,14 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const pessoasTable = (schema as any).pessoas;
 
-    const result = await this.db
+    // PRIMEIRO procura pelo auth_user_id
+    let result = await this.db
       .select()
       .from(pessoasTable)
       .where(eq(pessoasTable.auth_user_id, payload.sub))
       .limit(1);
 
-    const userProfile = result[0];
+    let userProfile = result[0];
 
     if (!userProfile) {
       throw new UnauthorizedException(
