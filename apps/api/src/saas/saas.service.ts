@@ -256,15 +256,22 @@ export class SaasService {
           const tablePessoas = schema.pessoas as any;
           await tx.insert(tablePessoas).values({
             id: authUser.user.id,
+            auth_user_id: authUser.user.id,
+
             tenant_id: tenantId,
             unidade_id: unidade.id,
+
             nome: dto.nomeDono || dto.nome_fantasia,
             email: dto.email_financeiro,
             documento: dto.documento || dto.nome_conta || '000.000.000-00',
+
             papel: '6',
             is_admin: true,
+            cargo: 'proprietario',
+
             endereco_id: enderecoId,
-            senha_hash: senhaPadraoHash, // 🛡️ SOBERANIA: Senha gravada no nosso banco
+            senha_hash: senhaPadraoHash,
+            deve_trocar_senha: true,
           });
 
           console.log('✅ [SISMOB] Novo Tenant e Dono criados com sucesso.');
