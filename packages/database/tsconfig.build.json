@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": true,
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "./dist",
+    "incremental": false
+  },
+  "include": [
+    "index.ts",
+    "schema.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "drizzle",
+    "dist",
+    "migrate.ts",
+    "drizzle.config.ts"
+  ]
+}

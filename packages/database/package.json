@@ -1,8 +1,11 @@
 {
   "name": "@sismob/database",
   "version": "1.0.0",
-  "main": "./index.js",
-  "types": "./index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
   "dependencies": {
     "drizzle-orm": "0.36.1",
     "postgres": "3.4.4"
